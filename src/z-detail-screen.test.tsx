@@ -33,7 +33,10 @@ function rowFor(view: Rendered, store: string) {
 }
 
 function textOf(node: Rendered['root']): string {
-  return node.findAll((child) => String(child.type) === 'Text').map((child) => child.children.join('')).join(' ');
+  return node
+    .findAll((child) => String(child.type) === 'Text')
+    .map((child) => child.children.filter((part): part is string => typeof part === 'string').join(''))
+    .join(' ');
 }
 
 describe('game detail screen', () => {

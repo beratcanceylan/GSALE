@@ -83,7 +83,7 @@ export const en = {
   'settings.searchCountries': 'Search countries',
 
   'notifications.title': 'Notifications',
-  'notifications.empty': 'No notifications yet.',
+  'notifications.empty': 'Price-drop and free-game alerts are coming soon.',
 
   'country.TR': 'Türkiye',
   'country.US': 'United States',

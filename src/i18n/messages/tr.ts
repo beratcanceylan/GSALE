@@ -84,7 +84,7 @@ export const tr = {
   'settings.searchCountries': 'Ülke ara',
 
   'notifications.title': 'Bildirimler',
-  'notifications.empty': 'Henüz bildirim yok.',
+  'notifications.empty': 'Fiyat düşüşü ve bedava oyun bildirimleri yakında geliyor.',
 
   'country.TR': 'Türkiye',
   'country.US': 'Amerika Birleşik Devletleri',

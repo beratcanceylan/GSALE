@@ -1,282 +1,119 @@
-import { Globe, Info, MapPin, X } from 'lucide-react-native';
+import { Bell } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useState } from 'react';
-import { StyleSheet, Text, View, Pressable, Modal, FlatList } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState, useSyncExternalStore } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { IconButton } from '@/components/IconButton';
+import { OptionPicker } from '@/components/OptionPicker';
 import { ScreenHeader } from '@/components/ScreenHeader';
-import { Font, Palette, Radius, Spacing, Typography } from '@/constants/DesignSystem';
-import { SUPPORTED_COUNTRIES, getAppCountry, setAppCountry, type CountryCode } from '@/services/country';
-import { t } from '@/i18n';
-import { LANGUAGES, isLanguageCode } from '@/i18n/languages';
-import { getLanguage, setLanguage } from '@/i18n/languageStore';
+import { SettingsRow } from '@/components/SettingsRow';
+import { Palette, Size, Spacing, useType } from '@/constants/DesignSystem';
+import { useScrollSafeAreaStyle } from '@/hooks/useScrollSafeAreaStyle';
+import { useT } from '@/i18n';
+import { LANGUAGES, type LanguageCode } from '@/i18n/languages';
+import { languageStore, setLanguage } from '@/i18n/languageStore';
 import { applyLayoutDirection } from '@/i18n/rtl';
+import { SUPPORTED_COUNTRIES, countryStore, setAppCountry, type CountryCode } from '@/services/country';
 
-const LANGUAGE_ITEMS = LANGUAGES.map((language) => ({ code: language.code, name: language.nativeName }));
-const COUNTRY_ITEMS = SUPPORTED_COUNTRIES.map((country) => ({ code: country.code, name: t(`country.${country.code}`) }));
+const APP_VERSION = '1.0.0';
 
-type PickerItem = Readonly<{ code: string; name: string }>;
-type PickerKind = 'language' | 'country';
-
-const PICKER_TITLES: Record<PickerKind, string> = {
-  language: 'Dil Seçin',
-  country: 'Ülke Seçin',
-};
-
-function findCountryCode(code: string): CountryCode | undefined {
-  return SUPPORTED_COUNTRIES.find((country) => country.code === code)?.code;
-}
+type Picker = 'language' | 'country' | null;
 
 export default function SettingsScreen() {
-  const [picker, setPicker] = useState<PickerKind | null>(null);
-  const [selectedLang, setSelectedLang] = useState<string>(() => getLanguage());
-  const [selectedCountry, setSelectedCountry] = useState<CountryCode>(() => getAppCountry());
-  const [settingHint, setSettingHint] = useState('');
+  const t = useT();
+  const type = useType();
+  const { push } = useRouter();
+  const containerStyle = useScrollSafeAreaStyle();
+  const [picker, setPicker] = useState<Picker>(null);
+  const language = useSyncExternalStore(languageStore.subscribe, languageStore.getSnapshot);
+  const country = useSyncExternalStore(countryStore.subscribe, countryStore.getSnapshot);
 
-  const currentLangName = LANGUAGE_ITEMS.find((l) => l.code === selectedLang)?.name || 'Türkçe';
-  const currentCountryName =
-    COUNTRY_ITEMS.find((c) => c.code === selectedCountry)?.name ?? 'Türkiye';
+  const languageName = LANGUAGES.find((option) => option.code === language)?.nativeName ?? language;
+  const countryName = t(`country.${country}`);
 
-  const pickerItems: readonly PickerItem[] =
-    picker === 'country' ? COUNTRY_ITEMS : LANGUAGE_ITEMS;
-  const pickerSelectedCode = picker === 'country' ? selectedCountry : selectedLang;
+  const chooseLanguage = async (code: LanguageCode) => {
+    setPicker(null);
+    await setLanguage(code);
+    if (applyLayoutDirection(code)) {
+      Alert.alert(t('settings.restartTitle'), t('settings.restartBody'));
+    }
+  };
 
-  const handlePickerPress = useCallback(
-    async (code: string) => {
-      if (picker === 'country') {
-        const country = findCountryCode(code);
-        if (!country) return;
-        setSelectedCountry(country);
-        await setAppCountry(country);
-        setSettingHint('Ülke kaydedildi. Yeni aramalar bu bölgenin fiyatlarıyla yapılacak.');
-      } else {
-        if (!isLanguageCode(code)) return;
-        setSelectedLang(code);
-        await setLanguage(code);
-        applyLayoutDirection(code);
-        setSettingHint('Dil kaydedildi. Yeni aramalar bu dilde yapılacak.');
-      }
-      setPicker(null);
-    },
-    [picker],
-  );
-
-  const renderPickerItem = useCallback(
-    (info: { item: PickerItem }) => (
-      <Pressable style={styles.langItem} onPress={() => void handlePickerPress(info.item.code)}>
-        <Text
-          style={[styles.langItemText, info.item.code === pickerSelectedCode && styles.langItemTextActive]}
-        >
-          {info.item.name}
-        </Text>
-      </Pressable>
-    ),
-    [pickerSelectedCode, handlePickerPress],
-  );
+  const chooseCountry = async (code: CountryCode) => {
+    setPicker(null);
+    await setAppCountry(code);
+  };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <View style={[styles.container, containerStyle]}>
       <StatusBar style="light" />
-
-      <ScreenHeader title="Ayarlar" align="center" />
-
-      <View style={styles.content}>
-        <Pressable
-          style={styles.settingRow}
-          onPress={() => {
-            setPicker('language');
-          }}
-        >
-          <View style={styles.settingRowLeft}>
-            <Globe size={24} color={Palette.textSecondary} />
-            <View>
-              <Text style={styles.settingLabel}>Mağaza dili</Text>
-              <Text style={styles.settingHint}>Steam ve bölgesel mağaza içerikleri</Text>
-            </View>
-          </View>
-          <Text style={styles.settingValue}>{currentLangName}</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.settingRow}
-          onPress={() => {
-            setPicker('country');
-          }}
-        >
-          <View style={styles.settingRowLeft}>
-            <MapPin size={24} color={Palette.textSecondary} />
-            <View style={styles.settingTextBlock}>
-              <Text style={styles.settingLabel}>Mağaza ülkesi</Text>
-              <Text style={styles.settingHint}>
-                Fiyatlar bu bölgenin mağazalarından gelir. Nintendo her zaman ABD eShop.
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.settingValue}>{currentCountryName}</Text>
-        </Pressable>
-
-        {settingHint ? <Text style={styles.localeHint}>{settingHint}</Text> : null}
-
-        <View style={styles.footer}>
-          <Text style={styles.disclaimerText}>
-            GSale bağımsız bir uygulamadır; hiçbir mağaza veya platform sahibiyle bağlantılı
-            değildir. Adı geçen markalar ve oyun görselleri sahiplerine aittir. Fiyatlar
-            mağazalardan alınır ve TL&apos;ye yaklaşık kurla çevrilir; satın alma her zaman resmi
-            mağazada yapılır.
-          </Text>
-          <View style={styles.versionRow}>
-            <Info size={14} color={Palette.textTertiary} />
-            <Text style={styles.footerText}>GSale v1.0.0</Text>
-          </View>
+      <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.scroll}>
+        <ScreenHeader
+          title={t('settings.title')}
+          trailing={<IconButton icon={Bell} label={t('notifications.title')} onPress={() => { push('/notifications'); }} />}
+        />
+        <View style={styles.group}>
+          <SettingsRow label={t('settings.language')} value={languageName} onPress={() => { setPicker('language'); }} />
+          <SettingsRow
+            label={t('settings.country')}
+            value={countryName}
+            hint={t('settings.countryHint')}
+            onPress={() => { setPicker('country'); }}
+          />
         </View>
-      </View>
-
-      <Modal visible={picker !== null} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{picker ? PICKER_TITLES[picker] : ''}</Text>
-              <Pressable
-                onPress={() => {
-                  setPicker(null);
-                }}
-                hitSlop={10}
-                accessibilityLabel="Kapat"
-                accessibilityRole="button"
-              >
-                <X size={24} color={Palette.text} />
-              </Pressable>
-            </View>
-            <FlatList
-              data={pickerItems}
-              keyExtractor={(item) => item.code}
-              renderItem={renderPickerItem}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.langList}
-            />
-          </View>
+        <View style={styles.about}>
+          <Text style={[type('heading'), styles.text]} accessibilityRole="header">{t('settings.about')}</Text>
+          <Text style={[type('body'), styles.muted]}>{t('settings.disclaimer')}</Text>
+          <Text style={[type('caption'), styles.muted]}>{t('settings.version', { version: APP_VERSION })}</Text>
         </View>
-      </Modal>
-    </SafeAreaView>
+      </ScrollView>
+
+      {picker === 'language' ? (
+        <OptionPicker
+          title={t('settings.language')}
+          searchPlaceholder={t('settings.searchLanguages')}
+          options={LANGUAGES.map((option) => ({ value: option.code, label: option.nativeName }))}
+          selected={language}
+          onSelect={(code) => { void chooseLanguage(code); }}
+          onClose={() => { setPicker(null); }}
+        />
+      ) : null}
+      {picker === 'country' ? (
+        <OptionPicker
+          title={t('settings.country')}
+          searchPlaceholder={t('settings.searchCountries')}
+          options={SUPPORTED_COUNTRIES.map((option) => ({ value: option.code, label: t(`country.${option.code}`), detail: option.code }))}
+          selected={country}
+          onSelect={(code) => { void chooseCountry(code); }}
+          onClose={() => { setPicker(null); }}
+        />
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: Palette.background,
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.md,
+  scroll: {
+    paddingBottom: Spacing.xxl,
   },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Palette.surface,
-    padding: Spacing.lg,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Palette.border,
-    gap: Spacing.md,
+  group: {
+    borderTopWidth: Size.hairline,
+    borderTopColor: Palette.line,
   },
-  settingRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  about: {
     gap: Spacing.sm,
-    flex: 1,
-  },
-  settingLabel: {
-    fontSize: Typography.body.fontSize,
-    fontFamily: Typography.body.fontFamily,
-    color: Palette.text,
-  },
-  settingHint: {
-    fontSize: Typography.caption.fontSize,
-    fontFamily: Typography.caption.fontFamily,
-    color: Palette.textTertiary,
-    marginTop: Spacing.xs,
-  },
-  settingValue: {
-    fontSize: Typography.body.fontSize,
-    fontFamily: Font.bodyMedium,
-    color: Palette.accent,
-  },
-  localeHint: {
-    fontSize: Typography.caption.fontSize,
-    fontFamily: Typography.caption.fontFamily,
-    color: Palette.textSecondary,
-    paddingHorizontal: Spacing.xs,
-  },
-  settingTextBlock: {
-    flex: 1,
-  },
-  footer: {
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginTop: 'auto',
-    marginBottom: Spacing.xl,
-  },
-  versionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.xs,
-  },
-  disclaimerText: {
-    fontSize: Typography.caption.fontSize,
-    fontFamily: Typography.caption.fontFamily,
-    color: Palette.textTertiary,
-    textAlign: 'center',
-    paddingHorizontal: Spacing.xs,
-  },
-  footerText: {
-    fontSize: Typography.caption.fontSize,
-    fontFamily: Typography.caption.fontFamily,
-    color: Palette.textTertiary,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: Palette.overlayMedium,
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: Palette.surface,
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: Palette.border,
-  },
-  modalTitle: {
-    fontSize: Typography.h2.fontSize,
-    fontFamily: Typography.h2.fontFamily,
-    color: Palette.text,
-  },
-  langList: {
-    paddingBottom: Spacing.xl * 2,
-  },
-  langItem: {
-    paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: Palette.border,
+    paddingTop: Spacing.xxl,
   },
-  langItemText: {
-    fontSize: Typography.body.fontSize,
-    fontFamily: Typography.body.fontFamily,
-    color: Palette.textSecondary,
-  },
-  langItemTextActive: {
+  text: {
     color: Palette.text,
-    fontFamily: Typography.h2.fontFamily,
+  },
+  muted: {
+    color: Palette.textMuted,
   },
 });

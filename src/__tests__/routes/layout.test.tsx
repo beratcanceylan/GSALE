@@ -18,7 +18,7 @@ describe('app navigation shell', () => {
   test('notification back control returns to the previous route', async () => {
     resetNativeState();
     const view = await render(<NotificationsScreen />);
-    expect(view.text()).toContain('Yakında');
+    expect(view.text()).toContain('bildirimleri yakında geliyor');
     await fire(byLabel(view.root, 'Geri dön'), 'onPress');
     expect(nativeState.router.back).toBe(1);
     await view.unmount();

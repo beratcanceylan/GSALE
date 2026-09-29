@@ -1,12 +1,8 @@
-import { describe, expect, mock, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 
 import '../../test-support/native-mocks';
 import { allOfType, byLabel, render } from '../../test-support/render';
 
-mock.module('expo-secure-store', () => ({
-  getItemAsync: async () => null,
-  setItemAsync: async () => undefined,
-}));
 
 const { StoreLogo, StoreLogoRow } = await import('@/components/StoreLogo');
 

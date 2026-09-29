@@ -1,14 +1,10 @@
-import { afterEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
 
 import { nativeState, resetNativeState } from '../../test-support/native-mocks';
 import { allOfType, byLabel, fire, render } from '../../test-support/render';
 import { uiDeal } from '../../test-support/deals';
 import type { Game } from '@/services/gameData';
 
-mock.module('expo-secure-store', () => ({
-  getItemAsync: async () => null,
-  setItemAsync: async () => undefined,
-}));
 
 const { AppBackground } = await import('@/components/AppBackground');
 const { CoverCard } = await import('@/components/CoverCard');
