@@ -36,19 +36,13 @@ const NINTENDO_ATTRIBUTES = [
   'nsuid',
   'sku',
   'title',
-  'description',
   'url',
   'productImageSquare',
   'productImage',
   'platform',
   'corePlatforms',
-  'releaseDate',
   'price',
   'eshopDetails',
-  'gameGenreLabels',
-  'genres',
-  'softwareDeveloper',
-  'softwarePublisher',
   'productType',
   'dlcType',
 ];
@@ -199,10 +193,6 @@ export async function fetchNintendoDetails(
     store_links: { Nintendo: storeUrl },
     platforms: [product.platform || 'Nintendo Switch'],
   };
-  if (product.description) game.description = product.description;
-  if (product.release_date) game.release_date = product.release_date;
-  if (product.developers) game.developers = product.developers;
-  if (product.genres) game.genres = product.genres;
 
   const sourcePrice = await productToPriceResult(product, options?.signal);
   if (sourcePrice) game.deals = [platformPriceToGameDeal(sourcePrice)];

@@ -9,7 +9,9 @@ import { searchLiveGames } from '@/services/store/search';
 import type { GameDetailResponse, GameSummary, StoreRequestOptions } from '@/services/store/types';
 
 export { getHomeSections, type HomeSection } from '@/services/store/home';
-export type { GameDetailResponse, GameSummary, Price, StoreRequestOptions } from '@/services/store/types';
+export type { EditionOption } from '@/services/store/edition-table';
+export type { EditionKey } from '@/services/store/editions';
+export type { GameDetailResponse, GameSummary, StoreRequestOptions } from '@/services/store/types';
 
 export async function searchGames(
   query: string,
@@ -27,7 +29,7 @@ export async function getGameDetail(
 ): Promise<GameDetailResponse> {
   const game = await fetchGameDetailLive(slug, platformHint, options);
   if (!game) throw new Error('Oyun bulunamadı.');
-  return liveGameToDetailResponse(game, Date.now());
+  return liveGameToDetailResponse(game);
 }
 
 export async function getFreeGames(options?: StoreRequestOptions): Promise<GameSummary[]> {

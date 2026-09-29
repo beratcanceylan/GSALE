@@ -129,37 +129,23 @@ describe('Epic edition prices', () => {
 });
 
 describe('fetchEpicDetails', () => {
-  test('builds details from the offer, its media and its price', async () => {
-    routeFetch((url) => {
-      if (url.endsWith('/media')) {
-        return Response.json({
-          images: [{ src: 'https://cdn1.epicgames.com/media-1.jpg' }],
-          videos: [{ outputs: [{ key: 'high', url: 'https://v/high.mp4' }, { key: 'thumbnail', url: 'https://v/t.jpg' }] }],
-        });
-      }
-      return Response.json(HADES);
-    });
+  test('builds details from the offer and its price in one request', async () => {
+    const urls = routeFetch(() => Response.json(HADES));
     const game = await fetchEpicDetails('epic-ns-hades_offer-hades');
+    expect(urls).toHaveLength(1);
     expect(game).toMatchObject({
       id: 'ns-hades_offer-hades',
       title: 'Hades',
-      image_url: 'https://cdn1.epicgames.com/media-1.jpg',
-      description: 'Defy the god of the dead.',
-      screenshots: ['https://cdn1.epicgames.com/media-1.jpg'],
+      image_url: 'https://cdn1.epicgames.com/hades-wide.jpg',
       store_links: { 'Epic Games': 'https://store.epicgames.com/p/hades' },
       deals: [{ platform: 'Epic Games', price: '100,00 TL' }],
     });
-    expect(game?.videos?.[0]).toMatchObject({ url: 'https://v/high.mp4', thumbnail: 'https://v/t.jpg' });
   });
 
-  test('keeps the offer screenshots when media fails, and skips deals without a price', async () => {
+  test('skips deals without a price', async () => {
     const { price: _price, ...unpriced } = HADES;
-    routeFetch((url) => (url.endsWith('/media') ? new Response('', { status: 500 }) : Response.json(unpriced)));
+    routeFetch(() => Response.json(unpriced));
     const game = await fetchEpicDetails('hades');
-    expect(game?.screenshots).toEqual([
-      'https://cdn1.epicgames.com/hades-wide.jpg',
-      'https://cdn1.epicgames.com/hades-shot.jpg',
-    ]);
     expect(game?.deals).toBeUndefined();
     expect(game?.image_url).toBe('https://cdn1.epicgames.com/hades-wide.jpg');
   });
@@ -170,7 +156,7 @@ describe('fetchEpicDetails', () => {
       return Response.json({});
     });
     const bySlug = await fetchEpicDetails('ns-hades_offer-hades');
-    expect(bySlug).toMatchObject({ id: 'ns-hades_offer-hades', title: 'Hades', description: '' });
+    expect(bySlug).toMatchObject({ id: 'ns-hades_offer-hades', title: 'Hades' });
 
     const byTitle = await fetchEpicDetails('unknown-slug', 'Hades');
     expect(byTitle?.title).toBe('Hades');
@@ -178,14 +164,11 @@ describe('fetchEpicDetails', () => {
     expect(await fetchEpicDetails('unknown_slug', 'Something Else')).toBeNull();
   });
 
-  test('an aborted media request rejects', async () => {
+  test('an aborted details request rejects', async () => {
     const controller = new AbortController();
-    routeFetch((url) => {
-      if (url.endsWith('/media')) {
-        controller.abort();
-        throw controller.signal.reason;
-      }
-      return Response.json(HADES);
+    routeFetch(() => {
+      controller.abort();
+      throw controller.signal.reason;
     });
     await expect(fetchEpicDetails('hades', undefined, { signal: controller.signal })).rejects.toMatchObject({
       name: 'AbortError',

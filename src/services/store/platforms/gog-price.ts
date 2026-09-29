@@ -1,10 +1,4 @@
 import { formatPriceAsTry } from '@/services/store/currency';
-import {
-  cleanStoreText,
-  normalizeDottedDate,
-  uniqueNonEmpty,
-  type DetailMetadata,
-} from '@/services/store/metadata';
 
 export interface GogMoney {
   amount?: string;
@@ -57,22 +51,6 @@ export function gogImage(product: GogProduct): string {
   return product.coverHorizontal || product.coverVertical || '';
 }
 
-function gogScreenshotUrl(url: string): string {
-  return url.replaceAll('{formatter}', '1920');
-}
-
-function gogYoutubeVideoId(url: string): string {
-  if (!/(^https?:)?\/\/([^/]+\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be)\//i.test(url)) return '';
-  const embed = /\/embed\/([^?/#]+)/.exec(url)?.[1];
-  const watch = /[?&]v=([^?&#]+)/.exec(url)?.[1];
-  const short = /youtu\.be\/([^?/#]+)/.exec(url)?.[1];
-  return embed || watch || short || '';
-}
-
-function gogVideoUrl(id: string, fallback: string): string {
-  return id ? `https://www.youtube.com/watch?v=${id}` : fallback;
-}
-
 function normalizeGogDiscount(value: string | null | undefined): string {
   const percent = Number.parseInt(/\d{1,3}/.exec(value ?? '')?.[0] ?? '', 10);
   if (!Number.isFinite(percent) || percent <= 0) return '';
@@ -82,48 +60,6 @@ function normalizeGogDiscount(value: string | null | undefined): string {
 export function pickGogProductById(products: GogProduct[], id: string | number): GogProduct | null {
   const normalizedId = String(id).replace(/^gog-/, '');
   return products.find((product) => String(product.id) === normalizedId) ?? null;
-}
-
-export function gogMetadataFromProduct(
-  product: GogProduct,
-  expanded?: GogExpandedProduct | null,
-): DetailMetadata {
-  const metadata: DetailMetadata = {};
-  const description = cleanStoreText(
-    expanded?.description?.full ||
-      expanded?.description?.lead ||
-      expanded?.description?.whats_cool_about_it ||
-      '',
-  );
-  const releaseDate = normalizeDottedDate(product.releaseDate || product.storeReleaseDate);
-  const developers = uniqueNonEmpty([...(product.developers ?? []), ...(product.publishers ?? [])]);
-  const genres = uniqueNonEmpty(
-    (product.genres ?? []).map((genre) => (typeof genre === 'string' ? genre : genre.name)),
-  );
-  const screenshots = uniqueNonEmpty(
-    (expanded?.screenshots?.length ? expanded.screenshots.map((s) => s.formatter_template_url) : product.screenshots)
-      ?.map((url) => (url ? gogScreenshotUrl(url) : '')) ?? [],
-  );
-  const videos = (expanded?.videos ?? []).flatMap((video) => {
-    if (!video.video_url) return [];
-    const id = gogYoutubeVideoId(video.video_url);
-    if (!id) return [];
-    const item: NonNullable<DetailMetadata['videos']>[number] = {
-      platform: 'youtube',
-      id,
-      url: gogVideoUrl(id, video.video_url),
-    };
-    if (video.thumbnail_url) item.thumbnail = video.thumbnail_url;
-    return [item];
-  });
-
-  if (description) metadata.description = description;
-  if (releaseDate) metadata.release_date = releaseDate;
-  if (developers.length > 0) metadata.developers = developers;
-  if (genres.length > 0) metadata.genres = genres;
-  if (screenshots.length > 0) metadata.screenshots = screenshots;
-  if (videos.length > 0) metadata.videos = videos;
-  return metadata;
 }
 
 export async function gogPriceFromProduct(

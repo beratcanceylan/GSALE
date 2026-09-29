@@ -10,13 +10,7 @@ export interface ParsedPlayStationProduct {
   discount: string;
   image_url: string;
   store_url: string;
-  description?: string;
-  release_date?: string;
-  developers?: string[];
-  genres?: string[];
   platforms?: string[];
-  screenshots?: string[];
-  videos?: { platform: string; id: string; url?: string; thumbnail?: string }[];
   /** Chihiro marks add-ons separately; they must not win a base-game price match. */
   is_add_on?: boolean;
 }
@@ -268,16 +262,6 @@ function stringField(record: Record<string, unknown> | undefined, field: string)
   return typeof value === 'string' ? normalizeText(value) : '';
 }
 
-function parseLocalizedGenres(record: Record<string, unknown> | undefined): string[] {
-  const raw = record?.['localizedGenres'];
-  if (!Array.isArray(raw)) return [];
-  return raw.flatMap((genre) => {
-    if (!isRecord(genre)) return [];
-    const value = genre['value'];
-    return typeof value === 'string' && value.trim() ? [normalizeText(value)] : [];
-  });
-}
-
 function firstStringField(records: Record<string, unknown>[], field: string): string {
   for (const record of records) {
     const value = stringField(record, field);
@@ -286,80 +270,6 @@ function firstStringField(records: Record<string, unknown>[], field: string): st
   return '';
 }
 
-function mergedLocalizedGenres(records: Record<string, unknown>[]): string[] {
-  const seen = new Set<string>();
-  return records.flatMap((record) =>
-    parseLocalizedGenres(record).flatMap((genre) => {
-      const key = genre.toLowerCase();
-      if (seen.has(key)) return [];
-      seen.add(key);
-      return [genre];
-    }),
-  );
-}
-
-function addConceptScreenshot(
-  url: string,
-  screenshots: string[],
-  seenScreenshots: Set<string>,
-): void {
-  if (seenScreenshots.has(url)) return;
-  seenScreenshots.add(url);
-  screenshots.push(url);
-}
-
-function addConceptVideo(
-  url: string,
-  videos: NonNullable<ParsedPlayStationProduct['videos']>,
-  seenVideos: Set<string>,
-): void {
-  if (seenVideos.has(url)) return;
-  seenVideos.add(url);
-  videos.push({ platform: 'ps', id: `ps-video-${videos.length}`, url });
-}
-
-function collectConceptMediaFromRecord(
-  record: Record<string, unknown>,
-  screenshots: string[],
-  videos: NonNullable<ParsedPlayStationProduct['videos']>,
-  seenScreenshots: Set<string>,
-  seenVideos: Set<string>,
-): void {
-  const meta = record['personalizedMeta'];
-  if (!isRecord(meta) || !Array.isArray(meta['media'])) return;
-
-  for (const media of meta['media']) {
-    if (!isRecord(media)) continue;
-    const url = stringField(media, 'url');
-    if (!url) continue;
-
-    const role = stringField(media, 'role').toUpperCase();
-    const type = stringField(media, 'type').toUpperCase();
-    if (role === 'SCREENSHOT' && type === 'IMAGE') {
-      addConceptScreenshot(url, screenshots, seenScreenshots);
-      continue;
-    }
-    if (role === 'PREVIEW' && type === 'VIDEO') {
-      addConceptVideo(url, videos, seenVideos);
-    }
-  }
-}
-
-function parseConceptMedia(records: Record<string, unknown>[]): Pick<ParsedPlayStationProduct, 'screenshots' | 'videos'> {
-  const screenshots: string[] = [];
-  const videos: NonNullable<ParsedPlayStationProduct['videos']> = [];
-  const seenScreenshots = new Set<string>();
-  const seenVideos = new Set<string>();
-
-  for (const record of records) {
-    collectConceptMediaFromRecord(record, screenshots, videos, seenScreenshots, seenVideos);
-  }
-
-  const parsed: Pick<ParsedPlayStationProduct, 'screenshots' | 'videos'> = {};
-  if (screenshots.length > 0) parsed.screenshots = screenshots;
-  if (videos.length > 0) parsed.videos = videos;
-  return parsed;
-}
 
 type CtaPrice = { price: string; original_price: string | null; discount: string };
 
@@ -497,17 +407,6 @@ export function parsePlayStationProductHtml(
     image_url: jsonLdImage(jsonLd),
     store_url: getPlayStationStoreUrl(productId, pathLocale),
   };
-  const description = normalizeText(jsonLd?.description);
-  const publisher = firstStringField(productRecords, 'publisherName');
-  const releaseDate = firstStringField(productRecords, 'releaseDate');
-  const genres = mergedLocalizedGenres(productRecords);
-  const media = parseConceptMedia(cacheRecords);
-  if (description) product.description = description;
-  if (releaseDate) product.release_date = releaseDate;
-  if (publisher) product.developers = [publisher];
-  if (genres.length > 0) product.genres = genres;
-  if (media.screenshots) product.screenshots = media.screenshots;
-  if (media.videos) product.videos = media.videos;
   return product;
 }
 
@@ -607,46 +506,6 @@ function chihiroPlatforms(product: ChihiroProductLike): string[] {
   return chihiroStringArray(product.playable_platform);
 }
 
-function chihiroGenres(product: ChihiroProductLike): string[] {
-  if (!isRecord(product.metadata)) return [];
-  const values: string[] = [];
-  for (const key of ['genre', 'game_genre', 'genres']) {
-    const metadata = product.metadata[key];
-    if (isRecord(metadata)) values.push(...chihiroStringArray(metadata['values']));
-    else values.push(...chihiroStringArray(metadata));
-  }
-  return [...new Set(values)];
-}
-
-function recordsOf(value: unknown): Record<string, unknown>[] {
-  return Array.isArray(value) ? value.filter(isRecord) : [];
-}
-
-/** Preview "shots" are either `{ url }` records or plain URL strings. */
-function previewShotUrls(shots: unknown): unknown[] {
-  return Array.isArray(shots) ? (shots as unknown[]).map((shot) => (isRecord(shot) ? shot['url'] : shot)) : [];
-}
-
-function chihiroMedia(product: ChihiroProductLike): Pick<ParsedPlayStationProduct, 'screenshots' | 'videos'> {
-  if (!isRecord(product.mediaList)) return {};
-  const previews = recordsOf(product.mediaList['previews']).filter((preview) => chihiroString(preview['url']));
-  const screenshotCandidates = [
-    ...recordsOf(product.mediaList['screenshots']).map((screenshot) => screenshot['url']),
-    ...previews.flatMap((preview) => previewShotUrls(preview['shots'])),
-  ];
-  const screenshots = [...new Set(screenshotCandidates.map(chihiroString).filter(Boolean))];
-  const videos = previews.map((preview, index) => ({
-    platform: 'ps',
-    id: `ps-video-${index}`,
-    url: chihiroString(preview['url']),
-  }));
-
-  return {
-    ...(screenshots.length > 0 ? { screenshots } : {}),
-    ...(videos.length > 0 ? { videos } : {}),
-  };
-}
-
 function chihiroProductToParsed(
   product: ChihiroProductLike,
   pathLocale: string,
@@ -685,17 +544,8 @@ function chihiroProductToParsed(
       requiresEntitlement,
   };
 
-  const description = chihiroString(product.long_desc);
-  const releaseDate = chihiroString(product.release_date);
-  const provider = chihiroString(product.provider_name);
   const platforms = chihiroPlatforms(product);
-  const genres = chihiroGenres(product);
-  if (description) parsed.description = description;
-  if (releaseDate) parsed.release_date = releaseDate;
-  if (provider) parsed.developers = [provider];
-  if (genres.length > 0) parsed.genres = genres;
   if (platforms.length > 0) parsed.platforms = platforms;
-  if (detail) Object.assign(parsed, chihiroMedia(product));
   return parsed;
 }
 

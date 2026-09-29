@@ -36,14 +36,8 @@ interface SteamPriceOverview {
 interface SteamAppData {
   name?: string;
   header_image?: string;
-  short_description?: string;
   is_free?: boolean;
   price_overview?: SteamPriceOverview;
-  release_date?: { date?: string };
-  developers?: string[];
-  genres?: { description?: string }[];
-  screenshots?: { path_full?: string }[];
-  movies?: { id: number; thumbnail?: string; mp4?: { max?: string }; hls_h264?: string }[];
   package_groups?: { subs?: SteamPackageSub[] }[];
 }
 
@@ -302,34 +296,13 @@ export async function fetchSteamDetails(
     image_url: data.header_image ?? steamImage(cleanAppId),
     platform: 'Steam',
     source_platform: 'Steam',
-    developers: data.developers ?? [],
-    genres:
-      data.genres?.flatMap((g) => {
-        const description = g.description || '';
-        return description ? [description] : [];
-      }) ?? [],
-    screenshots:
-      data.screenshots?.flatMap((s) => {
-        const path = s.path_full || '';
-        return path ? [path] : [];
-      }) ?? [],
-    videos:
-      data.movies?.flatMap((m) => {
-        const url = m.hls_h264 || m.mp4?.max || '';
-        return url ? [{ platform: 'steam', id: String(m.id), url, thumbnail: m.thumbnail || '' }] : [];
-      }) ?? [],
     rating: null,
     store_links: { Steam: steamStoreUrl(cleanAppId) },
   };
-  if (data.short_description) game.description = data.short_description;
-  if (data.release_date?.date) game.release_date = data.release_date.date;
   const sourcePrice = await steamPriceFromAppData(cleanAppId, data, options);
   if (sourcePrice) game.deals = [platformPriceToGameDeal(sourcePrice)];
   return game;
 }
-
-
-
 
 export async function fetchSteamFreeGames(options?: StoreRequestOptions): Promise<LiveGame[]> {
   const url = `https://store.steampowered.com/api/featuredcategories/?cc=${getStoreCountry()}&l=${getSteamLang()}`;

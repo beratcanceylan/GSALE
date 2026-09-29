@@ -16,12 +16,6 @@ describe('live game API mapping', () => {
     const game: LiveGame = {
       ...base,
       source_platform: 'Xbox',
-      description: 'A game',
-      genres: ['Action'],
-      developers: ['Studio'],
-      release_date: '2026-01-01',
-      screenshots: ['https://example.com/shot.jpg'],
-      videos: [{ platform: 'YouTube', id: 'clip' }],
       store_links: { Steam: 'https://store.steampowered.com/app/1/' },
       platforms: ['Steam'],
       price: '50,00 TL',
@@ -34,12 +28,6 @@ describe('live game API mapping', () => {
     expect(liveGameToSummary(game)).toMatchObject({
       id: 'game-1',
       source_platform: 'Xbox',
-      description: 'A game',
-      genres: ['Action'],
-      developers: ['Studio'],
-      release_date: '2026-01-01',
-      screenshots: ['https://example.com/shot.jpg'],
-      videos: [{ id: 'clip' }],
       store_links: game.store_links,
       platforms: ['Steam'],
       price: '50,00 TL',
@@ -51,25 +39,11 @@ describe('live game API mapping', () => {
     });
   });
 
-  test('maps deals to timestamped prices and leaves absent values null', () => {
-    const response = liveGameToDetailResponse({
-      ...base,
-      deals: [
-        { platform: 'Steam', price: '50,00 TL', discount: '-50%', store_url: 'https://store.steampowered.com/app/1/' },
-        { platform: 'GOG', price: '60,00 TL', discount: '' },
-      ],
-    }, 123);
-    expect(response.prices).toEqual([
-      {
-        id: 1, game_id: 'game-1', platform: 'Steam', price: '50,00 TL', original_price: null,
-        discount: '-50%', store_url: 'https://store.steampowered.com/app/1/', subscription_note: null, fetched_at: 123,
-      },
-      {
-        id: 2, game_id: 'game-1', platform: 'GOG', price: '60,00 TL', original_price: null,
-        discount: null, store_url: null, subscription_note: null, fetched_at: 123,
-      },
-    ]);
-    expect(response.meta.prices_fetched_at).toBe(123);
-    expect(liveGameToDetailResponse(base, 123).meta.prices_fetched_at).toBeNull();
+  test('detail responses carry the opened edition and every edition option', () => {
+    const editions = [{ key: 'base' as const, deals: [{ platform: 'Steam', price: '50,00 TL', discount: '-50%' }] }];
+    const response = liveGameToDetailResponse({ game: { ...base, edition: 'deluxe' }, editions });
+    expect(response.game).toMatchObject({ id: 'game-1', edition: 'deluxe' });
+    expect(response.editions).toBe(editions);
   });
+
 });

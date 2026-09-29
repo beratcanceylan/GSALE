@@ -6,10 +6,6 @@ import {
 } from '@/services/store/platforms/epic-price';
 import {
   epicOfferToSearchHit,
-  epicOfferToGameMedia,
-  epicDetailImage,
-  epicMediaToGameMedia,
-  epicMetadataFromOffer,
   pickBestEpicOffers,
   pickBestEpicOffer,
 } from '@/services/store/platforms/epic-search';
@@ -200,88 +196,6 @@ describe('Epic offer search mapping', () => {
       image_url: 'https://cdn.example/wide.jpg',
       platform: 'Epic Games',
       store_url: 'https://store.epicgames.com/p/grand-theft-auto-v',
-    });
-  });
-
-  test('maps Epic offer metadata and media into game detail fields', () => {
-    const metadata = epicMetadataFromOffer({
-      title: 'Grand Theft Auto V Enhanced',
-      description: 'Experience GTA V.',
-      releaseDate: '2025-03-04T12:00:00.000Z',
-      developerDisplayName: 'Rockstar North',
-      publisherDisplayName: 'Rockstar Games  ',
-      tags: [
-        { name: 'Action' },
-        { name: 'Windows' },
-        { name: 'Open World' },
-        { name: 'Epic MEGA Sale' },
-      ],
-    });
-    const media = epicMediaToGameMedia({
-      images: [{ src: 'https://cdn.example/screenshot-1.jpg' }],
-      videos: [
-        {
-          outputs: [
-            { key: 'thumbnail', url: 'https://cdn.example/thumb.png' },
-            { key: 'medium', url: 'https://cdn.example/trailer.webm' },
-          ],
-        },
-      ],
-    });
-
-    expect(metadata).toEqual({
-      description: 'Experience GTA V.',
-      release_date: '2025-03-04T12:00:00.000Z',
-      developers: ['Rockstar North', 'Rockstar Games'],
-      genres: ['Action', 'Open World'],
-    });
-    expect(media).toEqual({
-      screenshots: ['https://cdn.example/screenshot-1.jpg'],
-      videos: [
-        {
-          platform: 'epic',
-          id: 'epic-video-0',
-          url: 'https://cdn.example/trailer.webm',
-          thumbnail: 'https://cdn.example/thumb.png',
-        },
-      ],
-    });
-  });
-
-  test('falls back to seller name for Epic developer metadata', () => {
-    expect(
-      epicMetadataFromOffer({
-        title: 'Fortnite',
-        description: 'Fortnite Battle Royale',
-        seller: { name: 'Epic Games' },
-      }).developers,
-    ).toEqual(['Epic Games']);
-  });
-
-  test('uses current Epic media artwork before stale offer artwork for detail hero', () => {
-    const image = epicDetailImage(
-      {
-        keyImages: [{ type: 'DieselStoreFrontWide', url: 'https://cdn.example/old.jpg' }],
-      },
-      {
-        images: [{ src: 'https://cdn.example/current.jpg' }],
-      },
-    );
-
-    expect(image).toBe('https://cdn.example/current.jpg');
-  });
-
-  test('uses Epic offer key images as detail screenshots when media endpoint has none', () => {
-    const media = epicOfferToGameMedia({
-      keyImages: [
-        { type: 'AndroidIcon', url: 'https://cdn.example/icon.jpg' },
-        { type: 'DieselGameBoxWide', url: 'https://cdn.example/wide.jpg' },
-        { type: 'featuredMedia', url: 'https://cdn.example/feature.jpg' },
-      ],
-    });
-
-    expect(media).toEqual({
-      screenshots: ['https://cdn.example/wide.jpg', 'https://cdn.example/feature.jpg'],
     });
   });
 

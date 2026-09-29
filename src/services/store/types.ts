@@ -1,3 +1,6 @@
+import type { EditionOption } from '@/services/store/edition-table';
+import type { EditionKey } from '@/services/store/editions';
+
 /** Store layer types aligned with src/services/api.ts */
 
 export interface GameDeal {
@@ -22,13 +25,7 @@ export interface LiveGame {
   platform: string;
   source_platform?: string;
   slug?: string;
-  edition?: string;
-  description?: string;
-  genres?: string[];
-  developers?: string[];
-  release_date?: string;
-  screenshots?: string[];
-  videos?: { platform: string; id: string; url?: string; thumbnail?: string }[];
+  edition?: EditionKey;
   store_links?: Record<string, string>;
   platforms?: string[];
   price?: string;
@@ -63,12 +60,6 @@ export interface GameSummary {
   id: string;
   title: string;
   image_url: string;
-  description?: string;
-  genres?: string[];
-  developers?: string[];
-  release_date?: string;
-  screenshots?: string[];
-  videos?: { platform: string; id: string; url?: string; thumbnail?: string }[];
   store_links?: Record<string, string>;
   platforms?: string[];
   platform?: string;
@@ -82,22 +73,8 @@ export interface GameSummary {
   upcoming_date_str?: string;
 }
 
-export interface Price {
-  id: number;
-  game_id: string;
-  platform: string;
-  price: string | null;
-  original_price: string | null;
-  discount: string | null;
-  store_url: string | null;
-  subscription_note: string | null;
-  fetched_at: number;
-}
-
 export interface GameDetailResponse {
-  game: GameSummary;
-  prices: Price[];
-  meta: {
-    prices_fetched_at: number | null;
-  };
+  game: GameSummary & { edition: EditionKey };
+  /** Every edition found across the stores, base first; each lists one deal per store. */
+  editions: EditionOption[];
 }

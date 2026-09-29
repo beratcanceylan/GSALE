@@ -6,9 +6,10 @@ export {
   getGameDetail,
   getHomeSections,
   searchGames,
+  type EditionKey,
+  type EditionOption,
   type GameDetailResponse,
   type GameSummary,
   type HomeSection,
-  type Price,
   type StoreRequestOptions,
 } from '@/services/store';

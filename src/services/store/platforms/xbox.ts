@@ -6,7 +6,6 @@ import { baseTitle } from '@/services/store/editions';
 import { fetchJson, fetchPostJson, fetchText, throwIfAborted, withRetry } from '@/services/store/fetch';
 import { firstResult } from '@/services/store/sequence';
 import { pickXboxSearchImage } from '@/services/store/platforms/xbox-image';
-import { xboxMetadataFromProduct } from '@/services/store/platforms/xbox-metadata';
 import { getXboxListPrice, type XboxSelectedPrice } from '@/services/store/platforms/xbox-price';
 import {
   parseXboxAutosuggestProductIds,
@@ -323,7 +322,6 @@ export async function fetchXboxDetails(
     image_url: pickXboxSearchImage(product),
     platform: 'Xbox',
     source_platform: 'Xbox',
-    ...xboxMetadataFromProduct(product),
     rating: null,
     store_links: { Xbox: xboxStoreUrl(id) },
     ...(deal ? { deals: [deal] } : {}),

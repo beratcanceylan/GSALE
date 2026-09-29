@@ -402,14 +402,8 @@ export async function fetchPlayStationDetails(
     },
   };
 
-  if (parsed.description) game.description = parsed.description;
   if (parsed.original_price) game.original_price = parsed.original_price;
-  if (parsed.release_date) game.release_date = parsed.release_date;
-  if (parsed.developers) game.developers = parsed.developers;
-  if (parsed.genres) game.genres = parsed.genres;
   if (parsed.platforms) game.platforms = parsed.platforms;
-  if (parsed.screenshots) game.screenshots = parsed.screenshots;
-  if (parsed.videos) game.videos = parsed.videos;
   if (parsed.price && !isUnavailablePrice(parsed.price)) {
     game.deals = [
       platformPriceToGameDeal({

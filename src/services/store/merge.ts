@@ -121,10 +121,6 @@ export function prepareLiveGame(game: LiveGame): LiveGame {
     id,
     source_platform: game.source_platform ?? game.platform,
     platforms: game.platforms ?? (game.platform ? [game.platform] : []),
-    genres: game.genres ?? [],
-    developers: game.developers ?? [],
-    screenshots: game.screenshots ?? [],
-    videos: game.videos ?? [],
     store_links: game.store_links ?? {},
     rating: game.rating ?? null,
   };

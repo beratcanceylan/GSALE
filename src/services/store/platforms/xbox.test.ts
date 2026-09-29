@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'bun:test';
 
-import { xboxMetadataFromProduct } from '@/services/store/platforms/xbox-metadata';
 import {
   parseXboxAutosuggestProductIds,
   parseXboxSearchProductIds,
@@ -82,48 +81,6 @@ describe('Xbox list price', () => {
       msrp: 0,
       currency: 'TRY',
       isFree: true,
-    });
-  });
-
-  test('maps display catalog metadata into detail fields', () => {
-    const metadata = xboxMetadataFromProduct({
-      MarketProperties: [{ OriginalReleaseDate: '2023-09-25T21:00:00.0000000Z' }],
-      Properties: { Categories: ['Role playing'] },
-      LocalizedProperties: [
-        {
-          ProductDescription: '<p>Spy-thriller adventure.</p>',
-          ShortDescription: 'Short text',
-          DeveloperName: 'CD PROJEKT RED',
-          PublisherName: 'CD PROJEKT RED',
-          Images: [
-            { ImagePurpose: 'Poster', Uri: '//store-images.example/poster.jpg' },
-            { ImagePurpose: 'Screenshot', Uri: '//store-images.example/shot-1.jpg' },
-          ],
-          CMSVideos: [
-            {
-              HLS: 'https://cdn.example/trailer.m3u8',
-              PreviewImage: { Uri: '//store-images.example/trailer.jpg' },
-              TrailerId: 'trailer-1',
-            },
-          ],
-        },
-      ],
-    });
-
-    expect(metadata).toEqual({
-      description: 'Spy-thriller adventure.',
-      release_date: '2023-09-25T21:00:00.0000000Z',
-      developers: ['CD PROJEKT RED'],
-      genres: ['Role playing'],
-      screenshots: ['https://store-images.example/shot-1.jpg'],
-      videos: [
-        {
-          platform: 'xbox',
-          id: 'trailer-1',
-          url: 'https://cdn.example/trailer.m3u8',
-          thumbnail: 'https://store-images.example/trailer.jpg',
-        },
-      ],
     });
   });
 });

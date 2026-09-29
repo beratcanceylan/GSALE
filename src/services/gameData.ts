@@ -1,7 +1,5 @@
 /**
- * Game Data Service
- * Backend API üzerinden oyun verilerini çeker.
- * Eski statik JSON import'u kaldırıldı.
+ * Game data for the screens: store API results mapped to the UI `Game` shape.
  */
 
 import {
@@ -10,20 +8,24 @@ import {
   getHomeSections,
   getFreeGames,
   type GameSummary,
+  type EditionKey,
   type GameDetailResponse,
-  type Price,
   type StoreRequestOptions,
 } from './api';
 import { resolveCardPrice } from '@/utils/gameDisplay';
 
-// Uyumluluk için eski tipleri koruyalım ama yeni yapıya map'leyelim
-interface Deal {
+export interface Deal {
   platform: string;
   price: string;
   originalPrice?: string | undefined;
   discount: string;
   url: string;
   subscriptionNote?: string | undefined;
+}
+
+export interface EditionOptionView {
+  key: EditionKey;
+  deals: Deal[];
 }
 
 export interface Game {
@@ -37,13 +39,11 @@ export interface Game {
   originalPrice?: string | undefined;
   imageUrl: string;
   url: string;
-  description?: string | undefined;
-  genres?: string[] | undefined;
-  screenshots?: string[] | undefined;
-  developers?: string[] | undefined;
-  release_date?: string | undefined;
-  videos?: { platform: string; id: string; url?: string; thumbnail?: string }[] | undefined;
   deals: Deal[];
+  /** Edition of the opened product (detail only). */
+  edition?: EditionKey | undefined;
+  /** Every edition across the stores, base first (detail only). */
+  editions?: EditionOptionView[] | undefined;
   rating?: number | null | undefined;
   store_links?: Record<string, string> | undefined;
   upcoming?: boolean | undefined;
@@ -52,14 +52,7 @@ export interface Game {
 
 // GameSummary → Game dönüşümü (UI bileşenleri ile uyumluluk)
 function mapSummaryToGame(summary: GameSummary): Game {
-  const deals: Deal[] = (summary.deals || []).map(d => ({
-    platform: d.platform,
-    price: d.price,
-    originalPrice: d.original_price,
-    discount: d.discount,
-    url: d.store_url || '',
-    subscriptionNote: d.subscription_note,
-  }));
+  const deals: Deal[] = (summary.deals || []).map(mapDeal);
 
   const game: Game = {
     id: summary.id,
@@ -75,12 +68,6 @@ function mapSummaryToGame(summary: GameSummary): Game {
   };
   if (summary.platforms) game.platforms = summary.platforms;
   if (summary.original_price !== undefined) game.originalPrice = summary.original_price;
-  if (summary.description) game.description = summary.description;
-  if (summary.genres) game.genres = summary.genres;
-  if (summary.screenshots) game.screenshots = summary.screenshots;
-  if (summary.developers) game.developers = summary.developers;
-  if (summary.release_date) game.release_date = summary.release_date;
-  if (summary.videos) game.videos = summary.videos;
   if (summary.store_links) game.store_links = summary.store_links;
   if (summary.upcoming !== undefined) game.upcoming = summary.upcoming;
   if (summary.upcoming_date_str) game.upcoming_date_str = summary.upcoming_date_str;
@@ -98,17 +85,25 @@ function applyResolvedSummaryPrice(game: Game): Game {
   };
 }
 
-// GameDetailResponse → Game dönüşümü (fiyatlar dahil)
-function mapDetailToGame(detail: GameDetailResponse): Game {
-  const deals: Deal[] = detail.prices.map((p: Price) => ({
-    platform: p.platform,
-    price: p.price || 'Bilinmiyor',
-    originalPrice: p.original_price || undefined,
-    discount: p.discount || '',
-    url: p.store_url || '',
-    subscriptionNote: p.subscription_note || undefined,
-  }));
+function mapDeal(deal: NonNullable<GameSummary['deals']>[number]): Deal {
+  return {
+    platform: deal.platform,
+    price: deal.price,
+    originalPrice: deal.original_price,
+    discount: deal.discount,
+    url: deal.store_url || '',
+    subscriptionNote: deal.subscription_note,
+  };
+}
 
+/** The opened product with every edition; `deals` are the opened edition's (or the first edition's). */
+function mapDetailToGame(detail: GameDetailResponse): Game {
+  const editions: EditionOptionView[] = detail.editions.map((option) => ({
+    key: option.key,
+    deals: option.deals.map(mapDeal),
+  }));
+  const selected = editions.find((option) => option.key === detail.game.edition) ?? editions[0];
+  const deals = selected?.deals ?? [];
   const firstDeal = deals[0];
 
   const game: Game = {
@@ -122,15 +117,11 @@ function mapDetailToGame(detail: GameDetailResponse): Game {
     url: firstDeal?.url || '',
     deals,
     rating: detail.game.rating,
+    edition: detail.game.edition,
+    editions,
   };
   if (detail.game.platforms) game.platforms = detail.game.platforms;
   if (firstDeal?.originalPrice !== undefined) game.originalPrice = firstDeal.originalPrice;
-  if (detail.game.description) game.description = detail.game.description;
-  if (detail.game.genres) game.genres = detail.game.genres;
-  if (detail.game.screenshots) game.screenshots = detail.game.screenshots;
-  if (detail.game.developers) game.developers = detail.game.developers;
-  if (detail.game.release_date) game.release_date = detail.game.release_date;
-  if (detail.game.videos) game.videos = detail.game.videos;
   if (detail.game.store_links) game.store_links = detail.game.store_links;
   return applyResolvedSummaryPrice(game);
 }

@@ -113,10 +113,6 @@ describe('fetchSteamDetails', () => {
           name: 'Counter-Strike 2',
           header_image: 'https://cdn/730.jpg',
           short_description: 'Tactical shooter',
-          release_date: { date: '27 Sep, 2023' },
-          developers: ['Valve'],
-          genres: [{ description: 'Action' }, { description: '' }],
-          screenshots: [{ path_full: 'https://cdn/s1.jpg' }, {}],
           movies: [{ id: 1, hls_h264: 'https://cdn/m.m3u8', thumbnail: 'https://cdn/t.jpg' }, { id: 2, mp4: { max: 'https://cdn/m.mp4' } }, { id: 3 }],
           is_free: true,
         },
@@ -126,15 +122,6 @@ describe('fetchSteamDetails', () => {
       id: '730',
       title: 'Counter-Strike 2',
       image_url: 'https://cdn/730.jpg',
-      description: 'Tactical shooter',
-      release_date: '27 Sep, 2023',
-      developers: ['Valve'],
-      genres: ['Action'],
-      screenshots: ['https://cdn/s1.jpg'],
-      videos: [
-        { id: '1', url: 'https://cdn/m.m3u8', thumbnail: 'https://cdn/t.jpg' },
-        { id: '2', url: 'https://cdn/m.mp4', thumbnail: '' },
-      ],
       deals: [{ price: 'Ücretsiz' }],
     });
   });
@@ -143,10 +130,6 @@ describe('fetchSteamDetails', () => {
     routeFetch(() => ({ 5: { success: true, data: { name: 'Sparse' } } }));
     expect(await fetchSteamDetails('5')).toMatchObject({
       image_url: 'https://cdn.akamai.steamstatic.com/steam/apps/5/header.jpg',
-      developers: [],
-      genres: [],
-      screenshots: [],
-      videos: [],
     });
 
     routeFetch(() => ({ 6: { success: true, data: {} } }));

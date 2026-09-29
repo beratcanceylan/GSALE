@@ -28,7 +28,6 @@ const MARIO = {
   title: 'Super Mario Bros. Wonder',
   url: '/us/store/products/super-mario-bros-wonder-switch/',
   productImage: 'store/software/switch/70010000068688/cover',
-  description: 'Wonder!',
   releaseDate: '2023-10-20',
   corePlatforms: [{ label: 'Nintendo Switch' }, '', 5],
   softwareDeveloper: ['Nintendo'],
@@ -59,8 +58,6 @@ describe('parseNintendoProduct', () => {
       currency: 'USD',
       discount: '-29%',
       platform: 'Nintendo Switch',
-      developers: ['Nintendo'],
-      genres: ['Platformer', 'Action'],
       is_add_on: false,
     });
   });
@@ -110,10 +107,6 @@ describe('Nintendo store adapter', () => {
     expect(await fetchNintendoDetails('nintendo-mario-wonder')).toMatchObject({
       id: 'nintendo-mario-wonder',
       title: 'Super Mario Bros. Wonder',
-      description: 'Wonder!',
-      release_date: '2023-10-20',
-      developers: ['Nintendo'],
-      genres: ['Platformer', 'Action'],
       platforms: ['Nintendo Switch'],
       deals: [{ price: '1.999,60 TL' }],
     });

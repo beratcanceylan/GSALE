@@ -13,10 +13,6 @@ export interface ParsedNintendoProduct {
   discount: string;
   image_url: string;
   store_url: string;
-  description?: string;
-  release_date?: string;
-  developers?: string[];
-  genres?: string[];
   platform?: string;
   is_add_on?: boolean;
 }
@@ -98,20 +94,6 @@ function priceParts(hit: Record<string, unknown>): {
   };
 }
 
-function productGenres(hit: Record<string, unknown>): string[] {
-  return [...new Set([
-    ...stringArray(hit['gameGenreLabels']),
-    ...stringArray(hit['genres']),
-  ])];
-}
-
-function productDevelopers(hit: Record<string, unknown>): string[] {
-  return [...new Set([
-    ...stringArray(hit['softwareDeveloper']),
-    ...stringArray(hit['softwarePublisher']),
-  ])];
-}
-
 /** Convert one current Nintendo.com Algolia hit into the store-neutral model. */
 export function parseNintendoProduct(value: unknown): ParsedNintendoProduct | null {
   if (!isRecord(value)) return null;
@@ -143,16 +125,8 @@ export function parseNintendoProduct(value: unknown): ParsedNintendoProduct | nu
       (Boolean(dlcType) && dlcType !== 'none' && dlcType !== 'null'),
   };
 
-  const description = stringValue(value['description']);
-  const releaseDate = stringValue(value['releaseDate']);
   const platform = stringValue(value['platform']) || stringArray(value['corePlatforms'])[0];
-  const developers = productDevelopers(value);
-  const genres = productGenres(value);
-  if (description) parsed.description = description;
-  if (releaseDate) parsed.release_date = releaseDate;
   if (platform) parsed.platform = platform;
-  if (developers.length > 0) parsed.developers = developers;
-  if (genres.length > 0) parsed.genres = genres;
   return parsed;
 }
 

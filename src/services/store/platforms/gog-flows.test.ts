@@ -75,7 +75,6 @@ describe('fetchGogDetails', () => {
     title: 'The Witcher 3',
     slug: 'the_witcher_3',
     images: { logo: '//images.gog.com/logo.png' },
-    description: { lead: 'Geralt returns.' },
   };
 
   test('combines the expanded product with the priced catalog entry', async () => {
@@ -86,7 +85,6 @@ describe('fetchGogDetails', () => {
       title: 'The Witcher 3',
       price: '400,00 TL',
       original_price: '800,00 TL',
-      description: 'Geralt returns.',
       store_links: { GOG: 'https://www.gog.com/game/the_witcher_3' },
       deals: [{ platform: 'GOG', price: '400,00 TL' }],
     });

@@ -72,23 +72,11 @@ describe('PlayStation Store SSR parsing', () => {
     expect(parsed).toMatchObject({
       id: PRODUCT_ID,
       title: 'Hades',
-      description: 'Zindan macerasi',
       image_url: 'https://image.api.playstation.com/hades-cover.jpg',
       price: '307,65 TL',
       original_price: '879,00 TL',
       discount: '-65%',
       store_url: `https://store.playstation.com/tr-tr/product/${PRODUCT_ID}`,
-      release_date: '2021-08-13T00:00:00Z',
-      developers: ['Supergiant Games'],
-      genres: ['Aksiyon'],
-      screenshots: ['https://image.api.playstation.com/hades-shot.jpg'],
-      videos: [
-        {
-          platform: 'ps',
-          id: 'ps-video-0',
-          url: 'https://vulcan.dl.playstation.net/hades-trailer.mp4',
-        },
-      ],
     });
   });
 
@@ -100,7 +88,6 @@ describe('PlayStation Store SSR parsing', () => {
       default_sku: { display_price: '307,65 TL', price: 30765 },
       images: [{ type: 10, url: 'https://image.api.playstation.com/hades-cover.jpg' }],
       mediaList: {
-        screenshots: [{ type: 'SCREENSHOT', url: 'https://image.api.playstation.com/hades-shot.jpg' }],
         previews: [{ type: 'PREVIEW', url: 'https://video.playstation.net/hades.mp4' }],
       },
       metadata: { genre: { values: ['Action'] } },
@@ -109,8 +96,6 @@ describe('PlayStation Store SSR parsing', () => {
 
     expect(parsePlayStationChihiroResponse(payload, 'tr-tr', true)[0]).toMatchObject({
       title: 'Hades',
-      screenshots: ['https://image.api.playstation.com/hades-shot.jpg'],
-      videos: [{ platform: 'ps', url: 'https://video.playstation.net/hades.mp4' }],
     });
   });
 
@@ -331,7 +316,6 @@ describe('Chihiro parsing', () => {
           metadata: { genre: { values: ['Action'] } },
           playable_platform: ['PS5'],
           provider_name: 'Supergiant Games',
-          release_date: '2021-08-13T00:00:00Z',
         },
       ],
     };
@@ -344,7 +328,6 @@ describe('Chihiro parsing', () => {
       price: '307,65 TL',
       image_url: 'https://image.api.playstation.com/hades-cover.jpg',
       platforms: ['PS5'],
-      genres: ['Action'],
       is_add_on: false,
     });
   });

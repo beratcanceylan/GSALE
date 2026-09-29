@@ -4,8 +4,6 @@ import type { GameDetailResponse, GameSummary } from '@/services/api';
 
 const summary: GameSummary = {
   id: '1', title: 'Example', image_url: 'https://example.com/cover.jpg', platform: 'Steam', rating: null,
-  description: 'Story', genres: ['Action'], developers: ['Studio'], release_date: '2026-01-01',
-  screenshots: ['https://example.com/shot.jpg'], videos: [{ platform: 'YouTube', id: 'clip' }],
   store_links: { Steam: 'https://store.steampowered.com/app/1/' }, platforms: ['Steam'],
   price: '100,00 TL', original_price: '200,00 TL', discount: '-50%',
   deals: [{ platform: 'Steam', price: '100,00 TL', original_price: '200,00 TL', discount: '-50%', store_url: 'https://store.steampowered.com/app/1/' }],
@@ -13,10 +11,13 @@ const summary: GameSummary = {
 };
 
 let searchResults: GameSummary[] = [summary];
+const steamDeal = { platform: 'Steam', price: '100,00 TL', original_price: '200,00 TL', discount: '-50%', store_url: 'https://store.steampowered.com/app/1/' };
 let detailResult: GameDetailResponse = {
-  game: summary,
-  prices: [{ id: 1, game_id: '1', platform: 'Steam', price: '100,00 TL', original_price: '200,00 TL', discount: '-50%', store_url: 'https://store.steampowered.com/app/1/', subscription_note: null, fetched_at: 1 }],
-  meta: { prices_fetched_at: 1 },
+  game: { ...summary, edition: 'deluxe' },
+  editions: [
+    { key: 'base', deals: [{ platform: 'GOG', price: '80,00 TL', discount: '' }] },
+    { key: 'deluxe', deals: [steamDeal] },
+  ],
 };
 
 mock.module('./api', () => ({
@@ -33,9 +34,7 @@ describe('game data mapping', () => {
     const [search] = await fetchSearchResults('Example');
     expect(search).toMatchObject({
       id: '1', title: 'Example', platform: 'Steam', source_platform: 'Steam',
-      imageUrl: summary.image_url, description: 'Story', genres: ['Action'],
-      developers: ['Studio'], release_date: '2026-01-01', screenshots: summary.screenshots,
-      videos: summary.videos, store_links: summary.store_links, platforms: ['Steam'],
+      imageUrl: summary.image_url, store_links: summary.store_links, platforms: ['Steam'],
       price: '100,00 TL', originalPrice: '200,00 TL', discount: '-50%',
       upcoming: false, upcoming_date_str: 'soon',
     });
@@ -44,21 +43,24 @@ describe('game data mapping', () => {
     expect((await fetchFreeGames())[0]).toEqual(search);
   });
 
-  test('maps detail prices, unknown values and empty details', async () => {
-    expect(await fetchGameDetail('1')).toMatchObject({
-      platform: 'Steam', price: '100,00 TL', originalPrice: '200,00 TL',
-      deals: [{ url: 'https://store.steampowered.com/app/1/' }],
+  test('maps every edition and shows the opened edition\'s deals', async () => {
+    const game = await fetchGameDetail('1');
+    expect(game).toMatchObject({
+      edition: 'deluxe', platform: 'Steam', price: '100,00 TL', originalPrice: '200,00 TL',
+      deals: [{ platform: 'Steam', url: 'https://store.steampowered.com/app/1/' }],
     });
-    detailResult = {
-      game: { id: '2', title: 'Unpriced', image_url: '', rating: null },
-      prices: [{ id: 1, game_id: '2', platform: 'GOG', price: null, original_price: null, discount: null, store_url: null, subscription_note: null, fetched_at: 1 }],
-      meta: { prices_fetched_at: null },
-    };
-    expect(await fetchGameDetail('2')).toMatchObject({
-      platform: 'GOG', source_platform: '', price: 'Bilinmiyor', url: '',
-      deals: [{ price: 'Bilinmiyor', discount: '', url: '' }],
-    });
-    detailResult = { ...detailResult, prices: [] };
+    expect(game.editions?.map((option) => [option.key, option.deals.map((deal) => deal.platform)])).toEqual([
+      ['base', ['GOG']],
+      ['deluxe', ['Steam']],
+    ]);
+  });
+
+  test('falls back to the first edition, and to no deals without editions', async () => {
+    detailResult = { game: { id: '2', title: 'Unpriced', image_url: '', rating: null, edition: 'gold' }, editions: [
+      { key: 'base', deals: [{ platform: 'GOG', price: '80,00 TL', discount: '' }] },
+    ] };
+    expect(await fetchGameDetail('2')).toMatchObject({ platform: 'GOG', source_platform: '', deals: [{ url: '' }] });
+    detailResult = { ...detailResult, editions: [] };
     expect((await fetchGameDetail('2')).deals).toEqual([]);
   });
 

@@ -41,7 +41,6 @@ describe('PlayStation detail price fallback', () => {
       const game = await fetchPlayStationDetails(`ps-${productId}`);
 
       expect(game?.title).toBe('007 First Light');
-      expect(game?.description).toBe('An espionage adventure.');
       expect(game?.deals).toBeUndefined();
       expect(game?.price).toBe('Bilinmiyor');
       expect(urls).toHaveLength(2);
@@ -94,10 +93,9 @@ describe('PlayStation detail price fallback', () => {
 
     const game = await fetchGameDetailLive(`ps-${productId}`, 'PlayStation');
 
-    expect(game?.title).toBe('007 First Light');
-    expect(game?.deals).toHaveLength(1);
-    expect(game?.deals?.[0]?.platform).toBe('Steam');
-    expect(game?.deals?.[0]?.price).toBe('1.500,00 TL');
+    expect(game?.game.title).toBe('007 First Light');
+    const deals = game?.editions.find((option) => option.key === 'base')?.deals ?? [];
+    expect(deals.map((deal) => [deal.platform, deal.price])).toEqual([['Steam', '1.500,00 TL']]);
   });
 });
 

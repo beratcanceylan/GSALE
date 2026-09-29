@@ -1,5 +1,4 @@
 import { pickBestTitleMatch, scoreProductTitleMatch } from '@/services/store/match';
-import { cleanStoreText, uniqueNonEmpty, type DetailMetadata } from '@/services/store/metadata';
 import type { PlatformSearchHit } from '@/services/store/types';
 
 export interface EpicOfferImage {
@@ -27,20 +26,6 @@ export interface EpicOffer {
   customAttributes?: Record<string, unknown> | { key?: string; value?: unknown }[];
 }
 
-export interface EpicMediaOutput {
-  key?: string | null;
-  url?: string | null;
-}
-
-export interface EpicMediaVideo {
-  outputs?: EpicMediaOutput[];
-}
-
-export interface EpicMediaResponse {
-  images?: { src?: string | null }[];
-  videos?: EpicMediaVideo[];
-}
-
 export function epicImage(el: { keyImages?: EpicOfferImage[] }): string {
   const images = el.keyImages ?? [];
   const wide =
@@ -50,35 +35,6 @@ export function epicImage(el: { keyImages?: EpicOfferImage[] }): string {
     images.find((i) => i.type === 'Thumbnail') ||
     images.find((i) => i.type === 'OfferImageTall');
   return wide?.url || tall?.url || images[0]?.url || '';
-}
-
-export function epicDetailImage(
-  offer: { keyImages?: EpicOfferImage[] },
-  media?: EpicMediaResponse | null,
-): string {
-  return media?.images?.find((image) => image.src)?.src || epicImage(offer);
-}
-
-const EPIC_DETAIL_IMAGE_TYPES = new Set([
-  'dieselgamebox',
-  'dieselgameboxwide',
-  'dieselstorefrontwide',
-  'offerimagewide',
-  'featuredmedia',
-]);
-
-export function epicOfferToGameMedia(offer: { keyImages?: EpicOfferImage[] }): DetailMetadata {
-  const metadata: DetailMetadata = {};
-  const screenshotUrls: (string | null | undefined)[] = [];
-  for (const image of offer.keyImages ?? []) {
-    if (EPIC_DETAIL_IMAGE_TYPES.has((image.type ?? '').toLowerCase())) {
-      screenshotUrls.push(image.url);
-    }
-  }
-  const screenshots = uniqueNonEmpty(screenshotUrls).slice(0, 12);
-
-  if (screenshots.length > 0) metadata.screenshots = screenshots;
-  return metadata;
 }
 
 export function getEpicRouteSlug(el: EpicOffer): string {
@@ -168,72 +124,4 @@ export function pickBestEpicOffers<T extends EpicOffer>(offers: T[], searchTitle
     }
   }
   return [...bestByTitle.values()].map((entry) => entry.offer);
-}
-
-const EPIC_TAG_DENYLIST = new Set([
-  'achievements',
-  'epic mega sale',
-  'windows',
-  'mac os',
-  'recommend this game',
-  'great for beginners',
-]);
-
-export function epicMetadataFromOffer(offer: EpicOffer): DetailMetadata {
-  const metadata: DetailMetadata = {};
-  const description = cleanStoreText(offer.description || offer.longDescription || '');
-  const developers = uniqueNonEmpty([
-    offer.developerDisplayName,
-    offer.publisherDisplayName,
-    offer.seller?.name,
-  ]);
-  const genreNames: (string | null | undefined)[] = [];
-  for (const tag of offer.tags ?? []) {
-    const name = tag.name;
-    if (!EPIC_TAG_DENYLIST.has((name ?? '').trim().toLowerCase())) {
-      genreNames.push(name);
-    }
-  }
-  const genres = uniqueNonEmpty(genreNames).slice(0, 8);
-
-  if (description) metadata.description = description;
-  const releaseDate = offer.pcReleaseDate || offer.releaseDate || '';
-  if (releaseDate) metadata.release_date = releaseDate;
-  if (developers.length > 0) metadata.developers = developers;
-  if (genres.length > 0) metadata.genres = genres;
-  return metadata;
-}
-
-function pickEpicVideoUrl(outputs: EpicMediaOutput[] | undefined): string {
-  const preferred =
-    outputs?.find((output) => output.key === 'high') ||
-    outputs?.find((output) => output.key === 'medium') ||
-    outputs?.find((output) => output.key === 'low') ||
-    outputs?.find((output) => output.url && output.key !== 'thumbnail');
-  return preferred?.url ?? '';
-}
-
-function pickEpicVideoThumbnail(outputs: EpicMediaOutput[] | undefined): string {
-  return outputs?.find((output) => output.key === 'thumbnail')?.url ?? '';
-}
-
-export function epicMediaToGameMedia(media: EpicMediaResponse | null | undefined): DetailMetadata {
-  const metadata: DetailMetadata = {};
-  const screenshots = uniqueNonEmpty((media?.images ?? []).map((image) => image.src));
-  const videos = (media?.videos ?? []).flatMap((video, index) => {
-    const url = pickEpicVideoUrl(video.outputs);
-    if (!url) return [];
-    const item: NonNullable<DetailMetadata['videos']>[number] = {
-      platform: 'epic',
-      id: `epic-video-${index}`,
-      url,
-    };
-    const thumbnail = pickEpicVideoThumbnail(video.outputs);
-    if (thumbnail) item.thumbnail = thumbnail;
-    return [item];
-  });
-
-  if (screenshots.length > 0) metadata.screenshots = screenshots;
-  if (videos.length > 0) metadata.videos = videos;
-  return metadata;
 }

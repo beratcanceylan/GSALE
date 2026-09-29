@@ -7,7 +7,6 @@ import { firstResult } from '@/services/store/sequence';
 import { isUnavailablePrice } from '@/services/store/price-parse';
 import {
   gogImage,
-  gogMetadataFromProduct,
   pickGogProductById,
   gogPriceFromProduct,
   type GogExpandedProduct,
@@ -228,7 +227,6 @@ export async function fetchGogDetails(
   const priced = catalogProduct
     ? await gogPriceFromProduct(catalogProduct, options?.signal)
     : { price: 'Bilinmiyor', original_price: null, discount: '' };
-  const metadata = gogMetadataFromProduct(product, expanded);
 
   const game: LiveGame = {
     id: `gog-${product.id}`,
@@ -239,7 +237,6 @@ export async function fetchGogDetails(
     source_platform: 'GOG',
     price: priced.price,
     discount: priced.discount,
-    ...metadata,
     rating: null,
     store_links: {
       GOG: gogStoreUrl(product),
