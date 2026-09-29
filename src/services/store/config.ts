@@ -1,5 +1,5 @@
 import { getAppCountry, getCountryConfig, type CountryCode, type StoreCountry } from '@/services/country';
-import { getAppLocale } from '@/services/locale';
+import { getLanguage } from '@/i18n/languageStore';
 import {
   STORE_RETRY,
   STORE_TIMEOUT,
@@ -22,14 +22,14 @@ export function getStoreCountryConfig(): StoreCountry {
 }
 
 export function getSteamLang(): string {
-  return getAppLocale() === 'tr' ? 'turkish' : 'english';
+  return getLanguage() === 'tr' ? 'turkish' : 'english';
 }
 
 export function getEpicLocale(): string {
-  return getAppLocale() === 'tr' ? 'tr-TR' : 'en-US';
+  return getLanguage() === 'tr' ? 'tr-TR' : 'en-US';
 }
 
 /** Chihiro API locale segment (not BCP-47). */
 export function getPsLocale(): string {
-  return getAppLocale() === 'tr' ? 'tr' : 'en';
+  return getLanguage() === 'tr' ? 'tr' : 'en';
 }

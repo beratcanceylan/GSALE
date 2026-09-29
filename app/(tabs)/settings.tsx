@@ -7,39 +7,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Font, Palette, Radius, Spacing, Typography } from '@/constants/DesignSystem';
 import { SUPPORTED_COUNTRIES, getAppCountry, setAppCountry, type CountryCode } from '@/services/country';
-import { getAppLocale, setAppLocale } from '@/services/locale';
+import { LANGUAGES, isLanguageCode } from '@/i18n/languages';
+import { getLanguage, setLanguage } from '@/i18n/languageStore';
+import { applyLayoutDirection } from '@/i18n/rtl';
 
-const STEAM_LANGUAGES = [
-  { code: 'tr', name: 'Türkçe' },
-  { code: 'en', name: 'English' },
-  { code: 'fr', name: 'Français' },
-  { code: 'it', name: 'Italiano' },
-  { code: 'de', name: 'Deutsch' },
-  { code: 'es', name: 'Español - España' },
-  { code: 'ar', name: 'العربية' },
-  { code: 'bg', name: 'Български' },
-  { code: 'cs', name: 'Čeština' },
-  { code: 'da', name: 'Dansk' },
-  { code: 'nl', name: 'Nederlands' },
-  { code: 'fi', name: 'Suomi' },
-  { code: 'el', name: 'Ελληνικά' },
-  { code: 'hu', name: 'Magyar' },
-  { code: 'ja', name: '日本語' },
-  { code: 'ko', name: '한국어' },
-  { code: 'no', name: 'Norsk' },
-  { code: 'pl', name: 'Polski' },
-  { code: 'pt', name: 'Português' },
-  { code: 'pt-br', name: 'Português - Brasil' },
-  { code: 'ro', name: 'Română' },
-  { code: 'ru', name: 'Русский' },
-  { code: 'zh-cn', name: '简体中文' },
-  { code: 'es-419', name: 'Español - Latinoamérica' },
-  { code: 'sv', name: 'Svenska' },
-  { code: 'zh-tw', name: '繁體中文' },
-  { code: 'th', name: 'ไทย' },
-  { code: 'uk', name: 'Українська' },
-  { code: 'vi', name: 'Tiếng Việt' },
-];
+const LANGUAGE_ITEMS = LANGUAGES.map((language) => ({ code: language.code, name: language.nativeName }));
 
 type PickerItem = Readonly<{ code: string; name: string }>;
 type PickerKind = 'language' | 'country';
@@ -55,16 +27,16 @@ function findCountryCode(code: string): CountryCode | undefined {
 
 export default function SettingsScreen() {
   const [picker, setPicker] = useState<PickerKind | null>(null);
-  const [selectedLang, setSelectedLang] = useState(() => getAppLocale());
+  const [selectedLang, setSelectedLang] = useState<string>(() => getLanguage());
   const [selectedCountry, setSelectedCountry] = useState<CountryCode>(() => getAppCountry());
   const [settingHint, setSettingHint] = useState('');
 
-  const currentLangName = STEAM_LANGUAGES.find((l) => l.code === selectedLang)?.name || 'Türkçe';
+  const currentLangName = LANGUAGE_ITEMS.find((l) => l.code === selectedLang)?.name || 'Türkçe';
   const currentCountryName =
     SUPPORTED_COUNTRIES.find((c) => c.code === selectedCountry)?.name ?? 'Türkiye';
 
   const pickerItems: readonly PickerItem[] =
-    picker === 'country' ? SUPPORTED_COUNTRIES : STEAM_LANGUAGES;
+    picker === 'country' ? SUPPORTED_COUNTRIES : LANGUAGE_ITEMS;
   const pickerSelectedCode = picker === 'country' ? selectedCountry : selectedLang;
 
   const handlePickerPress = useCallback(
@@ -76,8 +48,10 @@ export default function SettingsScreen() {
         await setAppCountry(country);
         setSettingHint('Ülke kaydedildi. Yeni aramalar bu bölgenin fiyatlarıyla yapılacak.');
       } else {
+        if (!isLanguageCode(code)) return;
         setSelectedLang(code);
-        await setAppLocale(code);
+        await setLanguage(code);
+        applyLayoutDirection(code);
         setSettingHint('Dil kaydedildi. Yeni aramalar bu dilde yapılacak.');
       }
       setPicker(null);

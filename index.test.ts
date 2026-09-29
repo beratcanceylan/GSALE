@@ -5,7 +5,7 @@ import './test-support/native-mocks';
 mock.module('expo-router/entry', () => ({}));
 mock.module('@/services/catalog/loader', () => ({ loadCatalog: () => undefined }));
 mock.module('@/services/country', () => ({ loadAppCountry: async () => 'TR' }));
-mock.module('@/services/locale', () => ({ loadAppLocale: async () => 'tr' }));
+mock.module('@/i18n/languageStore', () => ({ loadLanguage: async () => 'tr' }));
 mock.module('expo-secure-store', () => ({
   getItemAsync: async () => null,
   setItemAsync: async () => undefined,

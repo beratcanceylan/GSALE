@@ -14,7 +14,7 @@ mock.module('expo-secure-store', () => ({
 
 const SettingsScreen = (await import('../../../app/(tabs)/settings')).default;
 const { setAppCountry } = await import('@/services/country');
-const { setAppLocale } = await import('@/services/locale');
+const { setLanguage } = await import('@/i18n/languageStore');
 
 function pressableWithText(root: Rendered['root'], value: string): Rendered['root'] {
   const pressable = allOfType(root, 'Pressable').find((node) =>
@@ -45,6 +45,6 @@ describe('settings screen', () => {
     expect(allOfType(view.root, 'Modal')).toHaveLength(0);
     await view.unmount();
     await setAppCountry('TR');
-    await setAppLocale('tr');
+    await setLanguage('tr');
   });
 });

@@ -5,7 +5,8 @@ import * as SplashScreen from 'expo-splash-screen';
 
 import { loadCatalog } from '@/services/catalog/loader';
 import { loadAppCountry } from '@/services/country';
-import { loadAppLocale } from '@/services/locale';
+import { loadLanguage } from '@/i18n/languageStore';
+import { applyLayoutDirection } from '@/i18n/rtl';
 
 export function reportBootstrapFailure(label: string, task: Promise<unknown>): void {
   void task.catch((error: unknown) => {
@@ -14,7 +15,7 @@ export function reportBootstrapFailure(label: string, task: Promise<unknown>): v
 }
 
 reportBootstrapFailure('SplashScreen.preventAutoHideAsync', SplashScreen.preventAutoHideAsync());
-reportBootstrapFailure('loadAppLocale', loadAppLocale());
+reportBootstrapFailure('loadLanguage', loadLanguage().then(applyLayoutDirection));
 reportBootstrapFailure('loadAppCountry', loadAppCountry());
 
 void loadCatalog();

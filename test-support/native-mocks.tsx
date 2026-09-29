@@ -71,6 +71,7 @@ export const nativeState = {
   },
   splashHidden: 0,
   splashShouldFail: false,
+  rtl: { isRTL: false, allowed: false, forced: false },
 };
 
 export function resetNativeState(): void {
@@ -80,6 +81,7 @@ export function resetNativeState(): void {
   nativeState.router.pushed = [];
   nativeState.router.back = 0;
   nativeState.splashShouldFail = false;
+  nativeState.rtl = { isRTL: false, allowed: false, forced: false };
 }
 
 mock.module('react-native', () => ({
@@ -108,6 +110,17 @@ mock.module('react-native', () => ({
   Linking: {
     openURL: async (url: string) => {
       nativeState.openedUrls.push(url);
+    },
+  },
+  I18nManager: {
+    get isRTL() {
+      return nativeState.rtl.isRTL;
+    },
+    allowRTL: (allowed: boolean) => {
+      nativeState.rtl.allowed = allowed;
+    },
+    forceRTL: (forced: boolean) => {
+      nativeState.rtl.forced = forced;
     },
   },
 }));
