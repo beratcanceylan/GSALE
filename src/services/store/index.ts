@@ -26,9 +26,7 @@ export async function getGameDetail(
   options?: StoreRequestOptions,
 ): Promise<GameDetailResponse> {
   const game = await fetchGameDetailLive(slug, platformHint, options);
-  if (!game) {
-    throw new Error('Oyun bulunamadı.');
-  }
+  if (!game) throw new Error('Oyun bulunamadı.');
   return liveGameToDetailResponse(game, Date.now());
 }
 

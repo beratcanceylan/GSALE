@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+  extractNumericPrice,
   formatSteamPrice,
   isExplicitlyFreePrice,
   isUnavailablePrice,
@@ -32,6 +33,22 @@ describe('store price-parse', () => {
       final_formatted: '$44.99 USD',
     });
     expect(formatted.price).toBe('$44.99 USD');
+  });
+
+  test('parses punctuation and formats unformatted Steam prices by currency', () => {
+    expect(extractNumericPrice('1.299,50 TL')).toBe(1299.5);
+    expect(extractNumericPrice('1.299 TL')).toBe(1299);
+    expect(extractNumericPrice('$12.50')).toBe(12.5);
+    expect(extractNumericPrice('...')).toBeNull();
+    expect(extractNumericPrice('free')).toBeNull();
+    expect(formatSteamPrice({ currency: 'TRY', final: 1000, initial: 2000, discount_percent: 50 }))
+      .toEqual({ price: '10,00 TL', original_price: '20,00 TL' });
+    expect(formatSteamPrice({ currency: 'TRY', final: 1000, initial: 1000, discount_percent: 0 }))
+      .toEqual({ price: '10,00 TL', original_price: null });
+    expect(formatSteamPrice({ final: 499, initial: 999, discount_percent: 50 }))
+      .toEqual({ price: '4.99 USD', original_price: '9.99 USD' });
+    expect(formatSteamPrice({ currency: 'EUR', final: 499, initial: 499, discount_percent: 0 }))
+      .toEqual({ price: '4.99 EUR', original_price: null });
   });
 });
 

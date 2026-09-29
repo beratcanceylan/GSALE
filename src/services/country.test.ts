@@ -1,9 +1,13 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
 
 const stored = new Map<string, string>();
+let failRead = false;
 
 mock.module('expo-secure-store', () => ({
-  getItemAsync: async (key: string) => stored.get(key) ?? null,
+  getItemAsync: async (key: string) => {
+    if (failRead) throw new Error('secure store unavailable');
+    return stored.get(key) ?? null;
+  },
   setItemAsync: async (key: string, value: string) => {
     stored.set(key, value);
   },
@@ -22,6 +26,7 @@ describe('store country setting', () => {
     // Other test files share this module; leave the default behind.
     await setAppCountry('TR');
     stored.clear();
+    failRead = false;
   });
 
   test('defaults to TR', () => {
@@ -41,6 +46,12 @@ describe('store country setting', () => {
     expect(await loadAppCountry()).toBe('US');
 
     stored.set('gsale_country', 'ZZ');
+    expect(await loadAppCountry()).toBe('TR');
+  });
+
+  test('uses the default country when secure storage fails', async () => {
+    await setAppCountry('DE');
+    failRead = true;
     expect(await loadAppCountry()).toBe('TR');
   });
 

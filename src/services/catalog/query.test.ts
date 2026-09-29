@@ -30,6 +30,12 @@ const ROWS: readonly Row[] = [
 ];
 
 describe('searchCatalogHits', () => {
+  test('ignores an unexpected store row returned by a catalog database', async () => {
+    const brokenDb: CatalogDb = {
+      getAllAsync: async <T>() => [{ store: 'ps', id: 'bad', title: 'Hades', image: null }] as T[],
+    };
+    expect(await searchCatalogHits(brokenDb, 'Hades', 'tr-tr')).toEqual([]);
+  });
   test('returns Steam and Xbox hits with app routes, closest titles first', async () => {
     const hits = await searchCatalogHits(catalogDb(ROWS), 'hades', 'de-de');
 

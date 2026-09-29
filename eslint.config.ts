@@ -10,6 +10,7 @@ const config: Linter.Config[] = [
     ignores: [
       'node_modules/**',
       '.expo/**',
+      '.scannerwork/**',
       'dist/**',
       'web-build/**',
       'aggregator.js',

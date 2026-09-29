@@ -7,6 +7,7 @@
     "start:clear": "expo start --clear",
     "start:tunnel": "expo start --tunnel --clear",
     "test:store": "bun test src/services/store/",
+    "test:coverage": "bun test src scripts app eslint-plugin ./index.test.ts ./.github/native-sim/gate.test.ts --coverage --coverage-reporter=lcov",
     "typecheck": "tsc --noEmit && tsc -p eslint-plugin/tsconfig.json",
     "android": "expo run:android",
     "ios": "expo run:ios",

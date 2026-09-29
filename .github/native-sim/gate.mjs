@@ -13,10 +13,10 @@
  * `agent-device proxy` instead of serve-sim, so one URL carries both the
  * human-facing stream and the agent-facing control API.
  */
-const { Buffer } = require('node:buffer');
-const crypto = require('node:crypto');
-const http = require('node:http');
-const net = require('node:net');
+import { Buffer } from 'node:buffer';
+import crypto from 'node:crypto';
+import http from 'node:http';
+import net from 'node:net';
 
 const TOKEN = process.env.NATIVE_SIM_GATE_TOKEN || '';
 const TARGET_PORT = Number(process.env.NATIVE_SIM_TARGET_PORT || 3200);
@@ -33,10 +33,12 @@ const HEADER_NAME = /^[!#$%&'*+.^`|~0-9a-z-]+$/i;
 /** Origin-relative request targets only: no scheme, no authority, no whitespace. */
 const LOCAL_PATH = /^\/(?!\/)[\w\-.~!$&'()*+,;=:@%/?]*$/;
 
-if (!TOKEN) {
-  console.error('NATIVE_SIM_GATE_TOKEN is required — refusing to proxy an unauthenticated simulator');
-  process.exit(1);
+function requireToken(token) {
+  if (!token) {
+    throw new Error('NATIVE_SIM_GATE_TOKEN is required — refusing to proxy an unauthenticated simulator');
+  }
 }
+requireToken(TOKEN);
 
 function tokenMatches(candidate) {
   if (typeof candidate !== 'string') return false;
@@ -223,3 +225,18 @@ server.listen(PORT, '127.0.0.1', () => {
   const agentNote = AGENT_PORT ? ` (agent-device -> :${AGENT_PORT})` : '';
   console.log(`native-sim gate on :${PORT} -> :${TARGET_PORT}${agentNote}`);
 });
+
+export {
+  server,
+  requireToken,
+  tokenMatches,
+  cookieToken,
+  bearerToken,
+  localPath,
+  isAgentRoute,
+  authorize,
+  copyHeaders,
+  responseHeaders,
+  forwardedHeaders,
+  headerLines,
+};

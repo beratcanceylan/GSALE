@@ -15,6 +15,19 @@ function hit(title: string): PlatformSearchHit {
 }
 
 describe('search hit merge', () => {
+  test('chooses the lowest paid deal across regional number formats', () => {
+    const game = { id: 'prices', title: 'Prices', image_url: '', platform: 'Steam', rating: null };
+    const deals = [
+      { platform: 'Steam', price: '1.200,00 TL', discount: '' },
+      { platform: 'Xbox', price: '1.100 TL', discount: '' },
+      { platform: 'Epic Games', price: '999.50 TL', discount: '' },
+      { platform: 'Nintendo', price: '950 TL', discount: '' },
+      { platform: 'GOG', price: 'Bilinmiyor', discount: '' },
+    ];
+    expect(applyDealsToGame(game, deals).price).toBe('950 TL');
+    expect(applyDealsToGame(game, [{ platform: 'Steam', price: 'No price', discount: '' }]).price)
+      .toBe('No price');
+  });
   test('keeps deal store links and platform availability on trending cards', () => {
     const game = {
       id: '4356430',

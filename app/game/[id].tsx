@@ -99,8 +99,6 @@ function gameDetailUiReducer(state: GameDetailUiState, action: GameDetailUiActio
       return { ...state, selectedVideo: action.video };
     case 'SET_ACTIVE_TAB':
       return { ...state, activeTab: action.tab };
-    default:
-      return state;
   }
 }
 
@@ -466,7 +464,7 @@ function PricesTab({ deals }: Readonly<{ deals: Game['deals'] }>) {
         <View style={styles.platformGroup}>
           <Text style={styles.platformGroupTitle}>PC</Text>
           {pcDeals.map((deal) => (
-            <DealPriceCard key={deal.platform} deal={deal} />
+            <DealPriceCard key={`${deal.platform}-${deal.url}-${deal.price}`} deal={deal} />
           ))}
         </View>
       ) : null}
@@ -474,7 +472,7 @@ function PricesTab({ deals }: Readonly<{ deals: Game['deals'] }>) {
         <View style={styles.platformGroup}>
           <Text style={styles.platformGroupTitle}>Konsol</Text>
           {consoleDeals.map((deal) => (
-            <DealPriceCard key={deal.platform} deal={deal} />
+            <DealPriceCard key={`${deal.platform}-${deal.url}-${deal.price}`} deal={deal} />
           ))}
         </View>
       ) : null}

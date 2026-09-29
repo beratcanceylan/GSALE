@@ -89,4 +89,26 @@ describe('store match', () => {
     expect(scoreProductTitleMatch('Final Fantasy VII', 'Final Fantasy VIII')).toBe(0);
     expect(scoreProductTitleMatch('Tekken 7', 'Tekken 8')).toBe(0);
   });
+
+  test('distinguishes GTA IV from other numbered releases', () => {
+    expect(isStrictMatch('Grand Theft Auto IV', 'Grand Theft Auto V')).toBeFalse();
+    expect(scoreProductTitleMatch('GTA IV', 'GTA VI')).toBe(0);
+  });
+
+  test('recognizes overlapping titles without a substring', () => {
+    expect(isStrictMatch('Hades Battle Action', 'Hades Action Extra')).toBeTrue();
+  });
+
+  test('adjusts Prime upgrade scores when both titles describe the upgrade', () => {
+    expect(scoreProductTitleMatch(
+      'Counter-Strike 2 Prime Status Upgrade Edition',
+      'Counter-Strike 2 Prime Status Upgrade',
+    )).toBeGreaterThan(0);
+    expect(scoreProductTitleMatch('Counter-Strike 2', 'Counter-Strike 2 Prime Status Upgrade'))
+      .toBe(0);
+    expect(scoreProductTitleMatch(
+      'Counter-Strike 2 Primetime Status Upgrader',
+      'Counter-Strike 2 Prime Status Upgrade',
+    )).toBeGreaterThan(0);
+  });
 });

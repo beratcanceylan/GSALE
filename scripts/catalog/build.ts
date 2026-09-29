@@ -19,9 +19,9 @@ import {
 
 import { SOURCE_DIRECTORIES, sourceRecordToRow, type CatalogRow } from './source';
 
-function argument(name: string): string {
-  const index = process.argv.indexOf(`--${name}`);
-  const value = index >= 0 ? process.argv[index + 1] : undefined;
+function argument(name: string, args: readonly string[]): string {
+  const index = args.indexOf(`--${name}`);
+  const value = index >= 0 ? args[index + 1] : undefined;
   if (!value) throw new Error(`missing --${name}`);
   return value;
 }
@@ -43,9 +43,9 @@ function readSourceDate(sourceDir: string, directory: string): string {
   return typeof date === 'string' ? date : '';
 }
 
-function main(): void {
-  const sourceDir = argument('source');
-  const outDir = argument('out');
+export function buildCatalog(args: readonly string[] = process.argv): void {
+  const sourceDir = argument('source', args);
+  const outDir = argument('out', args);
   mkdirSync(outDir, { recursive: true });
   const dbPath = join(outDir, CATALOG_DB_NAME);
   rmSync(dbPath, { force: true });
@@ -91,4 +91,4 @@ function main(): void {
   console.log(`catalog ${version}: ${rowCount} rows, ${(manifest.bytes / 1e6).toFixed(1)} MB`);
 }
 
-main();
+if (import.meta.main) buildCatalog();

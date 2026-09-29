@@ -7,7 +7,7 @@ mock.module('expo-secure-store', () => ({
 
 const { fetchGogPrice } = await import('@/services/store/platforms/gog');
 const { fetchNintendoPrice } = await import('@/services/store/platforms/nintendo');
-const { fetchPlayStationPrice } = await import('@/services/store/platforms/ps');
+const { fetchPlayStationPrice, searchPlayStation } = await import('@/services/store/platforms/ps');
 const { fetchSteamPrice } = await import('@/services/store/platforms/steam');
 const { fetchXboxPrice } = await import('@/services/store/platforms/xbox');
 const { fetchAllPrices } = await import('@/services/store/prices');
@@ -210,6 +210,44 @@ describe('store adapter request reuse', () => {
     expect(result?.store_url).toContain('/product/UP0000-PPSA00000_00-GSALEPS00000000');
     expect(urls).toHaveLength(1);
     expect(urls[0]).toContain('/chihiro/00_09_000/tumbler/');
+  });
+
+  test('maps PlayStation catalog products to search hits', async () => {
+    urls = [];
+    globalThis.fetch = async (input) => {
+      urls.push(String(input));
+      return jsonResponse({ links: [{
+        id: 'UP0000-PPSA00000_00-GSALEPSSEARCH000',
+        name: 'GSALE PS Search',
+        default_sku: { display_price: '100,00 TL', price: 10000 },
+        images: [{ type: 10, url: 'https://image.api.playstation.com/search.jpg' }],
+      }] });
+    };
+    expect(await searchPlayStation('GSALE PS Search')).toMatchObject([{
+      id: 'ps-UP0000-PPSA00000_00-GSALEPSSEARCH000',
+      slug: 'ps-UP0000-PPSA00000_00-GSALEPSSEARCH000',
+      title: 'GSALE PS Search',
+      image_url: 'https://image.api.playstation.com/search.jpg',
+      platform: 'PlayStation',
+      store_url: 'https://store.playstation.com/tr-tr/product/UP0000-PPSA00000_00-GSALEPSSEARCH000',
+    }]);
+    expect(urls).toHaveLength(1);
+  });
+
+  test('fetches a PlayStation product page when the search price is unknown', async () => {
+    urls = [];
+    const id = 'UP0000-PPSA00000_00-GSALEPSDETAIL000';
+    globalThis.fetch = async (input) => {
+      const url = String(input);
+      urls.push(url);
+      const product = {
+        id, name: 'GSALE PS Detail',
+        ...(url.includes('/container/') ? { default_sku: { price: 9900 } } : {}),
+      };
+      return jsonResponse(url.includes('/container/') ? product : { links: [product] });
+    };
+    expect((await fetchPlayStationPrice('GSALE PS Detail'))?.price).toBe('99,00 TL');
+    expect(urls.some((url) => url.includes('/container/'))).toBeTrue();
   });
 
   test('falls back to the legacy PlayStation page when Chihiro is malformed', async () => {

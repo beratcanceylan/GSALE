@@ -130,6 +130,7 @@ mock.module('react-native-svg', () => ({
 mock.module('react-native-reanimated', () => ({
   default: { View: host('AnimatedView') },
   FadeIn: { duration: () => 'fade-in' },
+  LinearTransition: { duration: () => 'linear-transition' },
 }));
 mock.module('react-native-safe-area-context', () => ({
   SafeAreaView: host('SafeAreaView'),
@@ -153,17 +154,16 @@ mock.module('expo-video', () => ({
 
 type ScreenElementProps = { name: string; options?: Record<string, unknown>; listeners?: Record<string, () => void> };
 
-/** Tabs/Stack call every screen's icon renderer and listener so they execute in tests. */
+/** Render navigator screens and expose listeners so tests can fire tab presses. */
 function navigator(name: string) {
   function Navigator(props: Props & { screenOptions?: Record<string, unknown> }) {
     const screens = React.Children.toArray(props.children).filter(React.isValidElement<ScreenElementProps>);
     const rendered = screens.map((screen) => {
       const options = screen.props.options ?? {};
       const icon = options['tabBarIcon'];
-      for (const listener of Object.values(screen.props.listeners ?? {})) listener();
       return React.createElement(
         `${name}.Screen`,
-        { key: screen.props.name, name: screen.props.name },
+        { key: screen.props.name, name: screen.props.name, listeners: screen.props.listeners },
         typeof icon === 'function' ? (icon as (p: object) => ReactNode)({ color: '#fff', size: 24, focused: true }) : null,
       );
     });

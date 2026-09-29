@@ -15,8 +15,27 @@ import {
   pickBestEpicOfferForTitles,
 } from '@/services/store/platforms/epic-search';
 import { parseEpicBrowseOffers } from '@/services/store/platforms/epic-browse';
+import { resetCurrencyCacheForTests, setFxRatesForTests } from '@/services/store/currency';
 
 describe('Epic price mapping', () => {
+  test('handles explicit TL labels, nonnumeric copy and regional conversion', async () => {
+    setFxRatesForTests({ USD: 1, TRY: 40, EUR: 0.8 });
+    try {
+      expect((await epicPriceFromElement({ price: { totalPrice: {
+        fmtPrice: { discountPrice: '₺50,00' }, currencyCode: 'USD',
+      } } })).price).toBe('50,00 TL');
+      expect((await epicPriceFromElement({ price: { totalPrice: {
+        fmtPrice: { discountPrice: 'Special offer' }, currencyCode: 'USD',
+      } } })).price).toBe('Special offer');
+      expect((await epicPriceFromElement({ price: { totalPrice: {
+        fmtPrice: { discountPrice: '€10.00' }, currencyCode: 'EUR',
+      } } })).price).toBe('500,00 TL');
+      expect((await epicPriceFromMinorUnits({ currencyCode: 'EUR', discountPrice: 1000 })).price)
+        .toBe('500,00 TL');
+    } finally {
+      resetCurrencyCacheForTests();
+    }
+  });
   test('computes discount percent from formatted prices instead of discount amount', async () => {
     const priced = await epicPriceFromElement({
       price: {
@@ -91,6 +110,18 @@ describe('Epic price mapping', () => {
 });
 
 describe('Epic offer search mapping', () => {
+  test('prefers desktop offers over mobile attributes', () => {
+    const match = pickBestEpicOffer([
+      { id: 'mobile-key', title: 'Hades', namespace: 'ns', customAttributes: [{ key: 'ios', value: 'true' }] },
+      { id: 'mobile-value', title: 'Hades', namespace: 'ns', customAttributes: [{ key: 'platform', value: 'Android' }] },
+      { id: 'desktop', title: 'Hades', namespace: 'ns', customAttributes: [] },
+    ], 'Hades');
+    expect(match?.id).toBe('desktop');
+    expect(pickBestEpicOffer([
+      { id: 'mobile-map', title: 'Hades', customAttributes: { android: 'yes' } },
+      { id: 'desktop-map', title: 'Hades', customAttributes: { platform: 'desktop' } },
+    ], 'Hades')?.id).toBe('desktop-map');
+  });
   test('prefers the matching base-game offer over add-ons and non-store items', () => {
     const match = pickBestEpicOffer(
       [
@@ -331,5 +362,20 @@ describe('Epic offer search mapping', () => {
         },
       },
     ]);
+  });
+
+  test('skips invalid browse state and malformed artwork records', () => {
+    expect(parseEpicBrowseOffers('window.__REACT_QUERY_INITIAL_QUERIES__ = broken; window.server_rendered'))
+      .toEqual([]);
+    const state = { queries: [
+      { state: { data: { Catalog: { searchStore: { elements: [null, { id: 'a' }] } } } } },
+      { state: { data: { Catalog: { searchStore: { elements: [
+        { id: 'valid', title: 'Valid', keyImages: [{ type: 1, url: 'bad' }] },
+      ] } } } } },
+    ] };
+    const html = `window.__REACT_QUERY_INITIAL_QUERIES__ = ${JSON.stringify(state)}; window.server_rendered`;
+    expect(parseEpicBrowseOffers(html)).toMatchObject([{ id: 'valid', title: 'Valid' }]);
+    expect(parseEpicBrowseOffers('window.__REACT_QUERY_INITIAL_QUERIES__ = {"queries":[]}; window.server_rendered'))
+      .toEqual([]);
   });
 });

@@ -48,4 +48,24 @@ describe('cross-store detail metadata', () => {
     expect(result.store_links).toEqual({ Steam: 'https://steam.example', 'Epic Games': 'https://epic.example' });
     expect(result.platforms).toEqual(['PC']);
   });
+
+  test('skips blank values until a later detail has useful metadata', () => {
+    const result = mergeDetailMetadata(game({
+      description: ' ', developers: [], genres: [], release_date: '',
+    }), [
+      game({ description: ' ', developers: [' '], genres: [' '], release_date: ' ' }),
+      game({ description: 'Found', developers: ['Studio'], genres: ['Action'], release_date: '2026-01-01' }),
+    ]);
+    expect(result).toMatchObject({
+      description: 'Found', developers: ['Studio'], genres: ['Action'], release_date: '2026-01-01',
+    });
+  });
+
+  test('keeps optional metadata absent when no detail supplies it', () => {
+    const result = mergeDetailMetadata(game(), [game({ id: 'other' })]);
+    expect(result.developers).toBeUndefined();
+    expect(result.genres).toBeUndefined();
+    expect(result.description).toBeUndefined();
+    expect(result.release_date).toBeUndefined();
+  });
 });

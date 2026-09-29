@@ -67,10 +67,6 @@ function loadEntry(
   slug: string,
   platformHint: string | undefined,
 ): void {
-  if (entry.pending) {
-    return;
-  }
-
   const generation = entry.generation + 1;
   entry.generation = generation;
   const controller = new AbortController();

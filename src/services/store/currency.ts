@@ -59,7 +59,7 @@ function abortReason(signal: AbortSignal): Error {
   return error;
 }
 
-function waitForAbortable<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+export function waitForAbortable<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
   if (!signal) return promise;
   if (signal.aborted) return Promise.reject(abortReason(signal));
 

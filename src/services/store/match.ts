@@ -66,8 +66,7 @@ function gtaVersion(title: string): string | null {
   if (!version) return null;
   if (version === 'vi' || version === '6') return '6';
   if (version === 'v' || version === '5') return '5';
-  if (version === 'iv' || version === '4') return '4';
-  return null;
+  return '4';
 }
 
 function hasGrandTheftAutoVersionMismatch(a: string, b: string): boolean {

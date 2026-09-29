@@ -27,6 +27,9 @@ on:
       app_url:
         description: URL of a prebuilt simulator .app archive (mode:app)
         default: ""
+      app_sha256:
+        description: SHA-256 digest of the prebuilt archive (mode:app)
+        default: ""
       app_release_asset:
         description: >-
           Asset name on this repo's `native-sim-build` release to install
@@ -290,7 +293,7 @@ jobs:
           # The gate starts before the agent-device proxy does; until that comes
           # up, /agent-device/* simply 502s.
           NATIVE_SIM_TARGET_PORT="$PREVIEW_PORT" NATIVE_SIM_GATE_PORT="$GATE_PORT" \
-            nohup node .github/native-sim/gate.cjs > gate.log 2>&1 &
+            nohup node .github/native-sim/gate.mjs > gate.log 2>&1 &
           disown
           for _ in $(seq 1 30); do
             curl -fsS -o /dev/null "http://127.0.0.1:$GATE_PORT/__native-sim/healthz" && exit 0
@@ -445,12 +448,16 @@ jobs:
         env:
           UDID: ${{ steps.sim.outputs.udid }}
           APP_URL: ${{ inputs.app_url }}
+          APP_SHA256: ${{ inputs.app_sha256 }}
           APP_RELEASE_ASSET: ${{ inputs.app_release_asset }}
           APP_RELEASE_TAG: native-sim-build
         run: |
           set -euo pipefail
           [ -n "$APP_URL" ] || [ -n "$APP_RELEASE_ASSET" ] \
             || { echo "::error::mode 'app' requires app_url or app_release_asset"; exit 1; }
+          [[ "$APP_SHA256" =~ ^[0-9a-fA-F]{64}$ ]] \
+            || { echo "::error::mode 'app' requires the archive's SHA-256 digest"; exit 1; }
+          EXPECTED_SHA=$(printf '%s' "$APP_SHA256" | tr 'A-F' 'a-f')
 
           mkdir -p build/prebuilt && cd build/prebuilt
 
@@ -468,6 +475,9 @@ jobs:
             echo "Downloading prebuilt app"
             curl -fsSL --proto '=https' --tlsv1.2 --retry 3 -o download.bin "$APP_URL"
           fi
+          ACTUAL_SHA=$(shasum -a 256 download.bin | cut -d ' ' -f 1)
+          [ "$ACTUAL_SHA" = "$EXPECTED_SHA" ] \
+            || { echo "::error::prebuilt archive SHA-256 mismatch"; exit 1; }
           file download.bin
 
           # EAS simulator builds ship as .tar.gz; some tooling emits .zip.

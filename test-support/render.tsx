@@ -21,6 +21,14 @@ export async function flush(times = 5): Promise<void> {
   }
 }
 
+/** Notify React after an external store changes during a screen test. */
+export async function updateExternalStore(update: () => void): Promise<void> {
+  await act(async () => {
+    update();
+    await Promise.resolve();
+  });
+}
+
 type JsonNode = ReturnType<ReactTestRenderer['toJSON']> | string;
 
 function collectText(node: JsonNode): string {

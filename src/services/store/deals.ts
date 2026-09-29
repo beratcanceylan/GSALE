@@ -47,8 +47,6 @@ function pickCheapestDeal(deals: GameDeal[]): GameDeal | null {
 }
 
 function parsePriceNum(str: string): number {
-  if (isUnavailablePrice(str)) return 999999;
-  if (isExplicitlyFreePrice(str)) return 0;
   const clean = str.replaceAll(/[^0-9.,]/g, '');
   if (!clean) return 999999;
   if (clean.includes(',')) {

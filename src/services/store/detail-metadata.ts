@@ -72,10 +72,9 @@ export function mergeDetailMetadata(
   const genres = firstNonEmptyStrings(sources, 'genres');
   const screenshots = firstScreenshots(sources);
   const videos = firstVideos(sources);
-  const storeLinks = sources.reduce<Record<string, string>>((links, source) => ({
-    ...links,
-    ...source.store_links,
-  }), {});
+  const storeLinks = Object.fromEntries(
+    sources.flatMap((source) => Object.entries(source.store_links ?? {})),
+  );
   const platforms = cleanUnique(sources.flatMap((source) => source.platforms ?? []));
 
   const result: LiveGame = { ...game };

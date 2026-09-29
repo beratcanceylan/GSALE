@@ -12,6 +12,16 @@ const originalFetch = globalThis.fetch;
 describe('detail navigation fallback', () => {
   afterEach(() => { globalThis.fetch = originalFetch; });
 
+  test('evicts the oldest preview after the navigation cache fills', () => {
+    const games = Array.from({ length: 121 }, (_, index) => ({
+      id: `preview-${index}`, title: `Preview ${index}`,
+      platform: 'Steam', image_url: '', rating: null,
+    }));
+    rememberDetailPreviews(games);
+    expect(getDetailPreview('preview-0')).toBeNull();
+    expect(getDetailPreview('preview-120')?.title).toBe('Preview 120');
+  });
+
   for (const mode of ['HTTP failure', 'missing product']) {
     test(`fetches live prices from the search preview after ${mode}`, async () => {
       const id = mode === 'HTTP failure' ? '3768760' : '9910876';

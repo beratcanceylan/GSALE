@@ -604,4 +604,80 @@ describe('PlayStation Store SSR parsing', () => {
     expect(parsed?.title).toBe("Dragon's Dogma 2");
     expect(parsed?.price).toBe('1.311,75 TL');
   });
+
+  test('skips malformed search metadata and normalizes legacy image and relative links', () => {
+    const html = `
+      <li><a data-telemetry-meta="not-json" href="foo/product/bad"><img src="bad?x=1"></a></li>
+      <li><a data-telemetry-meta="{&quot;id&quot;:&quot;edge&quot;,&quot;name&quot;:&quot;Edge&quot;}"
+        href="foo/product/edge"><img src="bad url?x=1"></a></li>
+      <li><a data-telemetry-meta="{&quot;id&quot;:&quot;edge&quot;,&quot;name&quot;:&quot;Duplicate&quot;}"></a></li>
+    `;
+    const products = parsePlayStationSearchHtml(html, 'tr-tr');
+    expect(products).toHaveLength(1);
+    expect(products[0]).toMatchObject({
+      id: 'edge',
+      image_url: 'bad url',
+      store_url: 'https://store.playstation.com/tr-tr/foo/product/edge',
+    });
+  });
+
+  test('skips malformed JSON-LD and invalid CTA records before a valid price', () => {
+    const cache = {
+      invalid: { __typename: 'GameCTA', id: `a-${PRODUCT_ID}`, type: 'OTHER', price: { isTiedToSubscription: true } },
+      unrelated: { __typename: 'GameCTA', id: 'unrelated', type: 'ADD_TO_CART', price: { discountedPrice: '999,00 TL' } },
+      subscription: { __typename: 'GameCTA', id: `b-${PRODUCT_ID}`, type: 'ADD_TO_CART', price: { isTiedToSubscription: true, discountedPrice: 'Free' } },
+      valid: { __typename: 'GameCTA', id: `c-${PRODUCT_ID}`, type: 'ADD_TO_CART', price: { discountedPrice: '99,00 TL' } },
+    };
+    const html = `<script type="application/ld+json">{oops}</script>
+      <script type="application/ld+json">{"@type":"Product","name":"Edge"}</script>
+      <script type="application/json">${JSON.stringify({ cache })}</script>`;
+    const parsed = parsePlayStationProductHtml(html, PRODUCT_ID, 'tr-tr');
+    expect(parsed?.title).toBe('Edge');
+    expect(parsed?.price).toBe('99,00 TL');
+  });
+
+  test('prefers the cheaper equally matching product', () => {
+    const makeProduct = (id: string, price: string) => ({
+      id, title: 'Hades', price, original_price: null, discount: '', image_url: '',
+      store_url: `https://store.playstation.com/tr-tr/product/${id}`,
+    });
+    expect(pickBestAvailablePlayStationProduct([
+      makeProduct('expensive', '400,00 TL'), makeProduct('cheap', '100,00 TL'),
+    ], 'Hades')?.id).toBe('cheap');
+  });
+
+  test('reads numeric Chihiro prices without display text', () => {
+    const parsed = parsePlayStationChihiroResponse({ links: [
+      { id: 'free-numeric', name: 'Free Numeric', default_sku: { price: 0 } },
+      { id: 'paid-numeric', name: 'Paid Numeric', default_sku: { price: 12500 } },
+    ] }, 'tr-tr');
+    expect(parsed[0]?.price).toBe('Ücretsiz');
+    expect(parsed[1]?.price).toBe('125,00 TL');
+  });
+
+  test('falls back after malformed embedded strings and absent JSON-LD', () => {
+    const html = `<script type="application/json">${JSON.stringify({
+      cache: { product: { id: PRODUCT_ID, __typename: 'Product', name: 'Fallback' } },
+    })}</script><script>"priceOrText":"bad\\q"</script>`;
+    const parsed = parsePlayStationProductHtml(html, PRODUCT_ID, 'tr-tr');
+    expect(parsed?.title).toBe('Fallback');
+    expect(parsed?.price).toBe('bad\\q');
+  });
+
+  test('returns an unknown price when every cache CTA lacks a purchasable price', () => {
+    const html = `<script type="application/ld+json">{"@type":"Product","name":"No Offer"}</script>
+      <script type="application/json">${JSON.stringify({ cache: {
+        a: { __typename: 'GameCTA', id: PRODUCT_ID, type: 'OTHER' },
+        b: { __typename: 'GameCTA', id: PRODUCT_ID, type: 'OTHER' },
+      } })}</script>`;
+    const parsed = parsePlayStationProductHtml(html, PRODUCT_ID, 'tr-tr');
+    expect(parsed?.price).toBe('Bilinmiyor');
+  });
+
+  test('uses the unknown price label for Chihiro items without a SKU', () => {
+    const parsed = parsePlayStationChihiroResponse({ links: [
+      { id: 'unknown-price', name: 'Unknown Price' },
+    ] }, 'tr-tr');
+    expect(parsed[0]?.price).toBe('Bilinmiyor');
+  });
 });
