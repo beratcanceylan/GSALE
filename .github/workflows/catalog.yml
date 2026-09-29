@@ -1,0 +1,57 @@
+# Builds the SQLite game catalog the app downloads (src/services/catalog/loader.ts)
+# from Ephellon/game-store-catalog and publishes it as assets of the
+# `catalog-latest` release. Release assets must be publicly downloadable, so this
+# repository (or the one EXPO_PUBLIC_CATALOG_BASE_URL points at) must be public.
+name: catalog
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: catalog
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: catalog-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Fetch source catalog
+        run: git clone --depth 1 https://github.com/Ephellon/game-store-catalog "$RUNNER_TEMP/source"
+
+      - name: Build catalog
+        run: bun run scripts/catalog/build.ts --source "$RUNNER_TEMP/source" --out "$RUNNER_TEMP/catalog"
+
+      - name: Publish when the source changed
+        run: |
+          new_version=$(jq -r .version "$RUNNER_TEMP/catalog/catalog-manifest.json")
+          old_version=$( (gh release download "$RELEASE_TAG" -p catalog-manifest.json -O - 2>/dev/null || echo '{}') | jq -r '.version // empty')
+          if [ "$new_version" = "$old_version" ]; then
+            echo "Catalog $new_version is already published."
+            exit 0
+          fi
+          gh release view "$RELEASE_TAG" >/dev/null 2>&1 || gh release create "$RELEASE_TAG" \
+            --title "Game catalog" \
+            --notes "Built by .github/workflows/catalog.yml from Ephellon/game-store-catalog." \
+            --latest=false
+          # Upload the database before the manifest so the app never sees a manifest for a missing file.
+          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/catalog/catalog.db" --clobber
+          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/catalog/catalog-manifest.json" --clobber
+          echo "Published catalog $new_version (was: ${old_version:-none})."

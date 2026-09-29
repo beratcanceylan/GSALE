@@ -1,0 +1,126 @@
+import { fetchGameDetail, type Game } from '@/services/gameData';
+
+export type GameDetailFetchSnapshot = Readonly<{
+  game: Game | null;
+  loading: boolean;
+  error: string | null;
+  version: number;
+}>;
+
+type DetailEntry = {
+  snapshot: GameDetailFetchSnapshot;
+  listeners: Set<() => void>;
+  pending: Promise<void> | null;
+  controller: AbortController | null;
+  generation: number;
+};
+
+const entries = new Map<string, DetailEntry>();
+
+function detailKey(slug: string, platformHint?: string): string {
+  return `${slug}|${platformHint ?? ''}`;
+}
+
+function createEntry(): DetailEntry {
+  return {
+    snapshot: { game: null, loading: true, error: null, version: 0 },
+    listeners: new Set(),
+    pending: null,
+    controller: null,
+    generation: 0,
+  };
+}
+
+function notifyEntry(entry: DetailEntry): void {
+  for (const listener of entry.listeners) {
+    listener();
+  }
+}
+
+function loadEntry(
+  entry: DetailEntry,
+  slug: string,
+  platformHint: string | undefined,
+): void {
+  if (entry.pending) {
+    return;
+  }
+
+  const generation = entry.generation + 1;
+  entry.generation = generation;
+  const controller = new AbortController();
+  entry.controller = controller;
+
+  entry.pending = (async () => {
+    entry.snapshot = {
+      game: entry.snapshot.game,
+      loading: true,
+      error: null,
+      version: entry.snapshot.version + 1,
+    };
+    notifyEntry(entry);
+
+    try {
+      const game = await fetchGameDetail(slug, platformHint, { signal: controller.signal });
+      if (generation !== entry.generation) return;
+      entry.snapshot = {
+        game,
+        loading: false,
+        error: null,
+        version: entry.snapshot.version + 1,
+      };
+    } catch {
+      if (generation !== entry.generation) return;
+      entry.snapshot = {
+        game: null,
+        loading: false,
+        error: 'Oyun bilgileri yüklenemedi.',
+        version: entry.snapshot.version + 1,
+      };
+    }
+    notifyEntry(entry);
+  })().finally(() => {
+    if (generation === entry.generation) {
+      entry.pending = null;
+      entry.controller = null;
+    }
+  });
+}
+
+function getEntry(key: string): DetailEntry {
+  let entry = entries.get(key);
+  if (!entry) {
+    entry = createEntry();
+    entries.set(key, entry);
+  }
+  return entry;
+}
+
+export const gameDetailStore = {
+  getSnapshot: (slug: string, platformHint?: string): GameDetailFetchSnapshot => {
+    return getEntry(detailKey(slug, platformHint)).snapshot;
+  },
+  reload: (slug: string, platformHint?: string): void => {
+    const entry = getEntry(detailKey(slug, platformHint));
+    entry.generation += 1;
+    entry.controller?.abort();
+    entry.controller = null;
+    entry.pending = null;
+    loadEntry(entry, slug, platformHint);
+  },
+  subscribe: (
+    slug: string,
+    platformHint: string | undefined,
+    listener: () => void,
+  ): (() => void) => {
+    const key = detailKey(slug, platformHint);
+    const entry = getEntry(key);
+    entry.listeners.add(listener);
+    if (!entry.pending && (entry.snapshot.game === null || entry.snapshot.error !== null)) {
+      loadEntry(entry, slug, platformHint);
+    }
+    return () => {
+      entry.listeners.delete(listener);
+    };
+  },
+};
