@@ -2,7 +2,7 @@ import { STORE_CONFIG, getStoreCountryConfig } from '@/services/store/config';
 import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
 import { formatPriceAsTry } from '@/services/store/currency';
 import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } from '@/services/store/edition-table';
-import { baseTitle } from '@/services/store/editions';
+import { baseTitle, type EditionKey } from '@/services/store/editions';
 import { fetchJson, fetchPostJson, fetchText, throwIfAborted, withRetry } from '@/services/store/fetch';
 import { firstResult } from '@/services/store/sequence';
 import { pickXboxSearchImage } from '@/services/store/platforms/xbox-image';
@@ -228,7 +228,10 @@ export async function fetchXboxEditionOffers(
     const prices = getXboxListPrice(product);
     return edition && prices ? [{ hit, edition, prices }] : [];
   });
-  const consoleEditions = new Set(accepted.filter(({ hit }) => !PC_ONLY_TITLE.test(hit.title)).map(({ edition }) => edition));
+  const consoleEditions = new Set<EditionKey>();
+  for (const { hit, edition } of accepted) {
+    if (!PC_ONLY_TITLE.test(hit.title)) consoleEditions.add(edition);
+  }
   const preferred = accepted
     .filter(({ hit, edition }) => !PC_ONLY_TITLE.test(hit.title) || !consoleEditions.has(edition))
     .slice(0, MAX_EDITION_CANDIDATES);

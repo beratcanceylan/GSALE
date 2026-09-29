@@ -153,6 +153,8 @@ describe('screen request cancellation', () => {
     expect(detailSignals[0]?.aborted).toBeTrue();
     expect(detailSignals[1]?.aborted).toBeFalse();
     expect(gameDetailStore.getSnapshot(slug, 'Steam').loading).toBeTrue();
+    // The aborted request's failure belongs to an old generation and is dropped.
+    expect(gameDetailStore.getSnapshot(slug, 'Steam').error).toBeNull();
     unsubscribe();
   });
 });

@@ -19,7 +19,7 @@ export type EditionKey =
   | 'vault'
   | 'cross-gen';
 
-export const EDITION_ORDER: readonly EditionKey[] = [
+const EDITION_ORDER: readonly EditionKey[] = [
   'base', 'enhanced', 'deluxe', 'gold', 'premium', 'ultimate', 'champion', 'vault', 'legendary',
   'complete', 'definitive', 'goty', 'directors-cut', 'anniversary', 'special', 'collector', 'cross-gen',
 ];

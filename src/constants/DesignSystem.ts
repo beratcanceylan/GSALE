@@ -139,22 +139,3 @@ export const Shadows = {
     elevation: 10,
   },
 };
-
-const GENRE_PALETTE = [
-  { bg: 'rgba(232,255,71,0.16)', text: '#E8FF47' },
-  { bg: 'rgba(255,107,53,0.18)', text: '#FF8F6B' },
-  { bg: 'rgba(61,220,151,0.16)', text: '#3DDC97' },
-  { bg: 'rgba(120,140,255,0.18)', text: '#9AA8FF' },
-  { bg: 'rgba(255,179,71,0.18)', text: '#FFB347' },
-  { bg: 'rgba(255,92,122,0.16)', text: '#FF8FA3' },
-] as const;
-
-export function getGenreColor(genre: string): { bg: string; text: string } {
-  let hash = 0;
-  for (const char of genre) {
-    // 32-bit wrap-around, like Java's String.hashCode.
-    hash = Math.imul(Math.imul(hash, 31) + (char.codePointAt(0) ?? 0), 1);
-  }
-  const index = Math.abs(hash) % GENRE_PALETTE.length;
-  return GENRE_PALETTE[index] ?? GENRE_PALETTE[0];
-}
