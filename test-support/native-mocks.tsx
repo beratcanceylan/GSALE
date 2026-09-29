@@ -126,8 +126,8 @@ mock.module('react-native', () => ({
 }));
 
 const ICONS = [
-  'AlertCircle', 'ArrowLeft', 'Bell', 'Building2', 'Calendar', 'ExternalLink', 'Gamepad2', 'Gift',
-  'Globe', 'Heart', 'Home', 'Info', 'MapPin', 'PlayCircle', 'Search', 'Settings', 'Star', 'X', 'XCircle',
+  'AlertCircle', 'ArrowLeft', 'Bell', 'Check', 'ChevronRight', 'ExternalLink', 'Gamepad2', 'Gift',
+  'Globe', 'Heart', 'Home', 'Info', 'MapPin', 'Search', 'Settings', 'X',
 ];
 mock.module('lucide-react-native', () => Object.fromEntries(ICONS.map((name) => [name, host(name)])));
 

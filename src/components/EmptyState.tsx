@@ -1,34 +1,54 @@
-import type { LucideIcon } from 'lucide-react-native';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Palette, Spacing, Typography } from '@/constants/DesignSystem';
+import { Palette, Radius, Size, Spacing, useType } from '@/constants/DesignSystem';
 
 type EmptyStateProps = Readonly<{
-  icon: LucideIcon;
   message: string;
+  action?: Readonly<{ label: string; onPress: () => void }>;
 }>;
 
-/** Centered icon and message for a list with nothing to show. */
-export function EmptyState({ icon: Icon, message }: EmptyStateProps) {
+/** What to show when a list is empty or failed, with the one action that helps. */
+export function EmptyState({ message, action }: EmptyStateProps) {
+  const type = useType();
   return (
     <View style={styles.container}>
-      <Icon size={48} color={Palette.textTertiary} />
-      <Text style={styles.message}>{message}</Text>
+      <Text style={[type('body'), styles.message]}>{message}</Text>
+      {action ? (
+        <Pressable
+          onPress={action.onPress}
+          style={({ pressed }) => [styles.action, pressed && styles.pressed]}
+          accessibilityRole="button"
+          accessibilityLabel={action.label}
+        >
+          <Text style={[type('label'), styles.actionText]}>{action.label}</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.xl + Spacing.sm,
+    gap: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.xxl,
   },
   message: {
-    color: Palette.textSecondary,
-    marginTop: Spacing.sm + Spacing.xs,
-    fontSize: Typography.body.fontSize,
-    fontFamily: Typography.body.fontFamily,
+    color: Palette.textMuted,
+    textAlign: 'center',
+  },
+  action: {
+    minHeight: Size.touch,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.md,
+    backgroundColor: Palette.surfaceRaised,
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+  actionText: {
+    color: Palette.text,
   },
 });

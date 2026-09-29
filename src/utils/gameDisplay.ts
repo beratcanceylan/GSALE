@@ -131,7 +131,6 @@ export type CardPriceInfo = {
   price: string;
   originalPrice?: string;
   discount: string;
-  unavailableLabel?: string;
 };
 
 export function resolveCardPrice(game: Game): CardPriceInfo {
@@ -162,13 +161,7 @@ export function resolveCardPrice(game: Game): CardPriceInfo {
     return info;
   }
 
-  return {
-    purchasable: false,
-    price: '',
-    discount: '',
-    unavailableLabel:
-      game.deals.length > 0 ? 'Bu bölgede satın alınamıyor' : 'Fiyat bilinmiyor',
-  };
+  return { purchasable: false, price: '', discount: '' };
 }
 
 export function getDealPlatforms(

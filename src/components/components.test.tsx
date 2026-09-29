@@ -1,148 +1,124 @@
-import { afterEach, describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, mock, test } from 'bun:test';
 
 import { nativeState, resetNativeState } from '../../test-support/native-mocks';
 import { allOfType, byLabel, fire, render } from '../../test-support/render';
-import type { Game } from '@/services/gameData';
 import { uiDeal } from '../../test-support/deals';
+import type { Game } from '@/services/gameData';
+
+mock.module('expo-secure-store', () => ({
+  getItemAsync: async () => null,
+  setItemAsync: async () => undefined,
+}));
 
 const { AppBackground } = await import('@/components/AppBackground');
-const { CardFooter } = await import('@/components/CardFooter');
-const { CardImage } = await import('@/components/CardImage');
+const { CoverCard } = await import('@/components/CoverCard');
+const { CoverImage } = await import('@/components/CoverImage');
 const { EmptyState } = await import('@/components/EmptyState');
-const { FeaturedDeal } = await import('@/components/FeaturedDeal');
-const { GameCard } = await import('@/components/GameCard');
-const { GameListItem } = await import('@/components/GameListItem');
-const { GameSearchBar } = await import('@/components/GameSearchBar');
-const { HomeTopBar } = await import('@/components/HomeTopBar');
-const { PlatformBadge } = await import('@/components/PlatformBadge');
-const { PlatformBadgeList } = await import('@/components/PlatformBadgeList');
 const { ScreenHeader } = await import('@/components/ScreenHeader');
 const { ScreenLoading } = await import('@/components/ScreenLoading');
+const { SearchField } = await import('@/components/SearchField');
 const { useScrollSafeAreaStyle } = await import('@/hooks/useScrollSafeAreaStyle');
-const { getPlatformAspectRatio, getPlatformShortName } = await import('@/utils/platform');
-const { Gamepad2 } = await import('lucide-react-native');
+const { formatMoney, formatPercent } = await import('@/i18n');
+const { setLanguage } = await import('@/i18n/languageStore');
 
 const game: Game = {
-  id: 'steam-10', title: 'Hades', platform: 'Steam', source_platform: 'Steam', imageUrl: 'https://example.com/hades.jpg',
+  id: '10', title: 'Hades', platform: 'Steam', source_platform: 'Steam', imageUrl: 'https://example.com/hades.jpg',
   discount: '-50%', price: '50,00 TL', originalPrice: '100,00 TL', url: 'https://store.steampowered.com/app/10/',
   deals: [uiDeal({ platform: 'Steam', price: '50,00 TL', originalPrice: '100,00 TL', discount: '-50%', url: 'https://store.steampowered.com/app/10/' })],
-  platforms: ['Steam'], rating: null,
+  platforms: ['Steam', 'GOG'], rating: null,
 };
 
-afterEach(() => { resetNativeState(); });
+afterEach(async () => {
+  resetNativeState();
+  await setLanguage('tr');
+});
 
-describe('shared game components', () => {
-  test('image moves through alternate sources, then shows its initial', async () => {
-    const view = await render(<CardImage
-      sources={[{ uri: 'https://example.com/one.jpg' }, { uri: 'https://example.com/two.jpg' }]}
-      title="Hades" aspectRatio={2} upcomingDate="Soon"
-    />);
-    expect(view.text()).toContain('Soon');
-    expect(allOfType(view.root, 'Image')[0]?.props['source']).toEqual({ uri: 'https://example.com/one.jpg' });
-    const firstImage = allOfType(view.root, 'Image')[0];
-    if (!firstImage) throw new Error('first image missing');
-    await fire(firstImage, 'onError');
-    expect(allOfType(view.root, 'Image')[0]?.props['source']).toEqual({ uri: 'https://example.com/two.jpg' });
-    const secondImage = allOfType(view.root, 'Image')[0];
-    if (!secondImage) throw new Error('second image missing');
-    await fire(secondImage, 'onError');
+describe('CoverCard', () => {
+  test('shows the discount, both prices and store marks, and opens the detail', async () => {
+    const view = await render(<CoverCard game={game} />);
+    expect(view.text()).toContain(formatPercent(-50));
+    expect(view.text()).toContain(formatMoney(50));
+    expect(view.text()).toContain(formatMoney(100));
+    expect(byLabel(view.root, 'Steam')).toBeDefined();
+    expect(byLabel(view.root, 'GOG')).toBeDefined();
+    await fire(byLabel(view.root, 'Hades'), 'onPress');
+    expect(nativeState.router.pushed).toContainEqual({ pathname: '/game/[id]', params: { id: '10', platform: 'Steam' } });
+    await view.unmount();
+  });
+
+  test('a game without a price shows no price tag but keeps the store marks', async () => {
+    const view = await render(<CoverCard game={{ ...game, price: '', discount: '', originalPrice: undefined, deals: [] }} />);
+    expect(view.text()).not.toContain(formatMoney(50));
+    expect(byLabel(view.root, 'Steam')).toBeDefined();
+    await view.unmount();
+  });
+
+  test('a free game says free in the app language', async () => {
+    await setLanguage('en');
+    const view = await render(<CoverCard game={{ ...game, deals: [uiDeal({ platform: 'Steam', price: 'Ücretsiz' })] }} />);
+    expect(view.text()).toContain('Free');
+    await view.unmount();
+  });
+
+  test('Arabic drops the Latin font family', async () => {
+    await setLanguage('ar');
+    const view = await render(<CoverCard game={game} />);
+    const title = view.root.findAll((node) => String(node.type) === 'Text' && node.children.includes('Hades'))[0];
+    const styles = [title?.props['style']].flat(3).filter(Boolean) as { fontFamily?: string }[];
+    expect(styles.some((style) => style.fontFamily)).toBeFalse();
+    await view.unmount();
+  });
+});
+
+describe('CoverImage', () => {
+  test('falls back through its sources, then to the title initial', async () => {
+    const view = await render(<CoverImage sources={[{ uri: 'https://a/1.jpg' }, { uri: 'https://a/2.jpg' }]} title="Hades" />);
+    const image = () => allOfType(view.root, 'Image')[0];
+    await fire(image() ?? view.root, 'onError');
+    expect(image()?.props['source']).toEqual({ uri: 'https://a/2.jpg' });
+    await fire(image() ?? view.root, 'onError');
+    expect(image()).toBeUndefined();
     expect(view.text()).toContain('H');
     await view.unmount();
-
-    const empty = await render(<CardImage sources={[]} title="Zelda" aspectRatio={1} />);
-    expect(empty.text()).toContain('Z');
-    expect(allOfType(empty.root, 'Image')).toHaveLength(0);
-    await empty.unmount();
   });
+});
 
-  test('cards show prices and open a detail route with a saved preview', async () => {
-    const view = await render(<GameCard game={game} featuredLabel variant="strip" />);
-    expect(view.text()).toContain('ÖNE ÇIKAN');
-    expect(view.text()).toContain('50,00 TL');
-    await fire(byLabel(view.root, 'Hades oyununa git'), 'onPress');
-    expect(nativeState.router.pushed).toEqual([{ pathname: '/game/[id]', params: { id: 'steam-10', platform: 'Steam' } }]);
-    const firstDeal = game.deals[0];
-    if (!firstDeal) throw new Error('fixture deal missing');
-    await view.update(<GameCard game={{
-      ...game, platforms: ['Steam'], deals: [{ ...firstDeal }],
-    }} featuredLabel variant="strip" />);
-    await view.update(<GameCard game={{ ...game, price: '40,00 TL', deals: [] }} />);
-    expect(view.text()).toContain('40,00 TL');
-    await view.unmount();
-
-    const featured = await render(<FeaturedDeal game={game} />);
-    expect(featured.text()).toContain('ÖNE ÇIKAN');
-    await featured.unmount();
-    const list = await render(<GameListItem game={game} aspectRatio={1} hidePrice />);
-    expect(list.text()).toContain('Steam');
-    await list.unmount();
-  });
-
-  test('footer handles hidden, unavailable and discounted prices', async () => {
-    const empty = await render(<CardFooter game={{ ...game, platform: '', source_platform: '', platforms: [], deals: [] }} hidePrice />);
-    expect(empty.renderer.toJSON()).toBeNull();
-    await empty.unmount();
-
-    const hidden = await render(<CardFooter game={game} hidePrice />);
-    expect(hidden.text()).toContain('Steam');
-    expect(hidden.text()).not.toContain('50,00 TL');
-    await hidden.unmount();
-
-    const normal = await render(<CardFooter game={game} hidePrice={false} />);
-    expect(normal.text()).toContain('- 50 %');
-    expect(normal.text()).toContain('100,00 TL');
-    await normal.unmount();
-
-    const unavailable = await render(<CardFooter game={{ ...game, price: 'Bilinmiyor', deals: [] }} hidePrice={false} />);
-    expect(unavailable.text()).toContain('Fiyat bilinmiyor');
-    await unavailable.unmount();
-  });
-
-  test('search controls call their callbacks and navigation', async () => {
+describe('SearchField', () => {
+  test('clears its text and submits', async () => {
     const changes: string[] = [];
-    let submits = 0;
-    const view = await render(<GameSearchBar value="Had" onChangeText={(value) => changes.push(value)} onSubmit={() => { submits += 1; }} />);
-    await fire(byLabel(view.root, 'Oyun ara'), 'onChangeText', 'Hades');
-    await fire(byLabel(view.root, 'Ara'), 'onPress');
-    expect(changes).toEqual(['Hades']);
-    expect(submits).toBe(1);
-    await view.update(<GameSearchBar value="Hades" onChangeText={() => undefined} onSubmit={() => undefined} showSubmitButton={false} noMargin />);
-    expect(allOfType(view.root, 'Pressable')).toHaveLength(0);
+    let submitted = 0;
+    const view = await render(<SearchField value="hades" onChangeText={(text) => { changes.push(text); }} onSubmit={() => { submitted += 1; }} />);
+    await fire(byLabel(view.root, 'Temizle'), 'onPress');
+    expect(changes).toEqual(['']);
+    await fire(allOfType(view.root, 'TextInput')[0] ?? view.root, 'onSubmitEditing');
+    expect(submitted).toBe(1);
+    await view.update(<SearchField value="" onChangeText={() => undefined} onSubmit={() => undefined} />);
+    expect(view.root.findAll((node) => node.props['accessibilityLabel'] === 'Temizle')).toHaveLength(0);
     await view.unmount();
-
-    const home = await render(<HomeTopBar searchQuery="" onChangeQuery={() => undefined} onSubmitSearch={() => undefined} />);
-    await fire(byLabel(home.root, 'Bildirimler'), 'onPress');
-    expect(nativeState.router.pushed).toContain('/notifications');
-    await home.unmount();
   });
+});
 
-  test('headers, badges and empty states render readable labels', async () => {
-    const header = await render(<ScreenHeader title="Games" subtitle="Today" align="center" trailing={<Gamepad2 />} />);
-    expect(header.text()).toContain('Games Today');
-    await header.update(<ScreenHeader title="Games" />);
-    expect(header.text()).toBe('Games');
+describe('screen chrome', () => {
+  test('header, empty state with action and loading render their text', async () => {
+    const header = await render(<ScreenHeader title="Oyunlar" />);
+    expect(header.text()).toBe('Oyunlar');
     await header.unmount();
 
-    const badges = await render(<PlatformBadgeList platforms={['Epic Games', 'PlayStation']} />);
-    expect(badges.text()).toContain('Epic PS');
-    await badges.update(<PlatformBadgeList platforms={[]} />);
-    expect(badges.renderer.toJSON()).toBeNull();
-    await badges.unmount();
-    const badge = await render(<PlatformBadge platform="Custom Store" />);
-    expect(badge.text()).toBe('Custom Store');
-    await badge.unmount();
-
-    const empty = await render(<EmptyState icon={Gamepad2} message="No games" />);
-    expect(empty.text().trim()).toBe('No games');
+    let retried = 0;
+    const empty = await render(<EmptyState message="Hiç oyun yok" action={{ label: 'Tekrar dene', onPress: () => { retried += 1; } }} />);
+    expect(empty.text()).toContain('Hiç oyun yok');
+    await fire(byLabel(empty.root, 'Tekrar dene'), 'onPress');
+    expect(retried).toBe(1);
     await empty.unmount();
-    const loading = await render(<ScreenLoading message="Loading" />);
-    expect(loading.text().trim()).toBe('Loading');
+
+    const loading = await render(<ScreenLoading message="Yükleniyor" />);
+    expect(loading.text().trim()).toBe('Yükleniyor');
     await loading.unmount();
   });
 
   test('background hides the splash after first layout, even if hide rejects', async () => {
     nativeState.splashShouldFail = true;
-    const view = await render(<AppBackground><Gamepad2 /></AppBackground>);
+    const view = await render(<AppBackground><ScreenHeader title="x" /></AppBackground>);
     const root = allOfType(view.root, 'View')[0];
     if (!root) throw new Error('background missing');
     await fire(root, 'onLayout');
@@ -151,12 +127,7 @@ describe('shared game components', () => {
     await view.unmount();
   });
 
-  test('platform labels and safe area styles follow the device', async () => {
-    expect(getPlatformShortName(' epic games ')).toBe('Epic');
-    expect(getPlatformShortName('Unknown')).toBe('Unknown');
-    expect(getPlatformAspectRatio('PlayStation')).toBe(1);
-    expect(getPlatformAspectRatio()).toBe(460 / 215);
-
+  test('safe area styles follow the device', async () => {
     function SafeAreaProbe() { return <ScreenHeader title={JSON.stringify(useScrollSafeAreaStyle())} />; }
     const view = await render(<SafeAreaProbe />);
     expect(view.text()).toContain('"flex":1');

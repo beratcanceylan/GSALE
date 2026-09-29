@@ -137,11 +137,11 @@ describe('resolveCardPrice', () => {
       originalPrice: '9 TL',
     });
     expect(resolveCardPrice(game({ price: '5 TL' }))).toEqual({ purchasable: true, price: '5 TL', discount: '' });
-    expect(resolveCardPrice(game({ price: 'Bilinmiyor', deals: [deal('A', 'Bilinmiyor')] }))).toMatchObject({
+    expect(resolveCardPrice(game({ price: 'Bilinmiyor', deals: [deal('A', 'Bilinmiyor')] }))).toEqual({
       purchasable: false,
-      unavailableLabel: 'Bu bölgede satın alınamıyor',
+      price: '',
+      discount: '',
     });
-    expect(resolveCardPrice(game({ price: '' }))).toMatchObject({ unavailableLabel: 'Fiyat bilinmiyor' });
   });
 });
 
