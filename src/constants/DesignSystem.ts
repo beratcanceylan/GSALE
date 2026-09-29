@@ -1,141 +1,104 @@
-export const Font = {
-  body: 'IBMPlexSans_400Regular',
-  bodyMedium: 'IBMPlexSans_500Medium',
-  bodySemiBold: 'IBMPlexSans_600SemiBold',
-  bodyBold: 'IBMPlexSans_700Bold',
-} as const;
+import { useSyncExternalStore } from 'react';
+import type { TextStyle } from 'react-native';
 
+import { usesSystemFont } from '@/i18n/languages';
+import { languageStore } from '@/i18n/languageStore';
+
+/**
+ * GSale design tokens. Cover art carries the colour; the interface stays a quiet
+ * slate so covers read first. The one loud element is the paper price tag.
+ */
 export const Palette = {
-  background: '#07070C',
-  backgroundElevated: '#0E0E14',
-  surface: '#141419',
-  surfaceLight: '#1E1E26',
-  surfaceHighlight: 'rgba(255,255,255,0.06)',
-  border: '#2E2E38',
+  /** Slate ground behind the covers. */
+  background: '#1A1C22',
+  /** Image placeholders, pressed rows, skeletons. */
+  surface: '#23262E',
+  /** Inputs and chips. */
+  surfaceRaised: '#2C3038',
+  line: '#353944',
 
-  text: '#F4F4F6',
-  textSecondary: '#9A9AA6',
-  textTertiary: '#6B6B78',
+  text: '#ECEAE4',
+  textMuted: '#A9A7AE',
+  textFaint: '#6F6D75',
 
-  accent: '#E8FF47',
-  accentMuted: 'rgba(232,255,71,0.14)',
-  accentSecondary: '#A0A5B1',
+  /** Paper shelf tag that carries a price. */
+  tag: '#F2E6C9',
+  onTag: '#1A1C22',
+  /** Discounts and the lowest price. */
+  sale: '#7BD88F',
+  onSale: '#10301A',
+  danger: '#F07178',
 
-  deal: '#FF6B35',
-  dealMuted: 'rgba(255,107,53,0.18)',
-  success: '#3DDC97',
-  error: '#FF5C7A',
-  warning: '#FFB347',
-
-  overlayLight: 'rgba(0,0,0,0.35)',
-  overlayMedium: 'rgba(0,0,0,0.62)',
-  overlayHeavy: 'rgba(0,0,0,0.94)',
-
-  gamePass: '#198038',
-  onGamePass: '#FFFFFF',
-  onDeal: '#FFFFFF',
-};
+  /** Behind icons that sit on top of cover art. */
+  scrim: 'rgba(26,28,34,0.78)',
+} as const;
 
 export const Spacing = {
+  xxs: 2,
   xs: 4,
   sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-};
-
-export const Radius = {
-  xs: 2,
-  sm: 4,
-  md: 6,
-  lg: 8,
-  xl: 10,
-  full: 999,
-};
-
-export const Typography = {
-  h1: {
-    fontFamily: Font.bodyBold,
-    fontSize: 26,
-    lineHeight: 32,
-    letterSpacing: -0.2,
-  },
-  h2: {
-    fontFamily: Font.bodyBold,
-    fontSize: 18,
-    lineHeight: 24,
-    letterSpacing: -0.1,
-  },
-  h3: {
-    fontFamily: Font.bodySemiBold,
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  body: {
-    fontFamily: Font.body,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  caption: {
-    fontFamily: Font.bodyMedium,
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  button: {
-    fontFamily: Font.bodyBold,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  price: {
-    fontFamily: Font.bodyBold,
-    fontSize: 15,
-    lineHeight: 20,
-  },
-  priceHero: {
-    fontFamily: Font.bodyBold,
-    fontSize: 24,
-    lineHeight: 30,
-    letterSpacing: 0,
-  },
-  small: {
-    fontFamily: Font.bodyBold,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  micro: {
-    fontFamily: Font.bodyBold,
-    fontSize: 10,
-    lineHeight: 14,
-    letterSpacing: 0.6,
-  },
-  sectionLabel: {
-    fontFamily: Font.bodySemiBold,
-    fontSize: 12,
-    lineHeight: 16,
-    letterSpacing: 1,
-  },
+  md: 12,
+  lg: 16,
+  xl: 24,
+  xxl: 32,
 } as const;
 
-export const Shadows = {
-  sm: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  md: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  lg: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
-    elevation: 10,
-  },
-};
+export const Radius = {
+  none: 0,
+  sm: 2,
+  md: 4,
+  full: 999,
+} as const;
+
+export const Size = {
+  touch: 44,
+  icon: 20,
+  iconSmall: 16,
+  logo: 16,
+  logoLarge: 20,
+  tabBar: 56,
+  stripCard: 264,
+  hairline: 1,
+  skeletonLine: 14,
+} as const;
+
+export const Aspect = {
+  cover: 16 / 9,
+} as const;
+
+export const Font = {
+  regular: 'IBMPlexSans_400Regular',
+  medium: 'IBMPlexSans_500Medium',
+  semibold: 'IBMPlexSans_600SemiBold',
+  bold: 'IBMPlexSans_700Bold',
+} as const;
+
+type TypeToken = Readonly<Pick<TextStyle, 'fontFamily' | 'fontSize' | 'lineHeight' | 'letterSpacing' | 'fontVariant'>>;
+
+export const Typography = {
+  display: { fontFamily: Font.bold, fontSize: 28, lineHeight: 34, letterSpacing: -0.4 },
+  title: { fontFamily: Font.semibold, fontSize: 20, lineHeight: 26, letterSpacing: -0.2 },
+  heading: { fontFamily: Font.semibold, fontSize: 15, lineHeight: 20 },
+  body: { fontFamily: Font.regular, fontSize: 15, lineHeight: 22 },
+  label: { fontFamily: Font.medium, fontSize: 13, lineHeight: 18 },
+  caption: { fontFamily: Font.regular, fontSize: 12, lineHeight: 16 },
+  price: { fontFamily: Font.semibold, fontSize: 15, lineHeight: 20, fontVariant: ['tabular-nums'] },
+  priceLarge: { fontFamily: Font.bold, fontSize: 22, lineHeight: 26, fontVariant: ['tabular-nums'] },
+} as const satisfies Record<string, TypeToken>;
+
+export type TypeName = keyof typeof Typography;
+
+/** A type token, without the custom family for scripts IBM Plex Sans does not cover. */
+export function typeFor(name: TypeName, systemFont: boolean): TypeToken {
+  const token: TypeToken = Typography[name];
+  if (!systemFont) return token;
+  const { fontFamily: _family, ...rest } = token;
+  return rest;
+}
+
+/** `typeFor` bound to the app language; re-renders when the language changes. */
+export function useType(): (name: TypeName) => TypeToken {
+  const language = useSyncExternalStore(languageStore.subscribe, languageStore.getSnapshot);
+  const systemFont = usesSystemFont(language);
+  return (name) => typeFor(name, systemFont);
+}
