@@ -6,10 +6,7 @@ import {
   getDealPlatforms,
   getGameImageSources,
   getTitleInitial,
-  imageSourceFromUri,
   isSafeExternalUrl,
-  parseComparablePrice,
-  pickBestDealForDisplay,
   resolveCardPrice,
 } from '@/utils/gameDisplay';
 
@@ -51,24 +48,6 @@ describe('isSafeExternalUrl', () => {
   });
 });
 
-describe('imageSourceFromUri', () => {
-  test('adds store referer headers and normalizes protocol-relative URIs', () => {
-    expect(imageSourceFromUri('//image.api.playstation.com/x.png')).toMatchObject({
-      uri: 'https://image.api.playstation.com/x.png',
-      headers: { Referer: 'https://store.playstation.com/' },
-    });
-    expect(imageSourceFromUri('https://store-images.s-microsoft.com/x')).toMatchObject({
-      headers: { Referer: 'https://www.xbox.com/' },
-    });
-    expect(imageSourceFromUri('https://cdn1.epicgames.com/x')).toMatchObject({
-      headers: { Referer: 'https://store.epicgames.com/' },
-    });
-    const plain = imageSourceFromUri('https://images.gog-statics.com/x.jpg') as { headers: Record<string, string> };
-    expect(plain.headers['Referer']).toBeUndefined();
-    expect(imageSourceFromUri('   ')).toBeNull();
-  });
-});
-
 describe('getGameImageSources', () => {
   test('falls back to Steam header art for Steam games', () => {
     const sources = getGameImageSources(
@@ -94,23 +73,6 @@ describe('getGameImageSources', () => {
     expect(getGameImageSources(game({ id: 'ps-1', platform: 'PlayStation', imageUrl: '' }))).toEqual([]);
     const duplicate = getGameImageSources(game({ imageUrl: 'https://a/x.jpg', platform: 'Xbox' }));
     expect(duplicate).toHaveLength(1);
-  });
-});
-
-describe('parseComparablePrice and pickBestDealForDisplay', () => {
-  test('orders prices, free and unknown', () => {
-    expect(parseComparablePrice('Bilinmiyor')).toBe(Number.POSITIVE_INFINITY);
-    expect(parseComparablePrice('199,99 TL')).toBe(199.99);
-    expect(parseComparablePrice('Ücretsiz')).toBe(0);
-    expect(parseComparablePrice('0,00 TL')).toBe(0);
-    expect(parseComparablePrice('Game Pass')).toBe(Number.POSITIVE_INFINITY);
-  });
-
-  test('prefers the cheapest paid deal, then free, and ignores unavailable', () => {
-    expect(pickBestDealForDisplay([])).toBeNull();
-    expect(pickBestDealForDisplay([deal('A', 'Bilinmiyor')])).toBeNull();
-    expect(pickBestDealForDisplay([deal('A', '20 TL'), deal('B', '10 TL'), deal('C', 'Ücretsiz')])?.platform).toBe('B');
-    expect(pickBestDealForDisplay([deal('A', 'Ücretsiz')])?.platform).toBe('A');
   });
 });
 

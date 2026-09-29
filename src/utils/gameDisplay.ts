@@ -2,11 +2,8 @@ import type { ImageSource } from 'expo-image';
 
 import type { Game } from '@/services/gameData';
 import { normalizeProtocolRelativeUri } from '@/services/store/image-uri';
-import {
-  extractNumericPrice,
-  isExplicitlyFreePrice,
-  isUnavailablePrice,
-} from '@/services/store/price-parse';
+import { cheapestDeal } from '@/services/deal';
+import { isUnavailablePrice } from '@/services/store/price-parse';
 
 export { isUnavailablePrice } from '@/services/store/price-parse';
 
@@ -30,13 +27,6 @@ export function isSafeExternalUrl(value: string | undefined | null): boolean {
   } catch {
     return false;
   }
-}
-
-export function imageSourceFromUri(uri: string): ImageSource | null {
-  const normalized = normalizeImageUri(uri);
-  if (!normalized) return null;
-  const headers = headersForImageUrl(normalized);
-  return headers ? { uri: normalized, headers } : { uri: normalized };
 }
 
 function headersForImageUrl(uri: string): Record<string, string> | undefined {
@@ -103,29 +93,6 @@ export function getGameImageSources(
   return entries;
 }
 
-export function parseComparablePrice(price: string): number {
-  if (isUnavailablePrice(price)) return Number.POSITIVE_INFINITY;
-  const numeric = extractNumericPrice(price);
-  if (numeric !== null && numeric > 0) return numeric;
-  if (isExplicitlyFreePrice(price)) return 0;
-  if (numeric === 0) return 0;
-  return Number.POSITIVE_INFINITY;
-}
-
-export function pickBestDealForDisplay(
-  deals: Game['deals'],
-): Game['deals'][number] | null {
-  const available = deals.filter((deal) => !isUnavailablePrice(deal.price));
-  const paid = available.filter((deal) => !isExplicitlyFreePrice(deal.price));
-  const pool = paid.length > 0 ? paid : available;
-  const first = pool[0];
-  if (!first) return null;
-
-  return pool.reduce((best, deal) => {
-    return parseComparablePrice(deal.price) < parseComparablePrice(best.price) ? deal : best;
-  }, first);
-}
-
 export type CardPriceInfo = {
   purchasable: boolean;
   price: string;
@@ -134,7 +101,7 @@ export type CardPriceInfo = {
 };
 
 export function resolveCardPrice(game: Game): CardPriceInfo {
-  const bestDeal = pickBestDealForDisplay(game.deals);
+  const bestDeal = cheapestDeal(game.deals);
   if (bestDeal) {
     const info: CardPriceInfo = {
       purchasable: true,
