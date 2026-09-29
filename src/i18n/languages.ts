@@ -40,7 +40,7 @@ export type LanguageCode = (typeof LANGUAGES)[number]['code'];
 
 const CODES = new Set<string>(LANGUAGES.map((language) => language.code));
 const RTL_LANGUAGES = new Set<LanguageCode>(['ar']);
-const SYSTEM_FONT = new Set<LanguageCode>(LANGUAGES.filter((language) => language.font === 'system').map((language) => language.code));
+const SYSTEM_FONT = new Set<LanguageCode>(LANGUAGES.flatMap((language) => (language.font === 'system' ? [language.code] : [])));
 
 export function isLanguageCode(value: string | null | undefined): value is LanguageCode {
   return typeof value === 'string' && CODES.has(value);

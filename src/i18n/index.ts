@@ -27,12 +27,27 @@ export function t(key: MessageKey, params?: Params): string {
   return interpolate(lookup(key, getLanguage()) ?? key, params);
 }
 
+/** Intl objects are costly to build; each is created once per language and kind below. */
+const { NumberFormat, PluralRules } = Intl;
+const pluralRules = new Map<LanguageCode, Intl.PluralRules>();
+const moneyFormats = new Map<LanguageCode, Intl.NumberFormat>();
+const percentFormats = new Map<LanguageCode, Intl.NumberFormat>();
+
+function cached<T>(cache: Map<LanguageCode, T>, language: LanguageCode, create: () => T): T {
+  let value = cache.get(language);
+  if (!value) {
+    value = create();
+    cache.set(language, value);
+  }
+  return value;
+}
+
 type PluralBase = 'search.resultCount';
 
 /** `${base}.${category}` for the CLDR plural category of `count`, falling back to `.other`. */
 export function plural(base: PluralBase, count: number): string {
   const language = getLanguage();
-  const category = new Intl.PluralRules(language).select(count);
+  const category = cached(pluralRules, language, () => new PluralRules(language)).select(count);
   const key = `${base}.${category}` as MessageKey | PluralExtraKey;
   const text = lookup(key, language) ?? lookup(`${base}.other`, language) ?? base;
   return interpolate(text, { count });
@@ -46,10 +61,13 @@ export function useT(): typeof t {
 
 /** Turkish lira amount formatted for the app language. */
 export function formatMoney(amountTry: number, language: LanguageCode = getLanguage()): string {
-  return new Intl.NumberFormat(language, { style: 'currency', currency: 'TRY' }).format(amountTry);
+  return cached(moneyFormats, language, () => new NumberFormat(language, { style: 'currency', currency: 'TRY' })).format(amountTry);
 }
 
 /** Whole-number signed percent ("-40%"), formatted for the app language. */
 export function formatPercent(percent: number, language: LanguageCode = getLanguage()): string {
-  return new Intl.NumberFormat(language, { style: 'percent', signDisplay: 'exceptZero', maximumFractionDigits: 0 }).format(percent / 100);
+  const format = cached(percentFormats, language, () =>
+    new NumberFormat(language, { style: 'percent', signDisplay: 'exceptZero', maximumFractionDigits: 0 }),
+  );
+  return format.format(percent / 100);
 }
