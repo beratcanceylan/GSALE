@@ -1,7 +1,10 @@
 import { fetchGameDetail, type Game } from '@/services/gameData';
+import type { EditionKey } from '@/services/api';
 
 export type GameDetailFetchSnapshot = Readonly<{
   game: Game | null;
+  /** Edition whose prices are shown; starts on the opened product's edition. */
+  selectedEdition: EditionKey | null;
   loading: boolean;
   error: string | null;
   version: number;
@@ -23,7 +26,7 @@ function detailKey(slug: string, platformHint?: string): string {
 
 function createEntry(): DetailEntry {
   return {
-    snapshot: { game: null, loading: true, error: null, version: 0 },
+    snapshot: { game: null, selectedEdition: null, loading: true, error: null, version: 0 },
     listeners: new Set(),
     pending: null,
     controller: null,
@@ -51,11 +54,19 @@ async function fetchDetailResult(
   }
 }
 
+function initialEdition(game: Game | null): EditionKey | null {
+  if (!game) return null;
+  const keys = game.editions?.map((option) => option.key) ?? [];
+  if (game.edition && keys.includes(game.edition)) return game.edition;
+  return keys[0] ?? game.edition ?? null;
+}
+
 /** A newer load (retry or new platform hint) supersedes this one; drop stale results. */
 function commitIfCurrent(entry: DetailEntry, generation: number, result: DetailResult): void {
   if (generation !== entry.generation) return;
   entry.snapshot = {
     ...result,
+    selectedEdition: initialEdition(result.game),
     loading: false,
     version: entry.snapshot.version + 1,
   };
@@ -75,6 +86,7 @@ function loadEntry(
   entry.pending = (async () => {
     entry.snapshot = {
       game: entry.snapshot.game,
+      selectedEdition: entry.snapshot.selectedEdition,
       loading: true,
       error: null,
       version: entry.snapshot.version + 1,
@@ -111,6 +123,15 @@ export const gameDetailStore = {
     entry.controller = null;
     entry.pending = null;
     loadEntry(entry, slug, platformHint);
+  },
+  /** Shows another edition's prices; every edition is already loaded, so no request is made. */
+  selectEdition: (slug: string, platformHint: string | undefined, key: EditionKey): void => {
+    const entry = getEntry(detailKey(slug, platformHint));
+    const { snapshot } = entry;
+    const known = snapshot.game?.editions?.some((option) => option.key === key) ?? false;
+    if (!known || snapshot.selectedEdition === key) return;
+    entry.snapshot = { ...snapshot, selectedEdition: key, version: snapshot.version + 1 };
+    notifyEntry(entry);
   },
   subscribe: (
     slug: string,

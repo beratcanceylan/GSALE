@@ -36,7 +36,9 @@ export const searchStoreMock = {
   },
 };
 
-let detailSnapshot = { game: null as unknown | null, loading: true, error: null as string | null, version: 0 };
+type DetailSnapshot = { game: unknown | null; selectedEdition?: string | null; loading: boolean; error: string | null; version: number };
+
+let detailSnapshot: DetailSnapshot = { game: null, selectedEdition: null, loading: true, error: null, version: 0 };
 const detailListeners = new Set<Listener>();
 
 export const gameDetailStoreMock = {
@@ -47,7 +49,12 @@ export const gameDetailStoreMock = {
     return () => { detailListeners.delete(listener); };
   },
   reload(slug: string, hint?: string) { this.reloads.push([slug, hint]); },
-  setSnapshot(next: { game: unknown | null; loading: boolean; error: string | null; version: number }) {
+  selections: [] as string[],
+  selectEdition(_slug: string, _hint: string | undefined, key: string) {
+    this.selections.push(key);
+    this.setSnapshot({ ...detailSnapshot, selectedEdition: key, version: detailSnapshot.version + 1 });
+  },
+  setSnapshot(next: DetailSnapshot) {
     detailSnapshot = next;
     for (const listener of detailListeners) listener();
   },

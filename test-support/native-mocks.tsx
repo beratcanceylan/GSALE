@@ -143,15 +143,6 @@ mock.module('expo-splash-screen', () => ({
     if (nativeState.splashShouldFail) throw new Error('splash already hidden');
   },
 }));
-mock.module('expo-video', () => ({
-  VideoView: host('VideoView'),
-  useVideoPlayer: (source: unknown, setup?: (player: { loop: boolean; play: () => void }) => void) => {
-    const player = { source, loop: false, play: () => undefined };
-    setup?.(player);
-    return player;
-  },
-}));
-
 type ScreenElementProps = { name: string; options?: Record<string, unknown>; listeners?: Record<string, () => void> };
 
 /** Render navigator screens and expose listeners so tests can fire tab presses. */

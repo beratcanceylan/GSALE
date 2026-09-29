@@ -1,25 +1,11 @@
-import {
-  ArrowLeft,
-  Heart,
-  Calendar,
-  Building2,
-  PlayCircle,
-  ExternalLink,
-  X,
-  AlertCircle,
-  Gamepad2,
-} from 'lucide-react-native';
+import { ArrowLeft, Heart, ExternalLink, AlertCircle, Gamepad2 } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useCallback, useMemo, useReducer, useState, useSyncExternalStore } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 import { Image } from 'expo-image';
-import { useVideoPlayer, VideoView } from 'expo-video';
 import {
   ActivityIndicator,
-  FlatList,
-  type ListRenderItemInfo,
   Linking,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -27,16 +13,15 @@ import {
   Text,
   View,
 } from 'react-native';
-import Animated, { LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Palette, Radius, Shadows, Spacing, Typography, getGenreColor } from '@/constants/DesignSystem';
+import { Palette, Radius, Shadows, Spacing, Typography } from '@/constants/DesignSystem';
 import { type Game } from '@/services/gameData';
+import type { EditionKey } from '@/services/api';
 import { gameDetailStore } from '@/services/screenData';
 import { getPlatformAspectRatio } from '@/utils/platform';
 import {
   getGameImageSources,
   getTitleInitial,
-  imageSourceFromUri,
   isSafeExternalUrl,
   isUnavailablePrice,
   parseComparablePrice,
@@ -45,61 +30,10 @@ import {
 import { toggleFavorite, isFavorite as checkFavorite } from '@/services/favorites';
 import { useScrollSafeAreaStyle } from '@/hooks/useScrollSafeAreaStyle';
 
-type GameVideo = NonNullable<Game['videos']>[number];
-
 function routeParam(value: unknown): string | undefined {
   if (typeof value === 'string' && value.length > 0) return value;
   if (Array.isArray(value) && typeof value[0] === 'string' && value[0].length > 0) return value[0];
   return undefined;
-}
-
-const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})/;
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return '';
-  // ISO formats: "2017-11-17T00:00:00.000Z" or "2017-11-17"
-  const isoMatch = ISO_DATE_PATTERN.exec(dateStr);
-  if (isoMatch) {
-    const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
-    const year = isoMatch[1];
-    const monthIndex = isoMatch[2];
-    const dayRaw = isoMatch[3];
-    if (!year || !monthIndex || !dayRaw) return dateStr;
-    const day = Number.parseInt(dayRaw, 10);
-    const month = months[Number.parseInt(monthIndex, 10) - 1];
-    if (!month) return dateStr;
-    return `${day} ${month} ${year}`;
-  }
-  // Zaten formatlanmış string ise olduğu gibi döndür
-  return dateStr;
-}
-
-type GameDetailUiState = {
-  selectedImage: string | null;
-  selectedVideo: GameVideo | null;
-  activeTab: 'overview' | 'prices';
-};
-
-type GameDetailUiAction =
-  | { type: 'SET_SELECTED_IMAGE'; image: string | null }
-  | { type: 'SET_SELECTED_VIDEO'; video: GameVideo | null }
-  | { type: 'SET_ACTIVE_TAB'; tab: 'overview' | 'prices' };
-
-const initialGameDetailUiState: GameDetailUiState = {
-  selectedImage: null,
-  selectedVideo: null,
-  activeTab: 'overview',
-};
-
-function gameDetailUiReducer(state: GameDetailUiState, action: GameDetailUiAction): GameDetailUiState {
-  switch (action.type) {
-    case 'SET_SELECTED_IMAGE':
-      return { ...state, selectedImage: action.image };
-    case 'SET_SELECTED_VIDEO':
-      return { ...state, selectedVideo: action.video };
-    case 'SET_ACTIVE_TAB':
-      return { ...state, activeTab: action.tab };
-  }
 }
 
 function LoadingView({ onBack }: Readonly<{ onBack: () => void }>) {
@@ -195,30 +129,6 @@ function GameHeroSection({ game, isFav, onToggleFav, onBack }: Readonly<{
       </View>
       <View style={styles.heroInfo}>
         <Text style={styles.heroTitle} numberOfLines={2}>{game.title}</Text>
-        <View style={styles.heroMetaRow}>
-          {game.release_date && (
-            <View style={styles.heroMetaItem}>
-              <Calendar size={14} color={Palette.textSecondary} />
-              <Text style={styles.heroMetaText}>{formatDate(game.release_date)}</Text>
-            </View>
-          )}
-          {game.developers && game.developers.length > 0 && (
-            <View style={styles.heroMetaItem}>
-              <Building2 size={14} color={Palette.textSecondary} />
-              <Text style={styles.heroMetaText} numberOfLines={1}>{game.developers[0]}</Text>
-            </View>
-          )}
-        </View>
-        <View style={styles.genreTags}>
-          {(game.genres || []).slice(0, 3).map((genre) => {
-            const color = getGenreColor(genre);
-            return (
-              <View key={genre} style={[styles.genreBadge, { backgroundColor: color.bg }]}>
-                <Text style={[styles.genreText, { color: color.text }]}>{genre}</Text>
-              </View>
-            );
-          })}
-        </View>
       </View>
     </>
   );
@@ -255,122 +165,6 @@ function BestPriceCard({ deal }: Readonly<{ deal: Game['deals'][number] }>) {
         <ExternalLink size={18} color={Palette.background} />
       </View>
     </Pressable>
-  );
-}
-
-function TabBar({ activeTab, onTabChange }: Readonly<{ activeTab: 'overview' | 'prices'; onTabChange: (tab: 'overview' | 'prices') => void }>) {
-  return (
-    <View style={styles.tabBar}>
-      <Pressable
-        style={[styles.tabButton, activeTab === 'overview' && styles.tabButtonActive]}
-        onPress={() => { onTabChange('overview'); }}
-      >
-        <Text style={[styles.tabText, activeTab === 'overview' && styles.tabTextActive]}>Genel Bakış</Text>
-      </Pressable>
-      <Pressable
-        style={[styles.tabButton, activeTab === 'prices' && styles.tabButtonActive]}
-        onPress={() => { onTabChange('prices'); }}
-      >
-        <Text style={[styles.tabText, activeTab === 'prices' && styles.tabTextActive]}>Fiyatlar</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-type MediaListItem = {
-  type: 'video';
-  platform: string;
-  id: string;
-  url?: string;
-  thumbnail?: string;
-  key: string;
-} | {
-  type: 'screenshot';
-  url: string;
-  key: string;
-};
-
-function OverviewTab({ game, onSelectImage, onSelectVideo }: Readonly<{
-  game: Game;
-  onSelectImage: (url: string) => void;
-  onSelectVideo: (video: GameVideo) => void;
-}>) {
-  const screenshots = game.screenshots || [];
-  const heroImage = game.imageUrl || screenshots[0];
-  const mediaScreenshots = heroImage === screenshots[0] ? screenshots.slice(1) : screenshots;
-  const mediaItems = React.useMemo((): MediaListItem[] => [
-    ...(game.videos?.map((video) => ({ type: 'video' as const, ...video, key: video.id })) || []),
-    ...mediaScreenshots.map((screenshot) => ({ type: 'screenshot' as const, url: screenshot, key: screenshot })),
-  ], [game.videos, mediaScreenshots]);
-
-  const renderMediaItem = useCallback((info: ListRenderItemInfo<MediaListItem>) => {
-    const media = info.item;
-    if (media.type === 'video') {
-      return (
-        <Pressable
-          style={styles.mediaItem}
-          onPress={() => {
-            if (!media.url) return;
-            if (!isSafeExternalUrl(media.url)) return;
-            if (media.platform === 'youtube' || media.url.includes('youtube.com') || media.url.includes('youtu.be')) {
-              void Linking.openURL(media.url);
-              return;
-            }
-            onSelectVideo(media);
-          }}
-          accessibilityLabel="Video izle"
-          accessibilityRole="button"
-        >
-          <Image
-            source={
-              imageSourceFromUri(media.thumbnail || `https://img.youtube.com/vi/${media.id}/mqdefault.jpg`) ??
-              { uri: `https://img.youtube.com/vi/${media.id}/mqdefault.jpg` }
-            }
-            style={styles.mediaImage}
-            contentFit="cover"
-          />
-          <View style={styles.playIcon}>
-            <PlayCircle size={48} color={Palette.text} />
-          </View>
-        </Pressable>
-      );
-    }
-    return (
-      <Pressable
-        style={styles.mediaItem}
-        onPress={() => { onSelectImage(media.url); }}
-        accessibilityLabel="Ekran görüntüsünü büyüt"
-        accessibilityRole="button"
-      >
-        <Image
-          source={imageSourceFromUri(media.url) ?? { uri: media.url }}
-          style={styles.mediaImage}
-          contentFit="cover"
-        />
-      </Pressable>
-    );
-  }, [onSelectImage, onSelectVideo]);
-
-  return (
-    <>
-      {game.description ? (
-        <View style={styles.aboutSection}>
-          <Text style={styles.descriptionText}>{game.description}</Text>
-        </View>
-      ) : null}
-      {mediaItems.length > 0 && (
-        <View style={styles.mediaSection}>
-          <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.mediaListContent}
-            data={mediaItems}
-            renderItem={renderMediaItem}
-            keyExtractor={(item) => item.key}
-          />
-        </View>
-      )}
-    </>
   );
 }
 
@@ -480,56 +274,41 @@ function PricesTab({ deals }: Readonly<{ deals: Game['deals'] }>) {
   );
 }
 
-function ScreenshotModal({ image, onClose }: Readonly<{ image: string | null; onClose: () => void }>) {
+function EditionChips({ editions, selected, onSelect }: Readonly<{
+  editions: readonly { key: EditionKey }[];
+  selected: EditionKey | null;
+  onSelect: (key: EditionKey) => void;
+}>) {
+  if (editions.length < 2) return null;
   return (
-    <Modal visible={image !== null} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <X size={32} color={Palette.text} style={styles.modalClose} />
-        {image ? (
-          <Image
-            source={imageSourceFromUri(image) ?? { uri: image }}
-            style={styles.modalImage}
-            contentFit="contain"
-          />
-        ) : null}
-      </Pressable>
-    </Modal>
-  );
-}
-
-function VideoModal({ video, onClose }: Readonly<{ video: GameVideo; onClose: () => void }>) {
-  const player = useVideoPlayer(video.url || '', currentPlayer => {
-    currentPlayer.play();
-  });
-
-  return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <Pressable onPress={onClose} style={styles.videoCloseButton} accessibilityLabel="Videoyu kapat" accessibilityRole="button">
-          <X size={28} color={Palette.text} />
+    <View style={styles.editionRow}>
+      {editions.map(({ key }) => (
+        <Pressable
+          key={key}
+          onPress={() => { onSelect(key); }}
+          style={[styles.editionChip, key === selected && styles.editionChipActive]}
+          accessibilityLabel={key}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: key === selected }}
+        >
+          <Text style={[styles.editionText, key === selected && styles.editionTextActive]}>{key}</Text>
         </Pressable>
-        <VideoView
-          player={player}
-          style={styles.videoPlayer}
-          fullscreenOptions={{ enable: true }}
-          allowsPictureInPicture
-        />
-      </View>
-    </Modal>
+      ))}
+    </View>
   );
 }
 
 type GameDetailLoadedProps = Readonly<{
   game: Game;
-  ui: GameDetailUiState;
-  dispatch: React.Dispatch<GameDetailUiAction>;
+  selectedEdition: EditionKey | null;
+  onSelectEdition: (key: EditionKey) => void;
   onBack: () => void;
 }>;
 
-function GameDetailLoaded({ game, ui, dispatch, onBack }: GameDetailLoadedProps) {
+function GameDetailLoaded({ game, selectedEdition, onSelectEdition, onBack }: GameDetailLoadedProps) {
   const [isFav, setIsFav] = useState(() => checkFavorite(game.id));
-  const { selectedImage, selectedVideo, activeTab } = ui;
-  const cheapestDeal = useMemo(() => pickBestDealForDisplay(game.deals), [game.deals]);
+  const deals = game.editions?.find((option) => option.key === selectedEdition)?.deals ?? game.deals;
+  const cheapestDeal = useMemo(() => pickBestDealForDisplay(deals), [deals]);
   const scrollSafeAreaStyle = useScrollSafeAreaStyle();
 
   return (
@@ -559,24 +338,10 @@ function GameDetailLoaded({ game, ui, dispatch, onBack }: GameDetailLoadedProps)
           }}
           onBack={onBack}
         />
+        <EditionChips editions={game.editions ?? []} selected={selectedEdition} onSelect={onSelectEdition} />
         {cheapestDeal ? <BestPriceCard deal={cheapestDeal} /> : null}
-        <TabBar activeTab={activeTab} onTabChange={(tab) => { dispatch({ type: 'SET_ACTIVE_TAB', tab }); }} />
-        <Animated.View layout={LinearTransition.duration(220)}>
-          {activeTab === 'overview' ? (
-            <OverviewTab
-              game={game}
-              onSelectImage={(url) => { dispatch({ type: 'SET_SELECTED_IMAGE', image: url }); }}
-              onSelectVideo={(video) => { dispatch({ type: 'SET_SELECTED_VIDEO', video }); }}
-            />
-          ) : (
-            <PricesTab deals={game.deals} />
-          )}
-        </Animated.View>
+        <PricesTab deals={deals} />
       </ScrollView>
-      <ScreenshotModal image={selectedImage} onClose={() => { dispatch({ type: 'SET_SELECTED_IMAGE', image: null }); }} />
-      {selectedVideo ? (
-        <VideoModal video={selectedVideo} onClose={() => { dispatch({ type: 'SET_SELECTED_VIDEO', video: null }); }} />
-      ) : null}
     </View>
   );
 }
@@ -588,8 +353,7 @@ type GameDetailContentProps = Readonly<{
 
 function GameDetailContent({ slug, platformHint }: GameDetailContentProps) {
   const { back } = useRouter();
-  const [ui, dispatch] = useReducer(gameDetailUiReducer, initialGameDetailUiState);
-  const { game, loading, error } = useSyncExternalStore(
+  const { game, selectedEdition, loading, error } = useSyncExternalStore(
     (onStoreChange) => gameDetailStore.subscribe(slug, platformHint, onStoreChange),
     () => gameDetailStore.getSnapshot(slug, platformHint),
   );
@@ -599,7 +363,15 @@ function GameDetailContent({ slug, platformHint }: GameDetailContentProps) {
     return <ErrorView message={error || 'Oyun bulunamadı.'} onBack={() => { back(); }} />;
   }
 
-  return <GameDetailLoaded key={game.id} game={game} ui={ui} dispatch={dispatch} onBack={() => { back(); }} />;
+  return (
+    <GameDetailLoaded
+      key={game.id}
+      game={game}
+      selectedEdition={selectedEdition ?? null}
+      onSelectEdition={(key) => { gameDetailStore.selectEdition(slug, platformHint, key); }}
+      onBack={() => { back(); }}
+    />
+  );
 }
 
 export default function GameDetailScreen() {
@@ -628,13 +400,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'transparent',
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: Palette.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: Spacing.sm + Spacing.xs,
   },
   center: {
     flex: 1,
@@ -723,36 +488,32 @@ const styles = StyleSheet.create({
     lineHeight: Typography.h1.lineHeight,
     letterSpacing: Typography.h1.letterSpacing,
   },
-  heroMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  heroMetaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  heroMetaText: {
-    fontSize: Typography.caption.fontSize,
-    fontFamily: Typography.caption.fontFamily,
-    color: Palette.textSecondary,
-  },
-  genreTags: {
+
+  // Editions
+  editionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
   },
-  genreBadge: {
+  editionChip: {
     paddingHorizontal: Spacing.sm + Spacing.xs,
     paddingVertical: Spacing.xs,
     borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Palette.border,
   },
-  genreText: {
-    fontSize: Typography.micro.fontSize,
-    fontFamily: Typography.micro.fontFamily,
-    textTransform: 'uppercase',
-    letterSpacing: Typography.micro.letterSpacing,
+  editionChipActive: {
+    backgroundColor: Palette.surfaceLight,
+  },
+  editionText: {
+    color: Palette.textSecondary,
+    fontSize: Typography.caption.fontSize,
+    fontFamily: Typography.caption.fontFamily,
+  },
+  editionTextActive: {
+    color: Palette.text,
   },
 
   // Best Price
@@ -812,74 +573,7 @@ const styles = StyleSheet.create({
     fontFamily: Typography.button.fontFamily,
   },
 
-  // Tabs
-  tabBar: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.md,
-    marginTop: Spacing.md,
-    gap: Spacing.sm,
-  },
-  tabButton: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.lg,
-    backgroundColor: 'transparent',
-  },
-  tabButtonActive: {
-    backgroundColor: Palette.surfaceLight,
-  },
-  tabText: {
-    fontSize: Typography.body.fontSize,
-    fontFamily: Typography.body.fontFamily,
-    color: Palette.textSecondary,
-  },
-  tabTextActive: {
-    color: Palette.text,
-    fontFamily: Typography.button.fontFamily,
-  },
-
   // About
-  aboutSection: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
-  },
-  descriptionText: {
-    fontSize: Typography.body.fontSize,
-    fontFamily: Typography.body.fontFamily,
-    lineHeight: Typography.body.lineHeight,
-    color: Palette.textSecondary,
-  },
-
-  // Media
-  mediaSection: {
-    marginTop: Spacing.md,
-  },
-  mediaListContent: {
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-  },
-  mediaItem: {
-    width: Spacing.xl * 8 + Spacing.lg,
-    height: Spacing.xl * 5,
-    borderRadius: Radius.lg,
-    backgroundColor: Palette.surfaceLight,
-  },
-  mediaImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: Radius.lg,
-  },
-  playIcon: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
 
   // Prices
   pricesSection: {
@@ -987,40 +681,5 @@ const styles = StyleSheet.create({
     fontSize: Typography.caption.fontSize,
     fontFamily: Typography.caption.fontFamily,
     color: Palette.text,
-  },
-
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: Palette.overlayHeavy,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalClose: {
-    position: 'absolute',
-    top: 50,
-    right: Spacing.md + Spacing.xs,
-    zIndex: 10,
-  },
-  modalImage: {
-    width: '100%',
-    height: '80%',
-  },
-  videoCloseButton: {
-    position: 'absolute',
-    top: 50,
-    right: Spacing.md + Spacing.xs,
-    zIndex: 10,
-    width: 44,
-    height: 44,
-    borderRadius: Radius.lg,
-    backgroundColor: Palette.overlayMedium,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  videoPlayer: {
-    width: '100%',
-    aspectRatio: 16 / 9,
-    backgroundColor: Palette.background,
   },
 });

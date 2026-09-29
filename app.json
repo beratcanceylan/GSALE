@@ -44,7 +44,6 @@
           ]
         }
       ],
-      "expo-video",
       "expo-secure-store",
       "expo-sqlite",
       "expo-status-bar"
