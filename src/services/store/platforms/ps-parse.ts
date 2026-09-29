@@ -1,10 +1,5 @@
+import { baseTitle, editionKey, type EditionKey } from '@/services/store/editions';
 import { scoreProductTitleMatch } from '@/services/store/match';
-import {
-  foldTurkishI,
-  removeWithLeadingSpace,
-  replaceFolded,
-  replaceWithSingleSpace,
-} from '@/services/store/text';
 import { extractNumericPrice, formatTryPrice, isUnavailablePrice } from '@/services/store/price-parse';
 
 const PS_STORE_BASE = 'https://store.playstation.com';
@@ -518,56 +513,11 @@ export function parsePlayStationProductHtml(
   return product;
 }
 
-const PS_TR_EDITION_NAMES = [
-  'Standart',
-  'Lüks',
-  'Deluxe',
-  String.raw`Dijital\s+Deluxe`,
-  'Dijital',
-  'Seçkin',
-  'Özel',
-  'Nihai',
-  'Genişletilmiş',
-  'Tam',
-  'Complete',
-  'Yönetmenin',
-];
-const PS_EN_EDITION_NAMES = [
-  'Deluxe', 'Ultimate', 'Definitive', 'Enhanced', 'GOTY', 'Game of the Year', 'Complete',
-  'Special', 'Remastered', 'Anniversary', 'Collector', 'Standard', "Director'?s Cut",
-];
-const PS_TR_EDITION_SUFFIX = new RegExp(
-  String.raw`(?:[-–—]\s*)?(?:${PS_TR_EDITION_NAMES.join('|')})\s*Sürüm[üu]?`,
-  'iu',
-);
-const PS_EN_EDITION_SUFFIX = new RegExp(String.raw`(?:[-–—]\s*)?(?:${PS_EN_EDITION_NAMES.join('|')})\s*Edition`, 'iu');
-const PS_EN_EDITION_WORD = new RegExp(String.raw`(?:[-–—]\s*)?(?:${PS_EN_EDITION_NAMES.join('|')})\b`, 'iu');
-const PS_CROSS_GEN = /(?:[-–—]\s*)?(?:Cross-Gen|Çapraz Nesil)(?:\s*(?:Paketi?|Bundle))?/iu;
-const PS_PARENTHESISED = /\([^()]*\)/;
-const PS_TRAILING_PRODUCT_WORDS =
-  /(?:^|\s)(?:Sürüm[üu]?|Edition|Console\s+Edition|Bundle|Paketi?|Başlatıcısı|Launcher)(?:\s|$)/giu;
-const PS_TITLE_SEPARATORS = '-–—:/';
-
-/** Drops one trailing run of separators (" - ", " :") and the spaces around it. */
-function stripTrailingSeparators(text: string): string {
-  let end = text.trimEnd().length;
-  while (end > 0 && PS_TITLE_SEPARATORS.includes(text.charAt(end - 1))) end -= 1;
-  return end === text.trimEnd().length ? text : text.slice(0, end).trimEnd();
-}
+const PS_CONSOLE_NAME = /\bPlayStation\s*[45]\b/gi;
 
 export function cleanPsProductTitle(title: string): string {
   if (!title) return '';
-  let cleaned = title.replaceAll(/[™®©]/g, '');
-  for (const pattern of [PS_TR_EDITION_SUFFIX, PS_EN_EDITION_SUFFIX, PS_EN_EDITION_WORD, PS_CROSS_GEN]) {
-    cleaned = removeWithLeadingSpace(cleaned, pattern, foldTurkishI);
-  }
-  cleaned = cleaned
-    .replaceAll(/\b(?:PS4\s*(?:ve|&|\/)\s*PS5|PS5\s*(?:ve|&|\/)\s*PS4)\b/giu, '')
-    .replaceAll(/\bPS[45]\b/gi, '')
-    .replaceAll(/\bPlayStation\s*[45]\b/gi, '');
-  cleaned = replaceFolded(cleaned, PS_TRAILING_PRODUCT_WORDS, ' ', foldTurkishI);
-  cleaned = stripTrailingSeparators(replaceWithSingleSpace(cleaned, PS_PARENTHESISED));
-  return cleaned.replaceAll(/\s+/g, ' ').trim();
+  return baseTitle(title.replaceAll(PS_CONSOLE_NAME, ''));
 }
 
 function hasLegacyOnlyPlayStationPlatform(product: ParsedPlayStationProduct): boolean {
@@ -575,56 +525,6 @@ function hasLegacyOnlyPlayStationPlatform(product: ParsedPlayStationProduct): bo
   const hasModern = product.platforms.some((p) => /ps[45]|playstation\s*[45]/i.test(p));
   const hasLegacy = product.platforms.some((p) => /ps[23]|vita|psp/i.test(p));
   return hasLegacy && !hasModern;
-}
-
-export type PsEditionType =
-  | 'base'
-  | 'deluxe'
-  | 'ultimate'
-  | 'complete'
-  | 'goty'
-  | 'gold'
-  | 'premium'
-  | 'collector'
-  | 'special'
-  | 'directors_cut'
-  | 'anniversary'
-  | 'vault'
-  | 'bundle';
-
-/**
- * Edition markers, checked in order against `foldTurkishI(title)`; the first edition
- * with a matching pattern wins. English and Turkish forms are separate patterns.
- */
-const PS_EDITION_PATTERNS: readonly (readonly [PsEditionType, readonly RegExp[]])[] = [
-  ['base', [/\b(?:standart|standard)(?:\s*(?:s[üu]r[üu]m[üu]?|edition))?\b/iu]],
-  ['directors_cut', [/\bdirector'?s\s*cut\b/iu, /\by[öo]netmenin\s*s[üu]r[üu]m[üu]?\b/iu]],
-  ['deluxe', [/\b(?:deluxe|l[üu]ks)\b/iu]],
-  ['ultimate', [/\bultimate\b/iu, /\bnihai(?:\s*s[üu]r[üu]m[üu]?)?\b/iu]],
-  ['complete', [/\bcomplete(?:\s+edition)?\b/iu, /\btam\s*s[üu]r[üu]m[üu]?\b/iu]],
-  ['goty', [/\b(?:goty|game\s+of\s+the\s+year)\b/iu, /\byilin\s+oyunu\b/iu]],
-  ['gold', [/\bgold(?:\s+edition)?\b/iu, /\baltin\s*s[üu]r[üu]m[üu]?\b/iu]],
-  ['premium', [/\bpremium(?:\s+edition)?\b/iu, /\bse[çc]kin(?:\s*s[üu]r[üu]m[üu]?)?\b/iu]],
-  ['collector', [/\bcollector'?s?(?:\s*edition)?\b/iu, /\bkoleksiyon(?:cu)?\s*s[üu]r[üu]m[üu]?\b/iu]],
-  ['vault', [/\bvault(?:\s+edition)?\b/iu, /\bkasa\s*s[üu]r[üu]m[üu]?\b/iu]],
-  ['special', [/\bspecial(?:\s+edition)?\b/iu, /\b[öo]zel(?:\s*s[üu]r[üu]m[üu]?)?\b/iu]],
-  ['anniversary', [/\banniversary(?:\s+edition)?\b/iu, /\byild[öo]n[üu]m[üu]?(?:\s*s[üu]r[üu]m[üu]?)?\b/iu]],
-];
-
-function hasPsBundleEdition(title: string): boolean {
-  const withoutCrossGen = replaceWithSingleSpace(
-    foldTurkishI(title),
-    /(?:[-–—]\s*)?(?:cross-gen|[çc]apraz\s+nesil)(?:\s*(?:paketi?|bundle))?\b/iu,
-  );
-  return /\b(bundle|paketi?)\b/iu.test(withoutCrossGen);
-}
-
-export function extractPsEdition(title: string): PsEditionType {
-  if (!title) return 'base';
-  const folded = foldTurkishI(title);
-  const edition = PS_EDITION_PATTERNS.find(([, patterns]) => patterns.some((pattern) => pattern.test(folded)));
-  if (edition) return edition[0];
-  return hasPsBundleEdition(title) ? 'bundle' : 'base';
 }
 
 function normalizeTitleForExactCheck(title: string): string {
@@ -635,7 +535,7 @@ function normalizeTitleForExactCheck(title: string): string {
 }
 
 /** Same edition earns a bonus; a different edition is penalised but stays matchable (score ≥ 50). */
-function editionAdjustedScore(score: number, searchEdition: PsEditionType, productEdition: PsEditionType): number {
+function editionAdjustedScore(score: number, searchEdition: EditionKey, productEdition: EditionKey): number {
   if (productEdition === searchEdition) return score + (searchEdition === 'base' ? 15 : 25);
   if (searchEdition !== 'base' && productEdition === 'base') return Math.max(50, score - 15);
   return Math.max(50, score - 25);
@@ -657,8 +557,8 @@ function scorePlayStationProduct(
 
   if (titleScore < 50) return 0;
 
-  const searchEdition = extractPsEdition(searchTitle);
-  const productEdition = extractPsEdition(product.title);
+  const searchEdition = editionKey(searchTitle);
+  const productEdition = editionKey(product.title);
 
   titleScore = editionAdjustedScore(titleScore, searchEdition, productEdition);
 

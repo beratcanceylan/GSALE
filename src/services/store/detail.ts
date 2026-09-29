@@ -1,4 +1,5 @@
-import { extractEdition, scoreProductTitleMatch } from '@/services/store/match';
+import { editionKey } from '@/services/store/editions';
+import { scoreProductTitleMatch } from '@/services/store/match';
 import { getDetailPreview } from '@/services/store/detail-preview';
 import { mergeDetailMetadata, needsDetailMetadata } from '@/services/store/detail-metadata';
 import { throwIfAborted } from '@/services/store/fetch';
@@ -150,7 +151,7 @@ export async function fetchGameDetailLive(
     game = mergeDetailMetadata(game, candidates);
   }
 
-  const edition = game.edition ?? extractEdition(game.title);
+  const edition = game.edition ?? editionKey(game.title);
   const priceOptions = {
     edition,
     signal: options?.signal,

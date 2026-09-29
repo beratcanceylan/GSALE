@@ -1,3 +1,4 @@
+import { editionKey } from '@/services/store/editions';
 import { cleanTitleForCrossPlatform, scoreProductTitleMatch } from '@/services/store/match';
 
 export type XboxTitleHit = Readonly<{
@@ -16,8 +17,8 @@ function normalizedTitle(title: string): string {
     .replace(/[^a-z0-9]+/g, '');
 }
 
-function hasPremiumEdition(title: string): boolean {
-  return /\bpremium\s+edition\b/i.test(title);
+function hasNonBaseEdition(title: string): boolean {
+  return editionKey(title) !== 'base';
 }
 
 function wantsEnhancedSeriesVersion(title: string): boolean {
@@ -58,7 +59,7 @@ function xboxTitleScore(foundTitle: string, searchTitle: string): number {
     score -= 32;
   }
 
-  if (!hasPremiumEdition(searchTitle) && hasPremiumEdition(foundTitle)) {
+  if (!hasNonBaseEdition(searchTitle) && hasNonBaseEdition(foundTitle)) {
     score -= 22;
   }
 

@@ -45,7 +45,8 @@ describe('store match', () => {
   test('matches Enhanced search to base Xbox listing', () => {
     const search = cleanTitleForCrossPlatform('Grand Theft Auto V Enhanced');
     expect(scoreProductTitleMatch('Grand Theft Auto V (Xbox One)', search)).toBeGreaterThanOrEqual(55);
-    expect(scoreProductTitleMatch('Grand Theft Auto V Enhanced (PC)', search)).toBeGreaterThanOrEqual(75);
+    // Which edition wins is decided by editionKey, not by the title score.
+    expect(scoreProductTitleMatch('Grand Theft Auto V Enhanced (PC)', search)).toBeGreaterThanOrEqual(50);
   });
 
   test.each([
@@ -64,8 +65,7 @@ describe('store match', () => {
 
   test('getPriceLookupTitles includes base name without Enhanced', () => {
     const titles = getPriceLookupTitles('Grand Theft Auto V Enhanced');
-    expect(titles[0]).toBe('Grand Theft Auto V Enhanced');
-    expect(titles).toContain('Grand Theft Auto V');
+    expect(titles).toEqual(['Grand Theft Auto V']);
   });
 
   test('prefers base GTA V over DLC in pickBestTitleMatch', () => {

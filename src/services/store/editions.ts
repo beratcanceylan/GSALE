@@ -43,7 +43,7 @@ const EDITION_NAMES: readonly Readonly<{ key: EditionKey; paired: boolean; names
   { key: 'cross-gen', paired: false, names: ['cross gen'] },
   { key: 'enhanced', paired: false, names: ['enhanced'] },
   { key: 'ultimate', paired: true, names: ['ultimate', 'ultime', 'nihai'] },
-  { key: 'deluxe', paired: true, names: ['digital deluxe', 'deluxe', 'luks'] },
+  { key: 'deluxe', paired: true, names: ['deluxe', 'luks'] },
   { key: 'gold', paired: true, names: ['gold', 'altin', 'oro', 'or', 'ouro'] },
   { key: 'premium', paired: true, names: ['premium', 'seckin'] },
   { key: 'complete', paired: true, names: ['complete', 'completa', 'komplett', 'tam'] },
@@ -57,6 +57,9 @@ const EDITION_NAMES: readonly Readonly<{ key: EditionKey; paired: boolean; names
 ];
 
 const STANDARD_NAMES = ['standard', 'standart', 'estandar'];
+
+/** "Digital" before an edition name belongs to the edition ("Digital Deluxe Edition"). */
+const DIGITAL_WORDS = new Set(['digital', 'dijital', 'digitale', 'numerique', 'cyfrowa', 'цифровое']);
 
 const PLATFORM_WORDS = new Set(['pc', 'ps4', 'ps5', 'windows', 'xbox', 'and', 've', 'series']);
 
@@ -92,7 +95,9 @@ function pairedRange(tokens: readonly Token[], index: number, length: number): {
   const before = isEditionWord(tokens, index - 1);
   const after = isEditionWord(tokens, index + length);
   if (!before && !after) return null;
-  return { from: before ? index - 1 : index, to: after ? index + length + 1 : index + length };
+  let from = before ? index - 1 : index;
+  if (DIGITAL_WORDS.has(tokens[from - 1]?.word ?? '')) from -= 1;
+  return { from, to: after ? index + length + 1 : index + length };
 }
 
 function findEdition(tokens: readonly Token[]): EditionMatch | null {
@@ -114,10 +119,10 @@ export function editionKey(title: string): EditionKey {
   return findEdition(tokenize(title))?.key ?? 'base';
 }
 
-/** First token of a trailing "Standard Edition" / bare edition word, if any. */
-function trailingEditionStart(tokens: readonly Token[]): number | null {
-  const last = tokens.length - 1;
-  if (!isEditionWord(tokens, last)) return null;
+/** Start of a trailing "Standard Edition" / bare edition word ending before `end`, else `end`. */
+function trailingEditionStart(tokens: readonly Token[], end: number): number {
+  const last = end - 1;
+  if (last < 1 || !isEditionWord(tokens, last)) return end;
   const previous = tokens[last - 1]?.word;
   return previous && STANDARD_NAMES.includes(previous) ? last - 1 : last;
 }
@@ -158,9 +163,8 @@ export function baseTitle(title: string): string {
   const match = findEdition(tokens);
   const startToken = leadingEditionEnd(tokens, match);
 
-  let endToken = tokens.length;
-  if (match && match.from > startToken) endToken = match.from;
-  else endToken = trailingEditionStart(tokens) ?? endToken;
+  let endToken = stripTrailingPlatforms(tokens, tokens.length);
+  endToken = match && match.from > startToken ? match.from : trailingEditionStart(tokens, endToken);
   endToken = stripTrailingPlatforms(tokens, endToken);
   if (endToken <= startToken) return trimSeparators(cleaned);
 

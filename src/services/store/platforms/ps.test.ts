@@ -2,7 +2,6 @@ import { describe, expect, test } from 'bun:test';
 
 import {
     cleanPsProductTitle,
-    extractPsEdition,
     getPsSearchQueryCandidates,
     parsePlayStationChihiroResponse,
     parsePlayStationProductHtml,
@@ -551,26 +550,6 @@ describe('PlayStation Store SSR parsing', () => {
     expect(picked?.price).toBe('2.799,00 TL');
   });
 
-  test('extractPsEdition correctly categorizes Turkish and English edition variants', () => {
-    expect(extractPsEdition("Demon's Souls")).toBe('base');
-    expect(extractPsEdition('Demon’s Souls')).toBe('base');
-    expect(extractPsEdition("Demon's Souls Standart Sürüm")).toBe('base');
-    expect(extractPsEdition('EA SPORTS FC™ 25 Standart Sürüm PS4 ve PS5')).toBe('base');
-    expect(extractPsEdition('Grand Theft Auto V (PS4™ ve PS5™)')).toBe('base');
-    expect(extractPsEdition('Call of Duty®: Black Ops 6 - Cross-Gen Paketi')).toBe('base');
-
-    expect(extractPsEdition("Demon's Souls Dijital Deluxe Sürüm")).toBe('deluxe');
-    expect(extractPsEdition("Baldur's Gate 3 - Dijital Deluxe Sürümü")).toBe('deluxe');
-    expect(extractPsEdition('Hogwarts Legacy: Dijital Lüks Sürüm')).toBe('deluxe');
-    expect(extractPsEdition('EA SPORTS FC™ 25 Ultimate Sürüm PS4 ve PS5')).toBe('ultimate');
-    expect(extractPsEdition('Ghost of Tsushima YÖNETMENİN SÜRÜMÜ')).toBe('directors_cut');
-    expect(extractPsEdition("Ghost of Tsushima Director's Cut")).toBe('directors_cut');
-    expect(extractPsEdition('The Witcher 3: Wild Hunt – Complete Edition')).toBe('complete');
-    expect(extractPsEdition('Resident Evil 4 Gold Edition')).toBe('gold');
-    expect(extractPsEdition('Call of Duty®: Black Ops 6 - Kasa Sürümü')).toBe('vault');
-    expect(extractPsEdition('Grand Theft Auto V: Premium Edition')).toBe('premium');
-    expect(extractPsEdition('Cyberpunk 2077 ve Phantom Liberty Paketi')).toBe('bundle');
-  });
 
   test('prioritizes hyphen-free candidates before hyphenated candidates for Chihiro compatibility', () => {
     const candidates = getPsSearchQueryCandidates('Spider-Man 2');

@@ -1,4 +1,4 @@
-import { foldTurkishI, removeWithLeadingSpace, replaceWithSingleSpace } from '@/services/store/text';
+import { baseTitle, isDlcTitle } from '@/services/store/editions';
 
 function normalize(title: string): string {
   return title
@@ -100,85 +100,19 @@ function isGtaVStoryModeMainProduct(foundTitle: string, searchTitle: string): bo
   );
 }
 
-const EDITION_SUFFIX =
-  /(?:-\s*)?(?:Deluxe|Ultimate|Definitive|Enhanced|GOTY|Game of the Year|Complete|Special|Remastered|Anniversary|Collector|Standard|Director'?s\s*Cut)\s*Edition/i;
-const DIRECTORS_CUT_SUFFIX = /(?:[-–—]\s*)?Director'?s\s*Cut\b/i;
-const DIRECTORS_CUT_SUFFIX_TR = /(?:[-–—]\s*)?Y[öo]netmenin\s*S[üu]r[üu]m[üu]?(?=$|\s|[^\p{L}\p{N}])/iu;
-const PARENTHESISED = /\([^()]*\)/;
-
 /** Removes edition, platform and parenthesised suffixes so titles compare across stores. */
 export function cleanTitleForCrossPlatform(title: string): string {
   if (!title) return title;
-  let cleaned = title.replaceAll(/[™®©]/g, '');
-  cleaned = removeWithLeadingSpace(cleaned, EDITION_SUFFIX);
-  cleaned = removeWithLeadingSpace(cleaned, DIRECTORS_CUT_SUFFIX);
-  cleaned = removeWithLeadingSpace(cleaned, DIRECTORS_CUT_SUFFIX_TR, foldTurkishI);
-  cleaned = cleaned
-    .replaceAll(/\bConsole\s+Edition\b/gi, '')
-    .replaceAll(/\bEdition\b/gi, '')
-    .replaceAll(/\bPS[45]\b/gi, '')
-    .replaceAll(/\bXbox\b/gi, '')
-    .replaceAll(/\bPC\b/gi, '');
-  return replaceWithSingleSpace(cleaned, PARENTHESISED).replaceAll(/\s+/g, ' ').trim();
+  return baseTitle(title);
 }
 
-const EDITION_IN_TITLE =
-  /(ultimate edition|deluxe edition|definitive edition|gold edition|premium edition|complete edition|goty|game of the year|standard edition|director'?s cut)/;
-
-export function extractEdition(title: string): string {
-  const match = EDITION_IN_TITLE.exec(title.toLowerCase());
-  if (!match?.[1]) return 'base';
-  const edition = match[1];
-  // EDITION_IN_TITLE only matches single-spaced phrases.
-  return edition.replace(/ edition$/, '').trim() || edition;
-}
-
-/** DLC / add-on markers — reject when the search title is the base game. */
-const DLC_PHRASE_MARKERS = [
-  'story pack',
-  'hikaye modu',
-  'story mode',
-  'lost and',
-  'great white',
-  'criminal enterprise',
-  'battle pass',
-  'fortnite crew',
-] as const;
-
-const DLC_WORD_MARKERS = [
-  'dlc',
-  'pack',
-  'paket',
-  'paketi',
-  'season',
-  'cash',
-  'shark',
-  'kartı',
-  'karti',
-  'addon',
-  'expansion',
-  'starter',
-  'tony',
-  'damned',
-  'magus',
-  'dabber',
-  'harvest',
-  'skin',
-  'coin',
-  'credit',
-  'points',
-  'membership',
-  'subscription',
-] as const;
+/** GTA-specific DLC names the generic DLC check does not know. */
+const GTA_DLC_WORDS = ['tony', 'damned', 'magus', 'dabber', 'harvest', 'story pack', 'hikaye modu', 'story mode'];
 
 function hasProductDlcMarker(title: string): boolean {
-  if (/\bonline:/i.test(title)) return true;
-  if (/\bv[-\s]?(bucks|papel)\b/i.test(title)) return true;
-
+  if (isDlcTitle(title)) return true;
   const lower = title.toLowerCase();
-  if (DLC_PHRASE_MARKERS.some((phrase) => lower.includes(phrase))) return true;
-
-  return DLC_WORD_MARKERS.some((word) => new RegExp(String.raw`\b${word}\b`, 'i').test(title));
+  return GTA_DLC_WORDS.some((word) => new RegExp(String.raw`\b${word}\b`, 'i').test(lower));
 }
 
 /** Optional edition tags — not required for cross-store title match. */

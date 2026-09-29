@@ -1,4 +1,5 @@
-import { canonicalMergeTitleKey, extractEdition, scoreProductTitleMatch } from '@/services/store/match';
+import { editionKey } from '@/services/store/editions';
+import { canonicalMergeTitleKey, scoreProductTitleMatch } from '@/services/store/match';
 import type { LiveGame, PlatformSearchHit } from '@/services/store/types';
 
 function imageResolutionRank(imageUrl: string): number {
@@ -23,7 +24,7 @@ function searchResultRank(game: Pick<LiveGame, 'platform' | 'image_url' | 'title
   score += imageResolutionRank(image);
   if (image.includes('steamstatic') || image.includes('steampowered')) score += 40;
   if (image.includes('playstation.net') || image.includes('playstation.com')) score -= 15;
-  if (extractEdition(game.title) === 'base') score += 60;
+  if (editionKey(game.title) === 'base') score += 60;
   if (query) {
     score += scoreProductTitleMatch(game.title, query);
   }

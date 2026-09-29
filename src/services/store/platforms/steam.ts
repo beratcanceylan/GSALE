@@ -1,6 +1,7 @@
 import { STORE_CONFIG, getSteamLang, getStoreCountry } from '@/services/store/config';
 import { fetchJson, withRetry } from '@/services/store/fetch';
-import { extractEdition, pickBestTitleMatch } from '@/services/store/match';
+import { editionKey } from '@/services/store/editions';
+import { pickBestTitleMatch } from '@/services/store/match';
 import { formatPriceAsTry } from '@/services/store/currency';
 import { formatSteamPrice } from '@/services/store/price-parse';
 import { platformPriceToGameDeal } from '@/services/store/deals';
@@ -332,7 +333,7 @@ function pickSteamPriceMatch(
   let match =
     edition === 'base'
       ? undefined
-      : hits.find((hit) => extractEdition(hit.title) === edition);
+      : hits.find((hit) => editionKey(hit.title) === edition);
 
   if (!match && isPrimeUpgradeTitle(matchTitle)) {
     match = hits.find((hit) => isPrimeUpgradeTitle(hit.title));

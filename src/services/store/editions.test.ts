@@ -40,6 +40,13 @@ describe('editionKey', () => {
     ["Assassin's Creed Shadows Anniversary Edition", 'anniversary'],
     ['Ultimate Chicken Horse', 'base'],
     ['Gold Rush: The Game', 'base'],
+    ["Demon's Souls Dijital Deluxe Sürüm", 'deluxe'],
+    ['Hogwarts Legacy: Dijital Lüks Sürüm', 'deluxe'],
+    ['EA SPORTS FC™ 25 Standart Sürüm PS4 ve PS5', 'base'],
+    ['Grand Theft Auto V (PS4™ ve PS5™)', 'base'],
+    ['Ghost of Tsushima YÖNETMENİN SÜRÜMÜ', 'directors-cut'],
+    ['Call of Duty®: Black Ops 6 - Kasa Sürümü', 'vault'],
+    ['Grand Theft Auto V: Premium Edition', 'premium'],
   ])('%s → %s', (title, key) => {
     expect(editionKey(title)).toBe(key);
   });
@@ -58,6 +65,11 @@ describe('baseTitle', () => {
     ['Cyberpunk 2077™', 'Cyberpunk 2077'],
     ['Final Fantasy XVI', 'Final Fantasy XVI'],
     ['Ultimate Chicken Horse', 'Ultimate Chicken Horse'],
+    ["Baldur's Gate 3 - Dijital Deluxe Sürümü", "Baldur's Gate 3"],
+    ['EA SPORTS FC™ 25 Standart Sürüm PS4 ve PS5', 'EA SPORTS FC 25'],
+    ['Grand Theft Auto V (PS4™ ve PS5™)', 'Grand Theft Auto V'],
+    ['Ghost of Tsushima YÖNETMENİN SÜRÜMÜ', 'Ghost of Tsushima'],
+    ['Call of Duty®: Black Ops 6 - Kasa Sürümü', 'Call of Duty: Black Ops 6'],
   ])('%s → %s', (title, base) => {
     expect(baseTitle(title)).toBe(base);
   });
@@ -74,6 +86,7 @@ describe('isDlcTitle', () => {
     expect(isDlcTitle('ELDEN RING Deluxe Edition')).toBe(false);
     expect(isDlcTitle('Horizon Forbidden West Cross-Gen Bundle')).toBe(false);
     expect(isDlcTitle('Grand Theft Auto V Story Mode')).toBe(false);
+    expect(isDlcTitle('Cyberpunk 2077 ve Phantom Liberty Paketi')).toBe(true);
   });
 });
 

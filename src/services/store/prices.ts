@@ -1,7 +1,8 @@
 import { catalogPlatforms } from '@/services/catalog/state';
 import { CATALOG_PLATFORMS } from '@/services/catalog/schema';
 import { getStoreCountry } from '@/services/store/config';
-import { extractEdition, getPriceLookupTitles } from '@/services/store/match';
+import { editionKey } from '@/services/store/editions';
+import { getPriceLookupTitles } from '@/services/store/match';
 import { throwIfAborted } from '@/services/store/fetch';
 import { firstResult } from '@/services/store/sequence';
 import { fetchEpicPrice } from '@/services/store/platforms/epic';
@@ -195,7 +196,7 @@ export async function fetchPlatformDeal(
   const provider = PRICE_PROVIDERS.find((candidate) => candidate.platform === platform);
   if (!provider) return null;
   if (!isListedOn(platform, await catalogPlatforms(title))) return null;
-  const edition = options?.edition ?? extractEdition(title);
+  const edition = options?.edition ?? editionKey(title);
   const result = await fetchPlatformResult(provider, title, edition, options);
   return result ? platformPriceToGameDeal(result) : null;
 }
@@ -205,7 +206,7 @@ export async function fetchAllPrices(
   optionsOrEdition?: PriceFetchOptions | string,
 ): Promise<GameDeal[]> {
   const options = normalizeFetchOptions(optionsOrEdition);
-  const resolvedEdition = options.edition ?? extractEdition(title);
+  const resolvedEdition = options.edition ?? editionKey(title);
   const available = await catalogPlatforms(title);
 
   // Keep one store outage from hiding prices returned by the other providers.
