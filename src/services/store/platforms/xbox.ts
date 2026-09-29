@@ -1,7 +1,9 @@
 import { STORE_CONFIG, getStoreCountryConfig } from '@/services/store/config';
 import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
 import { formatPriceAsTry } from '@/services/store/currency';
-import { fetchJson, fetchPostJson, fetchText, withRetry } from '@/services/store/fetch';
+import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } from '@/services/store/edition-table';
+import { baseTitle } from '@/services/store/editions';
+import { fetchJson, fetchPostJson, fetchText, throwIfAborted, withRetry } from '@/services/store/fetch';
 import { firstResult } from '@/services/store/sequence';
 import { pickXboxSearchImage } from '@/services/store/platforms/xbox-image';
 import { rankXboxPriceHits } from '@/services/store/platforms/xbox-match';
@@ -249,6 +251,36 @@ export async function fetchXboxPrice(
   selected ??= firstFree;
   if (!selected?.prices) return null;
   return xboxPriceFromSelected(selected.prices, selected.hit.store_url, options?.signal);
+}
+
+const PC_ONLY_TITLE = /\(\s*PC\s*\)/i;
+
+/** Every edition of `title`'s game on Xbox, from one search with the base title; console listings win over "(PC)" twins. */
+export async function fetchXboxEditionOffers(
+  title: string,
+  options?: StoreRequestOptions,
+): Promise<EditionOffer[]> {
+  const products = await searchXboxProducts(baseTitle(title), options);
+  throwIfAborted(options?.signal);
+  const accepted = products.flatMap(({ hit, product }) => {
+    const edition = acceptEditionCandidate(hit.title, title);
+    const prices = getXboxListPrice(product);
+    return edition && prices ? [{ hit, edition, prices }] : [];
+  });
+  const consoleEditions = new Set(accepted.filter(({ hit }) => !PC_ONLY_TITLE.test(hit.title)).map(({ edition }) => edition));
+  const preferred = accepted
+    .filter(({ hit, edition }) => !PC_ONLY_TITLE.test(hit.title) || !consoleEditions.has(edition))
+    .slice(0, MAX_EDITION_CANDIDATES);
+
+  const offers = await Promise.all(preferred.map(async ({ hit, edition, prices }): Promise<EditionOffer> => ({
+    platform: 'Xbox',
+    edition,
+    title: hit.title,
+    id: hit.id,
+    price: await xboxPriceFromSelected(prices, hit.store_url, options?.signal),
+  })));
+  throwIfAborted(options?.signal);
+  return offers;
 }
 
 const XBOX_BROWSE_URL = 'https://emerald.xboxservices.com/xboxcomfd/browse';

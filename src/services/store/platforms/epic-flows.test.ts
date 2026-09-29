@@ -6,7 +6,7 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { resetCurrencyCacheForTests, setFxRatesForTests } = await import('@/services/store/currency');
-const { fetchEpicDeals, fetchEpicDetails, fetchEpicFreeGames, fetchEpicPrice, searchEpic } = await import(
+const { fetchEpicDeals, fetchEpicDetails, fetchEpicEditionOffers, fetchEpicFreeGames, fetchEpicPrice, searchEpic } = await import(
   '@/services/store/platforms/epic'
 );
 
@@ -249,5 +249,44 @@ describe('fetchEpicFreeGames', () => {
   test('handles an empty payload', async () => {
     routeFetch(() => Response.json({}));
     expect(await fetchEpicFreeGames()).toEqual([]);
+  });
+});
+
+describe('fetchEpicEditionOffers', () => {
+  const offer = (id: string, title: string, amount: number) => ({
+    ...HADES,
+    id,
+    title,
+    productSlug: id,
+    price: { price: { currencyCode: 'TRY', originalPrice: amount, discountPrice: amount } },
+  });
+
+  test('returns one offer per edition and drops DLC and sequels', async () => {
+    routeFetch(() =>
+      Response.json({
+        offers: [
+          offer('hades', 'Hades', 10000),
+          offer('hades-deluxe', 'Hades Deluxe Edition', 15000),
+          offer('hades-ost', 'Hades Original Soundtrack', 3000),
+          offer('hades-2', 'Hades II', 20000),
+        ],
+      }),
+    );
+    const offers = await fetchEpicEditionOffers('Hades Deluxe Edition');
+    expect(offers.map((entry) => [entry.edition, entry.price.store_url])).toEqual([
+      ['base', 'https://store.epicgames.com/p/hades'],
+      ['deluxe', 'https://store.epicgames.com/p/hades-deluxe'],
+    ]);
+  });
+
+  test('searches once with the base title', async () => {
+    const bodies: string[] = [];
+    routeFetch((_url, init) => {
+      bodies.push(String(init?.body ?? ''));
+      return Response.json({ offers: [offer('hades', 'Hades', 10000)] });
+    });
+    await fetchEpicEditionOffers('Hades Deluxe Edition');
+    expect(bodies).toHaveLength(1);
+    expect(JSON.parse(bodies[0] ?? '{}')).toMatchObject({ title: 'Hades' });
   });
 });

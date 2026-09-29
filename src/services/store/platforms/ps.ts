@@ -1,7 +1,9 @@
 import { STORE_CONFIG, getPsLocale, getStoreCountry, getStoreCountryConfig } from '@/services/store/config';
 import { formatPriceAsTry } from '@/services/store/currency';
 import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
-import { fetchJson, fetchText, withRetry } from '@/services/store/fetch';
+import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } from '@/services/store/edition-table';
+import { baseTitle } from '@/services/store/editions';
+import { fetchJson, fetchText, throwIfAborted, withRetry } from '@/services/store/fetch';
 import { firstResult } from '@/services/store/sequence';
 import {
   isExplicitlyFreePrice,
@@ -277,6 +279,43 @@ export async function fetchPlayStationPrice(
     tier: 'console',
     store_url: product.store_url,
   };
+}
+
+/** Every edition of `title`'s game on PlayStation, from one search with the base title. */
+export async function fetchPlayStationEditionOffers(
+  title: string,
+  options?: StoreRequestOptions,
+): Promise<EditionOffer[]> {
+  if (!getPsCurrency()) return [];
+  const products = await fetchPsSearchProducts(baseTitle(title), options);
+  throwIfAborted(options?.signal);
+  const accepted = products
+    .flatMap((product) => {
+      const edition = product.is_add_on ? null : acceptEditionCandidate(product.title, title);
+      return edition ? [{ product, edition }] : [];
+    })
+    .slice(0, MAX_EDITION_CANDIDATES);
+
+  const offers = await Promise.all(accepted.map(async ({ product, edition }): Promise<EditionOffer | null> => {
+    const priced = await localizePsProduct(await withKnownPrice(product, options), options?.signal);
+    if (isUnavailablePrice(priced.price)) return null;
+    return {
+      platform: 'PlayStation',
+      edition,
+      title: product.title,
+      id: `ps-${product.id}`,
+      price: {
+        platform: 'PlayStation',
+        price: priced.price,
+        original_price: priced.original_price,
+        discount: priced.discount,
+        tier: 'console',
+        store_url: priced.store_url,
+      },
+    };
+  }));
+  throwIfAborted(options?.signal);
+  return offers.flatMap((offer) => (offer ? [offer] : []));
 }
 
 const PS_GRAPHQL_URL = 'https://web.np.playstation.com/api/graphql/v1/op';

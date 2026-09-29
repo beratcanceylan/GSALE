@@ -184,7 +184,7 @@ const DLC_PHRASES = [
 const DLC_WORDS = new Set([
   'dlc', 'pack', 'paket', 'paketi', 'season', 'cash', 'shark', 'karti', 'addon', 'expansion', 'starter',
   'soundtrack', 'artbook', 'skin', 'skins', 'coin', 'coins', 'credit', 'credits', 'points', 'membership',
-  'subscription', 'upgrade', 'yukseltme', 'genisleme', 'bundle',
+  'subscription', 'upgrade', 'yukseltme', 'genisleme', 'bundle', 'pass',
 ]);
 const EDITION_DLC_WORDS = new Set(['dlc', 'expansion', 'season']);
 

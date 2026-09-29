@@ -1,7 +1,9 @@
 import { STORE_CONFIG } from '@/services/store/config';
 import { formatPriceAsTry } from '@/services/store/currency';
 import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
-import { fetchJson, fetchPostJson, withRetry } from '@/services/store/fetch';
+import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } from '@/services/store/edition-table';
+import { baseTitle } from '@/services/store/editions';
+import { fetchJson, fetchPostJson, throwIfAborted, withRetry } from '@/services/store/fetch';
 import {
   parseNintendoProduct,
   parseNintendoSearchResponse,
@@ -164,6 +166,27 @@ export async function fetchNintendoPrice(
   const products = await searchNintendoProducts(lookupTitle, options);
   const match = pickBestNintendoProduct(products, matchTitle);
   return match ? productToPriceResult(match, options?.signal) : null;
+}
+
+/** Every edition of `title`'s game on the US eShop, from one search with the base title. */
+export async function fetchNintendoEditionOffers(
+  title: string,
+  options?: StoreRequestOptions,
+): Promise<EditionOffer[]> {
+  const products = await searchNintendoProducts(baseTitle(title), options);
+  throwIfAborted(options?.signal);
+  const accepted = products
+    .flatMap((product) => {
+      const edition = product.is_add_on ? null : acceptEditionCandidate(product.title, title);
+      return edition ? [{ product, edition }] : [];
+    })
+    .slice(0, MAX_EDITION_CANDIDATES);
+  const offers = await Promise.all(accepted.map(async ({ product, edition }): Promise<EditionOffer | null> => {
+    const price = await productToPriceResult(product, options?.signal);
+    return price ? { platform: 'Nintendo', edition, title: product.title, id: `nintendo-${product.id}`, price } : null;
+  }));
+  throwIfAborted(options?.signal);
+  return offers.flatMap((offer) => (offer ? [offer] : []));
 }
 
 export async function fetchNintendoDetails(

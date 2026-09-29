@@ -1,6 +1,8 @@
 import { getEpicLocale, getStoreCountry, STORE_CONFIG } from '@/services/store/config';
 import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
-import { fetchJson, fetchPostJson, fetchText, withRetry } from '@/services/store/fetch';
+import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } from '@/services/store/edition-table';
+import { baseTitle } from '@/services/store/editions';
+import { fetchJson, fetchPostJson, fetchText, throwIfAborted, withRetry } from '@/services/store/fetch';
 import { firstResult } from '@/services/store/sequence';
 import { isStrictMatch } from '@/services/store/match';
 import { parseEpicBrowseOffers, type EpicBrowseOffer } from '@/services/store/platforms/epic-browse';
@@ -175,6 +177,38 @@ export async function fetchEpicPrice(
   };
   if (hit?.store_url) result.store_url = hit.store_url;
   return result;
+}
+
+/** Every edition of `title`'s game on Epic, from one search with the base title. */
+export async function fetchEpicEditionOffers(
+  title: string,
+  options?: StoreRequestOptions,
+): Promise<EditionOffer[]> {
+  const { elements } = await runEpicSearchVariants(baseTitle(title), 12, options);
+  throwIfAborted(options?.signal);
+  const accepted = elements
+    .flatMap((element) => {
+      const edition = element.title ? acceptEditionCandidate(element.title, title) : null;
+      const priceInfo = element.price?.price;
+      return edition && priceInfo ? [{ element, edition, priceInfo }] : [];
+    })
+    .slice(0, MAX_EDITION_CANDIDATES);
+
+  const offers = await Promise.all(accepted.map(async ({ element, edition, priceInfo }): Promise<EditionOffer> => {
+    const priced = await epicPriceFromMinorUnits(priceInfo, options?.signal);
+    const hit = epicOfferToSearchHit(element);
+    const price: PlatformPriceResult = {
+      platform: 'Epic Games',
+      price: priced.price,
+      original_price: priced.original_price,
+      discount: priced.discount,
+      tier: 'pc',
+      ...(hit?.store_url ? { store_url: hit.store_url } : {}),
+    };
+    return { platform: 'Epic Games', edition, title: element.title ?? '', id: hit?.slug ?? hit?.id ?? element.id ?? '', price };
+  }));
+  throwIfAborted(options?.signal);
+  return offers;
 }
 
 /** Offer media, keeping the offer's own screenshots when the media endpoint has none. */

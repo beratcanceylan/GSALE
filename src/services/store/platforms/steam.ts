@@ -1,6 +1,7 @@
 import { STORE_CONFIG, getSteamLang, getStoreCountry } from '@/services/store/config';
-import { fetchJson, withRetry } from '@/services/store/fetch';
-import { editionKey } from '@/services/store/editions';
+import { fetchJson, throwIfAborted, withRetry } from '@/services/store/fetch';
+import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } from '@/services/store/edition-table';
+import { baseTitle, editionKey } from '@/services/store/editions';
 import { pickBestTitleMatch } from '@/services/store/match';
 import { formatPriceAsTry } from '@/services/store/currency';
 import { formatSteamPrice } from '@/services/store/price-parse';
@@ -44,6 +45,14 @@ interface SteamAppData {
   genres?: { description?: string }[];
   screenshots?: { path_full?: string }[];
   movies?: { id: number; thumbnail?: string; mp4?: { max?: string }; hls_h264?: string }[];
+  package_groups?: { subs?: SteamPackageSub[] }[];
+}
+
+interface SteamPackageSub {
+  packageid: number;
+  option_text?: string;
+  percent_savings?: number;
+  price_in_cents_with_discount?: number;
 }
 
 interface SteamAppDetailsResponse {
@@ -394,4 +403,73 @@ export async function fetchSteamFreeGames(options?: StoreRequestOptions): Promis
     discount: '',
     rating: null,
   }));
+}
+
+/** "Buy ELDEN RING Deluxe Edition - ₺1.999,00" → "ELDEN RING Deluxe Edition". */
+function steamPackageTitle(optionText: string): string {
+  const dash = optionText.lastIndexOf(' - ');
+  const withoutPrice = dash > 0 ? optionText.slice(0, dash) : optionText;
+  return withoutPrice.replace(/^(?:buy|satın al|acheter|kaufen|comprar|acquista|kup)\s+/iu, '').trim();
+}
+
+function steamPackageOverview(sub: SteamPackageSub, currency: string | undefined): Partial<SteamPriceOverview> | null {
+  const final = sub.price_in_cents_with_discount;
+  if (!isFiniteNumber(final)) return null;
+  const savings = isFiniteNumber(sub.percent_savings) ? sub.percent_savings : 0;
+  const initial = savings > 0 && savings < 100 ? Math.round(final / (1 - savings / 100)) : final;
+  return { final, initial, discount_percent: savings, ...(currency ? { currency } : {}) };
+}
+
+/** Editions Steam sells as packages of one app ("Deluxe Edition" subs of the base game). */
+async function steamPackageOffers(
+  appId: string,
+  title: string,
+  options?: StoreRequestOptions,
+): Promise<EditionOffer[]> {
+  const data = await fetchSteamAppData(appId, options);
+  const currency = data?.price_overview?.currency;
+  const subs = (data?.package_groups ?? []).flatMap((group) => group.subs ?? []);
+  const offers = await Promise.all(subs.map(async (sub): Promise<EditionOffer | null> => {
+    const packageTitle = steamPackageTitle(sub.option_text ?? '');
+    const edition = acceptEditionCandidate(packageTitle, title);
+    const overview = steamPackageOverview(sub, currency);
+    if (!edition || !overview) return null;
+    const price = await steamPriceFromOverview(appId, overview, options?.signal);
+    if (!price) return null;
+    return {
+      platform: 'Steam',
+      edition,
+      title: packageTitle,
+      id: appId,
+      price: { ...price, store_url: `https://store.steampowered.com/sub/${sub.packageid}/` },
+    };
+  }));
+  return offers.flatMap((offer) => (offer ? [offer] : []));
+}
+
+/** Every edition of `title`'s game on Steam: search apps plus the base app's packages. */
+export async function fetchSteamEditionOffers(
+  title: string,
+  options?: StoreRequestOptions,
+): Promise<EditionOffer[]> {
+  const products = await searchSteamProducts(baseTitle(title), options);
+  throwIfAborted(options?.signal);
+  const accepted = products
+    .flatMap((product) => {
+      const edition = acceptEditionCandidate(product.hit.title, title);
+      return edition ? [{ product, edition }] : [];
+    })
+    .slice(0, MAX_EDITION_CANDIDATES);
+
+  const appOffers = await Promise.all(accepted.map(async ({ product, edition }): Promise<EditionOffer | null> => {
+    if (!product.price) return null;
+    const price = await steamPriceFromOverview(product.hit.id, product.price, options?.signal);
+    return price ? { platform: 'Steam', edition, title: product.hit.title, id: product.hit.id, price } : null;
+  }));
+  throwIfAborted(options?.signal);
+
+  const baseApp = accepted.find(({ edition }) => edition === 'base')?.product.hit.id;
+  const packages = baseApp ? await steamPackageOffers(baseApp, title, options) : [];
+  throwIfAborted(options?.signal);
+  return [...appOffers.flatMap((offer) => (offer ? [offer] : [])), ...packages];
 }

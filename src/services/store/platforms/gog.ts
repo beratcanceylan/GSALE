@@ -1,6 +1,8 @@
 import { getStoreCountry } from '@/services/store/config';
 import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
-import { fetchJson, withRetry } from '@/services/store/fetch';
+import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } from '@/services/store/edition-table';
+import { baseTitle } from '@/services/store/editions';
+import { fetchJson, throwIfAborted, withRetry } from '@/services/store/fetch';
 import { firstResult } from '@/services/store/sequence';
 import { pickBestTitleMatch } from '@/services/store/match';
 import { isUnavailablePrice } from '@/services/store/price-parse';
@@ -198,6 +200,40 @@ export async function fetchGogPrice(
     store_url: gogStoreUrl(match),
     tier: 'pc',
   };
+}
+
+/** Every edition of `title`'s game on GOG, from one catalog search with the base title. */
+export async function fetchGogEditionOffers(
+  title: string,
+  options?: StoreRequestOptions,
+): Promise<EditionOffer[]> {
+  const products = await fetchGogCatalog(baseTitle(title), 12, options);
+  throwIfAborted(options?.signal);
+  const accepted = products
+    .flatMap((product) => {
+      const edition = acceptEditionCandidate(product.title, title);
+      return edition ? [{ product, edition }] : [];
+    })
+    .slice(0, MAX_EDITION_CANDIDATES);
+  const offers = await Promise.all(accepted.map(async ({ product, edition }): Promise<EditionOffer> => {
+    const priced = await gogPriceFromProduct(product, options?.signal);
+    return {
+      platform: 'GOG',
+      edition,
+      title: product.title,
+      id: `gog-${product.id}`,
+      price: {
+        platform: 'GOG',
+        price: priced.price,
+        original_price: priced.original_price,
+        discount: priced.discount,
+        store_url: gogStoreUrl(product),
+        tier: 'pc',
+      },
+    };
+  }));
+  throwIfAborted(options?.signal);
+  return offers;
 }
 
 export async function fetchGogDetails(

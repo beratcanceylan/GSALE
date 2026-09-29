@@ -6,7 +6,7 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { resetCurrencyCacheForTests, setFxRatesForTests } = await import('@/services/store/currency');
-const { fetchSteamDeals, fetchSteamDetails, fetchSteamFreeGames, fetchSteamPrice, searchSteam } = await import(
+const { fetchSteamDeals, fetchSteamDetails, fetchSteamEditionOffers, fetchSteamFreeGames, fetchSteamPrice, searchSteam } = await import(
   '@/services/store/platforms/steam'
 );
 
@@ -221,5 +221,66 @@ describe('fetchSteamFreeGames and fetchSteamDeals', () => {
     const games = await fetchSteamDeals(10);
     expect(games.map((game) => game.id)).toEqual(['1', '4']);
     expect(games[1]?.deals?.[0]).toMatchObject({ price: '300,00 TL' });
+  });
+});
+
+describe('fetchSteamEditionOffers', () => {
+  const tryPrice = (final: number) => ({ currency: 'TRY', final, initial: final, discount_percent: 0 });
+
+  test('returns one offer per edition and drops DLC and sequels', async () => {
+    routeFetch((url) =>
+      url.includes('storesearch')
+        ? search(
+            { id: 1, name: 'Hades', price: tryPrice(5000) },
+            { id: 2, name: 'Hades Deluxe Edition', price: tryPrice(8000) },
+            { id: 3, name: 'Hades Season Pass', price: tryPrice(2000) },
+            { id: 4, name: 'Hades II', price: tryPrice(9000) },
+          )
+        : { 1: { success: true, data: { name: 'Hades' } } },
+    );
+    const offers = await fetchSteamEditionOffers('Hades Deluxe Edition');
+    expect(offers.map((offer) => [offer.edition, offer.id])).toEqual([
+      ['base', '1'],
+      ['deluxe', '2'],
+    ]);
+  });
+
+  test('searches once with the base title', async () => {
+    const urls = routeFetch((url) => (url.includes('storesearch') ? search() : {}));
+    await fetchSteamEditionOffers('Hades Deluxe Edition');
+    const searches = urls.filter((url) => url.includes('storesearch'));
+    expect(searches).toHaveLength(1);
+    expect(searches[0]).toContain('term=Hades&');
+  });
+
+  test('adds the base app packages as editions with their own store link', async () => {
+    routeFetch((url) =>
+      url.includes('storesearch')
+        ? search({ id: 10, name: 'ELDEN RING', price: tryPrice(100000) })
+        : {
+            10: {
+              success: true,
+              data: {
+                name: 'ELDEN RING',
+                price_overview: tryPrice(100000),
+                package_groups: [{
+                  subs: [
+                    { packageid: 100, option_text: 'Buy ELDEN RING - ₺1.000,00', price_in_cents_with_discount: 100000 },
+                    { packageid: 101, option_text: 'ELDEN RING Deluxe Edition - ₺1.500,00', price_in_cents_with_discount: 120000, percent_savings: 20 },
+                  ],
+                }],
+              },
+            },
+          },
+    );
+    const offers = await fetchSteamEditionOffers('ELDEN RING');
+    const deluxe = offers.find((offer) => offer.edition === 'deluxe');
+    expect(deluxe?.price).toMatchObject({
+      price: '1.200,00 TL',
+      original_price: '1.500,00 TL',
+      discount: '-20%',
+      store_url: 'https://store.steampowered.com/sub/101/',
+    });
+    expect(offers.filter((offer) => offer.edition === 'base')).toHaveLength(2);
   });
 });

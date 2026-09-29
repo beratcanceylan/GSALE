@@ -6,7 +6,7 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { resetCurrencyCacheForTests, setFxRatesForTests } = await import('@/services/store/currency');
-const { fetchNintendoDeals, fetchNintendoDetails, fetchNintendoPrice, searchNintendo } = await import(
+const { fetchNintendoDeals, fetchNintendoDetails, fetchNintendoEditionOffers, fetchNintendoPrice, searchNintendo } = await import(
   '@/services/store/platforms/nintendo'
 );
 const { parseNintendoProduct, pickBestNintendoProduct } = await import('@/services/store/platforms/nintendo-parse');
@@ -175,5 +175,22 @@ describe('Nintendo store adapter', () => {
       ],
     });
     expect((await fetchNintendoDeals(10)).map((game) => game.id)).toEqual(['nintendo-mario-wonder']);
+  });
+});
+
+describe('fetchNintendoEditionOffers', () => {
+  test('returns one offer per edition and drops add-ons', async () => {
+    respond({
+      hits: [
+        MARIO,
+        { ...MARIO, objectID: 'mario-deluxe', title: 'Super Mario Bros. Wonder Deluxe Edition' },
+        { ...MARIO, objectID: 'mario-extra', title: 'Super Mario Bros. Wonder Extra Levels', dlcType: 'Individual' },
+      ],
+    });
+    const offers = await fetchNintendoEditionOffers('Super Mario Bros. Wonder');
+    expect(offers.map((offer) => [offer.edition, offer.id])).toEqual([
+      ['base', 'nintendo-mario-wonder'],
+      ['deluxe', 'nintendo-mario-deluxe'],
+    ]);
   });
 });

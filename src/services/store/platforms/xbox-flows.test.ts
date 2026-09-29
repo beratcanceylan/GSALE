@@ -6,7 +6,9 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { resetCurrencyCacheForTests, setFxRatesForTests } = await import('@/services/store/currency');
-const { fetchXboxDeals, fetchXboxDetails, fetchXboxPrice, searchXbox } = await import('@/services/store/platforms/xbox');
+const { fetchXboxDeals, fetchXboxDetails, fetchXboxEditionOffers, fetchXboxPrice, searchXbox } = await import(
+  '@/services/store/platforms/xbox'
+);
 
 const originalFetch = globalThis.fetch;
 
@@ -194,5 +196,34 @@ describe('Xbox search fallbacks', () => {
       throw controller.signal.reason;
     };
     await expect(searchXbox('Halo', { signal: controller.signal })).rejects.toMatchObject({ name: 'AbortError' });
+  });
+});
+
+describe('fetchXboxEditionOffers', () => {
+  const usd = (list: number): Price[] => [{ CurrencyCode: 'USD', ListPrice: list, MSRP: list }];
+
+  test('returns one offer per edition and keeps the console listing over the PC one', async () => {
+    mockXbox(
+      ['A', 'B', 'C', 'D'],
+      [
+        product('A', 'Forza Horizon 5', usd(60)),
+        product('B', 'Forza Horizon 5 Premium Edition', usd(100)),
+        product('C', 'Forza Horizon 5 Premium Edition (PC)', usd(90)),
+        product('D', 'Forza Horizon 5 Car Pass', usd(30)),
+      ],
+    );
+    const offers = await fetchXboxEditionOffers('Forza Horizon 5');
+    expect(offers.map((offer) => [offer.edition, offer.id])).toEqual([
+      ['base', 'xbox-A'],
+      ['premium', 'xbox-B'],
+    ]);
+  });
+
+  test('searches once with the base title', async () => {
+    const urls = mockXbox([], []);
+    await fetchXboxEditionOffers('Forza Horizon 5 Premium Edition');
+    const searches = urls.filter((url) => url.includes('autosuggest'));
+    expect(searches).toHaveLength(1);
+    expect(new URL(searches[0] ?? '').searchParams.get('query')).toBe('Forza Horizon 5');
   });
 });

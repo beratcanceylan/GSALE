@@ -6,7 +6,9 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { resetCurrencyCacheForTests, setFxRatesForTests } = await import('@/services/store/currency');
-const { fetchGogDeals, fetchGogDetails, fetchGogPrice, searchGog } = await import('@/services/store/platforms/gog');
+const { fetchGogDeals, fetchGogDetails, fetchGogEditionOffers, fetchGogPrice, searchGog } = await import(
+  '@/services/store/platforms/gog'
+);
 const { gogPriceFromProduct } = await import('@/services/store/platforms/gog-price');
 
 const originalFetch = globalThis.fetch;
@@ -162,5 +164,30 @@ describe('gogPriceFromProduct', () => {
     expect(await gogPriceFromProduct({ id: 1, title: 'x', slug: 'x', price: { final: '  ' } })).toMatchObject({
       price: 'Bilinmiyor',
     });
+  });
+});
+
+describe('fetchGogEditionOffers', () => {
+  test('returns one offer per edition and drops DLC and sequels', async () => {
+    routeFetch(() => ({
+      products: [
+        { ...WITCHER, id: 1, title: 'The Witcher 3: Wild Hunt', slug: 'w3' },
+        { ...WITCHER, id: 2, title: 'The Witcher 3: Wild Hunt - Game of the Year Edition', slug: 'w3_goty' },
+        { ...WITCHER, id: 3, title: 'The Witcher 3: Wild Hunt - Hearts of Stone Expansion', slug: 'w3_hos' },
+        { ...WITCHER, id: 4, title: 'The Witcher 2: Assassins of Kings', slug: 'w2' },
+      ],
+    }));
+    const offers = await fetchGogEditionOffers('The Witcher 3: Wild Hunt');
+    expect(offers.map((offer) => [offer.edition, offer.id])).toEqual([
+      ['base', 'gog-1'],
+      ['goty', 'gog-2'],
+    ]);
+  });
+
+  test('searches once with the base title', async () => {
+    const urls = routeFetch(() => ({ products: [] }));
+    await fetchGogEditionOffers('The Witcher 3: Wild Hunt - Game of the Year Edition');
+    expect(urls).toHaveLength(1);
+    expect(new URL(urls[0] ?? '').searchParams.get('query')).toBe('The Witcher 3: Wild Hunt');
   });
 });

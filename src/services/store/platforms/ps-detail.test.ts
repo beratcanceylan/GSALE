@@ -5,7 +5,8 @@ mock.module('expo-secure-store', () => ({
   setItemAsync: async () => undefined,
 }));
 
-const { fetchPlayStationDetails } = await import('@/services/store/platforms/ps');
+const { fetchPlayStationDetails, fetchPlayStationEditionOffers } = await import('@/services/store/platforms/ps');
+const { setAppCountry } = await import('@/services/country');
 const { fetchGameDetailLive } = await import('@/services/store/detail');
 const originalFetch = globalThis.fetch;
 const productId = 'EP3969-PPSA11386_00-007FIRSTLIGHT000';
@@ -97,5 +98,55 @@ describe('PlayStation detail price fallback', () => {
     expect(game?.deals).toHaveLength(1);
     expect(game?.deals?.[0]?.platform).toBe('Steam');
     expect(game?.deals?.[0]?.price).toBe('1.500,00 TL');
+  });
+});
+
+describe('fetchPlayStationEditionOffers', () => {
+  afterEach(async () => {
+    globalThis.fetch = originalFetch;
+    await setAppCountry('TR');
+  });
+
+  const link = (id: string, name: string, price: number, extra: Record<string, unknown> = {}) => ({
+    id,
+    name,
+    title_name: name,
+    top_category: 'downloadable_game',
+    default_sku: { display_price: `${(price / 100).toFixed(2).replace('.', ',')} TL`, price },
+    images: [{ type: 10, url: 'https://image.api.playstation.com/cover.png' }],
+    ...extra,
+  });
+
+  test('returns one offer per edition and drops add-ons and sequels', async () => {
+    const urls: string[] = [];
+    globalThis.fetch = async (input) => {
+      urls.push(String(input));
+      return Response.json({
+        links: [
+          link('EP1-A', 'Hades', 30000),
+          link('EP1-B', 'Hades Deluxe Edition', 45000),
+          link('EP1-C', 'Hades Soundtrack', 5000, { top_category: 'add_on' }),
+          link('EP1-D', 'Hades II', 60000),
+        ],
+      });
+    };
+    const offers = await fetchPlayStationEditionOffers('Hades Deluxe Edition');
+    expect(offers.map((offer) => [offer.edition, offer.id])).toEqual([
+      ['base', 'ps-EP1-A'],
+      ['deluxe', 'ps-EP1-B'],
+    ]);
+    expect(urls).toHaveLength(1);
+    expect(urls[0]).toContain('/Hades?');
+  });
+
+  test('makes no request where the country has no PlayStation Store', async () => {
+    await setAppCountry('KZ');
+    const urls: string[] = [];
+    globalThis.fetch = async (input) => {
+      urls.push(String(input));
+      return Response.json({ links: [] });
+    };
+    expect(await fetchPlayStationEditionOffers('Hades')).toEqual([]);
+    expect(urls).toHaveLength(0);
   });
 });

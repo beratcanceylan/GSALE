@@ -81,6 +81,7 @@ describe('isDlcTitle', () => {
     expect(isDlcTitle('Fortnite - 1000 V-Bucks')).toBe(true);
     expect(isDlcTitle('Cyberpunk 2077: Phantom Liberty Expansion')).toBe(true);
     expect(isDlcTitle('GTA Online: Criminal Enterprise Starter Pack')).toBe(true);
+    expect(isDlcTitle('Forza Horizon 5 Car Pass')).toBe(true);
   });
   test('editions are not DLC', () => {
     expect(isDlcTitle('ELDEN RING Deluxe Edition')).toBe(false);
