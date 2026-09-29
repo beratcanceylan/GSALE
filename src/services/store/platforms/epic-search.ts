@@ -154,17 +154,6 @@ export function pickBestEpicOffer<T extends EpicOffer>(
   return best;
 }
 
-export function pickBestEpicOfferForTitles<T extends EpicOffer>(
-  offers: T[],
-  searchTitles: string[],
-): T | null {
-  for (const title of searchTitles) {
-    const match = pickBestEpicOffer(offers, title);
-    if (match) return match;
-  }
-  return null;
-}
-
 /** Collapse duplicate Epic listings to one representative product per title. */
 export function pickBestEpicOffers<T extends EpicOffer>(offers: T[], searchTitle: string): T[] {
   const bestByTitle = new Map<string, { offer: T; score: number }>();

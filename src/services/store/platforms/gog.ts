@@ -4,7 +4,6 @@ import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } fro
 import { baseTitle } from '@/services/store/editions';
 import { fetchJson, throwIfAborted, withRetry } from '@/services/store/fetch';
 import { firstResult } from '@/services/store/sequence';
-import { pickBestTitleMatch } from '@/services/store/match';
 import { isUnavailablePrice } from '@/services/store/price-parse';
 import {
   gogImage,
@@ -16,7 +15,6 @@ import {
 } from '@/services/store/platforms/gog-price';
 import type {
   LiveGame,
-  PlatformPriceResult,
   PlatformSearchHit,
   StoreRequestOptions,
 } from '@/services/store/types';
@@ -181,26 +179,6 @@ export async function fetchGogDeals(
   return games.flatMap((game) => (game ? [game] : []));
 }
 
-export async function fetchGogPrice(
-  lookupTitle: string,
-  matchTitle: string = lookupTitle,
-  options?: StoreRequestOptions,
-): Promise<PlatformPriceResult | null> {
-  const products = await fetchGogCatalog(lookupTitle, 12, options);
-  const match = pickBestTitleMatch(products, matchTitle, (product) => product.title);
-  if (!match) return null;
-
-  const priced = await gogPriceFromProduct(match, options?.signal);
-
-  return {
-    platform: 'GOG',
-    price: priced.price,
-    original_price: priced.original_price,
-    discount: priced.discount,
-    store_url: gogStoreUrl(match),
-    tier: 'pc',
-  };
-}
 
 /** Every edition of `title`'s game on GOG, from one catalog search with the base title. */
 export async function fetchGogEditionOffers(

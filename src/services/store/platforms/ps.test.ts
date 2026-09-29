@@ -1,12 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
-    cleanPsProductTitle,
     getPsSearchQueryCandidates,
     parsePlayStationChihiroResponse,
     parsePlayStationProductHtml,
     parsePlayStationSearchHtml,
-    pickBestAvailablePlayStationProduct,
 } from '@/services/store/platforms/ps-parse';
 
 const PRODUCT_ID = 'EP4484-PPSA03711_00-3235764131417729';
@@ -94,74 +92,6 @@ describe('PlayStation Store SSR parsing', () => {
     });
   });
 
-  test('prefers purchasable GTA V platform edition over unavailable exact title', () => {
-    const products = [
-      {
-        id: 'unavailable',
-        title: 'Grand Theft Auto V',
-        price: 'Not available',
-        original_price: null,
-        discount: '',
-        image_url: '',
-        store_url: 'https://store.playstation.com/tr-tr/product/unavailable',
-      },
-      {
-        id: 'ps5',
-        title: 'Grand Theft Auto V (PlayStation 5)',
-        price: '699,50 TL',
-        original_price: null,
-        discount: '',
-        image_url: '',
-        store_url: 'https://store.playstation.com/tr-tr/product/ps5',
-      },
-    ];
-
-    const picked = pickBestAvailablePlayStationProduct(products, 'Grand Theft Auto V Enhanced');
-
-    expect(picked?.id).toBe('ps5');
-  });
-
-  test('parses the live Chihiro catalog response and ignores add-ons', () => {
-    const payload = {
-      links: [
-        {
-          id: 'UP1001-CUSA00000_00-GAMEADDON0000000',
-          name: 'Hades DLC',
-          top_category: 'add_on',
-          default_sku: { display_price: '0,00 TL', price: 0 },
-        },
-        {
-          id: PRODUCT_ID,
-          name: 'Hades',
-          title_name: 'Hades',
-          top_category: 'downloadable_game',
-          default_sku: { display_price: '307,65 TL', price: 30765 },
-          images: [
-            { type: 10, url: 'https://image.api.playstation.com/hades-cover.jpg' },
-            { type: 12, url: 'https://image.api.playstation.com/hades-shot.jpg' },
-          ],
-          metadata: { genre: { values: ['Action'] } },
-          playable_platform: ['PS5'],
-          provider_name: 'Supergiant Games',
-          release_date: '2021-08-13T00:00:00Z',
-        },
-      ],
-    };
-
-    const parsed = parsePlayStationChihiroResponse(payload, 'tr-tr');
-    expect(parsed).toHaveLength(2);
-    expect(parsed[1]).toMatchObject({
-      id: PRODUCT_ID,
-      title: 'Hades',
-      price: '307,65 TL',
-      image_url: 'https://image.api.playstation.com/hades-cover.jpg',
-      platforms: ['PS5'],
-      genres: ['Action'],
-      is_add_on: false,
-    });
-    expect(pickBestAvailablePlayStationProduct(parsed, 'Hades')?.id).toBe(PRODUCT_ID);
-  });
-
   test('parses a Chihiro container with screenshots and preview video', () => {
     const payload = {
       id: PRODUCT_ID,
@@ -206,87 +136,6 @@ describe('PlayStation Store SSR parsing', () => {
     expect(getPsSearchQueryCandidates('NieR:Automata')).toContain('NieR_Automata');
     expect(getPsSearchQueryCandidates('Warhammer 40,000: Space Marine 2')).toContain('Warhammer_40000_Space_Marine_2');
     expect(getPsSearchQueryCandidates('Uncharted: Legacy of Thieves Collection')).toContain('Uncharted');
-  });
-
-  test('cleans Turkish edition, Director Cut, and console platform suffixes for title matching', () => {
-    expect(cleanPsProductTitle('EA SPORTS FC™ 25 Standart Sürüm PS4 ve PS5')).toBe('EA SPORTS FC 25');
-    expect(cleanPsProductTitle('Grand Theft Auto V (PS4™ ve PS5™)')).toBe('Grand Theft Auto V');
-    expect(cleanPsProductTitle('The Witcher 3: Wild Hunt – Complete Edition')).toBe('The Witcher 3: Wild Hunt');
-    expect(cleanPsProductTitle("Baldur's Gate 3 - Dijital Deluxe Sürümü")).toBe("Baldur's Gate 3");
-    expect(cleanPsProductTitle('Ghost of Tsushima YÖNETMENİN SÜRÜMÜ')).toBe('Ghost of Tsushima');
-    expect(cleanPsProductTitle("Death Stranding Director's Cut")).toBe('Death Stranding');
-    expect(cleanPsProductTitle('Call of Duty®: Black Ops 6 - Cross-Gen Paketi')).toBe('Call of Duty: Black Ops 6');
-    expect(cleanPsProductTitle('Monster Hunter Rise PS4/PS5')).toBe('Monster Hunter Rise');
-  });
-
-  test('treats Chihiro entitlement-only products as add-ons so base game is chosen', () => {
-    const payload = {
-      links: [
-        {
-          id: 'entitlement-sku',
-          name: 'Cyberpunk 2077',
-          top_category: 'downloadable_game',
-          default_sku: {
-            display_price: 'Ücretsiz',
-            price: 0,
-            eligibilities: [
-              {
-                id: 'SIE-ENTITLEMENT-1',
-                operand: 'IS_ACTIVE',
-                operator: 'TRUE',
-              },
-            ],
-          },
-        },
-        {
-          id: 'paid-base-game',
-          name: 'Cyberpunk 2077',
-          top_category: 'downloadable_game',
-          default_sku: {
-            display_price: '2.799,00 TL',
-            price: 279900,
-            eligibilities: [],
-          },
-        },
-      ],
-    };
-
-    const parsed = parsePlayStationChihiroResponse(payload, 'tr-tr');
-    expect(parsed[0]?.is_add_on).toBeTrue();
-    expect(parsed[1]?.is_add_on).toBeFalse();
-
-    const match = pickBestAvailablePlayStationProduct(parsed, 'Cyberpunk 2077');
-    expect(match?.id).toBe('paid-base-game');
-    expect(match?.price).toBe('2.799,00 TL');
-  });
-
-  test('prefers modern PS4/PS5 editions over legacy-only PS3 versions', () => {
-    const products = [
-      {
-        id: 'ps3-version',
-        title: 'Grand Theft Auto V',
-        price: '119,00 TL',
-        original_price: null,
-        discount: '',
-        image_url: '',
-        store_url: 'https://store.playstation.com/tr-tr/product/ps3-version',
-        platforms: ['PS3™'],
-      },
-      {
-        id: 'ps5-crossgen',
-        title: 'Grand Theft Auto V (PS4™ ve PS5™)',
-        price: '1.399,00 TL',
-        original_price: null,
-        discount: '',
-        image_url: '',
-        store_url: 'https://store.playstation.com/tr-tr/product/ps5-crossgen',
-        platforms: ['PS4', 'PS5'],
-      },
-    ];
-
-    const picked = pickBestAvailablePlayStationProduct(products, 'Grand Theft Auto V');
-    expect(picked?.id).toBe('ps5-crossgen');
-    expect(picked?.price).toBe('1.399,00 TL');
   });
 
   test('extracts outright purchase price from product page bypassing subscription upsell', () => {
@@ -358,198 +207,6 @@ describe('PlayStation Store SSR parsing', () => {
     expect(parsed[0]?.price).toBe('619,00 TL');
   });
 
-  test('does not match Part I when searching for Part II', () => {
-    const products = [
-      {
-        id: 'part1',
-        title: 'The Last of Us™ Part I',
-        price: '3.449,00 TL',
-        original_price: null,
-        discount: '',
-        image_url: '',
-        store_url: 'https://store.playstation.com/tr-tr/product/part1',
-        platforms: ['PS5'],
-        is_add_on: false,
-      },
-      {
-        id: 'part2',
-        title: 'The Last of Us Part II',
-        price: '1.749,00 TL',
-        original_price: null,
-        discount: '',
-        image_url: '',
-        store_url: 'https://store.playstation.com/tr-tr/product/part2',
-        platforms: ['PS4'],
-        is_add_on: false,
-      },
-    ];
-
-    const picked = pickBestAvailablePlayStationProduct(products, 'The Last of Us Part II Remastered');
-    expect(picked?.id).toBe('part2');
-  });
-
-  test('matches Director Cut search query against Turkish Yönetmenin Sürümü', () => {
-    const products = [
-      {
-        id: 'dc-ps5',
-        title: 'Ghost of Tsushima YÖNETMENİN SÜRÜMÜ',
-        price: '1.049,00 TL',
-        original_price: null,
-        discount: '',
-        image_url: '',
-        store_url: 'https://store.playstation.com/tr-tr/product/dc-ps5',
-        platforms: ['PS5'],
-        is_add_on: false,
-      },
-    ];
-
-    const picked = pickBestAvailablePlayStationProduct(products, "Ghost of Tsushima Director's Cut");
-    expect(picked?.id).toBe('dc-ps5');
-  });
-
-  test('prefers standard base game over digital deluxe edition when query does not specify edition (Demon\'s Souls)', () => {
-    const products = [
-      {
-        id: 'deluxe',
-        title: "Demon's Souls Dijital Deluxe Sürüm",
-        price: '4.749,00 TL',
-        original_price: null,
-        discount: '',
-        image_url: '',
-        store_url: 'https://store.playstation.com/tr-tr/product/deluxe',
-        platforms: ['PS5'],
-        is_add_on: false,
-      },
-      {
-        id: 'standard',
-        title: 'Demon’s Souls',
-        price: '619,00 TL',
-        original_price: null,
-        discount: '',
-        image_url: '',
-        store_url: 'https://store.playstation.com/tr-tr/product/standard',
-        platforms: ['PS5'],
-        is_add_on: false,
-      },
-    ];
-
-    const picked = pickBestAvailablePlayStationProduct(products, "Demon's Souls");
-    expect(picked?.id).toBe('standard');
-    expect(picked?.price).toBe('619,00 TL');
-  });
-
-  test('selects digital deluxe edition when search query specifies deluxe', () => {
-    const products = [
-      {
-        id: 'deluxe',
-        title: "Demon's Souls Dijital Deluxe Sürüm",
-        price: '4.749,00 TL',
-        original_price: null,
-        discount: '',
-        image_url: '',
-        store_url: 'https://store.playstation.com/tr-tr/product/deluxe',
-        platforms: ['PS5'],
-        is_add_on: false,
-      },
-      {
-        id: 'standard',
-        title: 'Demon’s Souls',
-        price: '619,00 TL',
-        original_price: null,
-        discount: '',
-        image_url: '',
-        store_url: 'https://store.playstation.com/tr-tr/product/standard',
-        platforms: ['PS5'],
-        is_add_on: false,
-      },
-    ];
-
-    const picked = pickBestAvailablePlayStationProduct(products, "Demon's Souls Dijital Deluxe Sürüm");
-    expect(picked?.id).toBe('deluxe');
-    expect(picked?.price).toBe('4.749,00 TL');
-  });
-
-  test('falls back to digital deluxe edition when it is the only purchasable version available', () => {
-    const products = [
-      {
-        id: 'deluxe',
-        title: "Demon's Souls Dijital Deluxe Sürüm",
-        price: '4.749,00 TL',
-        original_price: null,
-        discount: '',
-        image_url: '',
-        store_url: 'https://store.playstation.com/tr-tr/product/deluxe',
-        platforms: ['PS5'],
-        is_add_on: false,
-      },
-    ];
-
-    const picked = pickBestAvailablePlayStationProduct(products, "Demon's Souls");
-    expect(picked?.id).toBe('deluxe');
-  });
-
-  test('prefers Standart Sürüm over Ultimate Sürüm for base game query', () => {
-    const products = [
-      {
-        id: 'fc25-ultimate',
-        title: 'EA SPORTS FC™ 25 Ultimate Sürüm PS4 ve PS5',
-        price: '4.000,00 TL',
-        original_price: null,
-        discount: '',
-        image_url: '',
-        store_url: 'https://store.playstation.com/tr-tr/product/fc25-ultimate',
-        platforms: ['PS4', 'PS5'],
-        is_add_on: false,
-      },
-      {
-        id: 'fc25-standard',
-        title: 'EA SPORTS FC™ 25 Standart Sürüm PS4 ve PS5',
-        price: '2.900,00 TL',
-        original_price: null,
-        discount: '',
-        image_url: '',
-        store_url: 'https://store.playstation.com/tr-tr/product/fc25-standard',
-        platforms: ['PS4', 'PS5'],
-        is_add_on: false,
-      },
-    ];
-
-    const picked = pickBestAvailablePlayStationProduct(products, 'EA SPORTS FC 25');
-    expect(picked?.id).toBe('fc25-standard');
-    expect(picked?.price).toBe('2.900,00 TL');
-  });
-
-  test('prefers base game over bundle/pack editions when query does not specify bundle', () => {
-    const products = [
-      {
-        id: 'bundle',
-        title: 'Cyberpunk 2077 ve Phantom Liberty Paketi',
-        price: '3.499,00 TL',
-        original_price: null,
-        discount: '',
-        image_url: '',
-        store_url: 'https://store.playstation.com/tr-tr/product/bundle',
-        platforms: ['PS5'],
-        is_add_on: false,
-      },
-      {
-        id: 'base',
-        title: 'Cyberpunk 2077',
-        price: '2.799,00 TL',
-        original_price: null,
-        discount: '',
-        image_url: '',
-        store_url: 'https://store.playstation.com/tr-tr/product/base',
-        platforms: ['PS5'],
-        is_add_on: false,
-      },
-    ];
-
-    const picked = pickBestAvailablePlayStationProduct(products, 'Cyberpunk 2077');
-    expect(picked?.id).toBe('base');
-    expect(picked?.price).toBe('2.799,00 TL');
-  });
-
 
   test('prioritizes hyphen-free candidates before hyphenated candidates for Chihiro compatibility', () => {
     const candidates = getPsSearchQueryCandidates('Spider-Man 2');
@@ -615,16 +272,6 @@ describe('PlayStation Store SSR parsing', () => {
     expect(parsed?.price).toBe('99,00 TL');
   });
 
-  test('prefers the cheaper equally matching product', () => {
-    const makeProduct = (id: string, price: string) => ({
-      id, title: 'Hades', price, original_price: null, discount: '', image_url: '',
-      store_url: `https://store.playstation.com/tr-tr/product/${id}`,
-    });
-    expect(pickBestAvailablePlayStationProduct([
-      makeProduct('expensive', '400,00 TL'), makeProduct('cheap', '100,00 TL'),
-    ], 'Hades')?.id).toBe('cheap');
-  });
-
   test('reads numeric Chihiro prices without display text', () => {
     const parsed = parsePlayStationChihiroResponse({ links: [
       { id: 'free-numeric', name: 'Free Numeric', default_sku: { price: 0 } },
@@ -658,5 +305,85 @@ describe('PlayStation Store SSR parsing', () => {
       { id: 'unknown-price', name: 'Unknown Price' },
     ] }, 'tr-tr');
     expect(parsed[0]?.price).toBe('Bilinmiyor');
+  });
+});
+
+describe('Chihiro parsing', () => {
+  test('parses the live Chihiro catalog response and ignores add-ons', () => {
+    const payload = {
+      links: [
+        {
+          id: 'UP1001-CUSA00000_00-GAMEADDON0000000',
+          name: 'Hades DLC',
+          top_category: 'add_on',
+          default_sku: { display_price: '0,00 TL', price: 0 },
+        },
+        {
+          id: PRODUCT_ID,
+          name: 'Hades',
+          title_name: 'Hades',
+          top_category: 'downloadable_game',
+          default_sku: { display_price: '307,65 TL', price: 30765 },
+          images: [
+            { type: 10, url: 'https://image.api.playstation.com/hades-cover.jpg' },
+            { type: 12, url: 'https://image.api.playstation.com/hades-shot.jpg' },
+          ],
+          metadata: { genre: { values: ['Action'] } },
+          playable_platform: ['PS5'],
+          provider_name: 'Supergiant Games',
+          release_date: '2021-08-13T00:00:00Z',
+        },
+      ],
+    };
+
+    const parsed = parsePlayStationChihiroResponse(payload, 'tr-tr');
+    expect(parsed).toHaveLength(2);
+    expect(parsed[1]).toMatchObject({
+      id: PRODUCT_ID,
+      title: 'Hades',
+      price: '307,65 TL',
+      image_url: 'https://image.api.playstation.com/hades-cover.jpg',
+      platforms: ['PS5'],
+      genres: ['Action'],
+      is_add_on: false,
+    });
+  });
+
+  test('treats Chihiro entitlement-only products as add-ons', () => {
+    const payload = {
+      links: [
+        {
+          id: 'entitlement-sku',
+          name: 'Cyberpunk 2077',
+          top_category: 'downloadable_game',
+          default_sku: {
+            display_price: 'Ücretsiz',
+            price: 0,
+            eligibilities: [
+              {
+                id: 'SIE-ENTITLEMENT-1',
+                operand: 'IS_ACTIVE',
+                operator: 'TRUE',
+              },
+            ],
+          },
+        },
+        {
+          id: 'paid-base-game',
+          name: 'Cyberpunk 2077',
+          top_category: 'downloadable_game',
+          default_sku: {
+            display_price: '2.799,00 TL',
+            price: 279900,
+            eligibilities: [],
+          },
+        },
+      ],
+    };
+
+    const parsed = parsePlayStationChihiroResponse(payload, 'tr-tr');
+    expect(parsed[0]?.is_add_on).toBeTrue();
+    expect(parsed[1]?.is_add_on).toBeFalse();
+
   });
 });

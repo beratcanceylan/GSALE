@@ -125,24 +125,6 @@ function getCoreSignificantWords(title: string): string[] {
   return core.length > 0 ? core : words;
 }
 
-/** Titles to try when store search fails on the full product name (e.g. "… Enhanced"). */
-export function getPriceLookupTitles(title: string): string[] {
-  const cross = cleanTitleForCrossPlatform(title);
-  const withoutOptionalEdition = cross
-    .replace(
-      /\b(enhanced|legacy|remastered|definitive|premium|complete|ultimate|deluxe|gold|goty|director'?s\s*cut)\b/gi,
-      ' ',
-    )
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  const variants: string[] = [];
-  if (cross) variants.push(cross);
-  if (withoutOptionalEdition && withoutOptionalEdition !== cross) {
-    variants.push(withoutOptionalEdition);
-  }
-  return [...new Set(variants)];
-}
 
 /** Longest numerals first, so "viii" is not read as "v". */
 const ROMAN_NUMERALS = ['xvi', 'xv', 'xiv', 'xiii', 'xii', 'xi', 'x', 'ix', 'viii', 'vii', 'vi', 'v', 'iv', 'iii', 'ii', 'i'];

@@ -1,5 +1,3 @@
-import { baseTitle, editionKey, type EditionKey } from '@/services/store/editions';
-import { scoreProductTitleMatch } from '@/services/store/match';
 import { extractNumericPrice, formatTryPrice, isUnavailablePrice } from '@/services/store/price-parse';
 
 const PS_STORE_BASE = 'https://store.playstation.com';
@@ -511,100 +509,6 @@ export function parsePlayStationProductHtml(
   if (media.screenshots) product.screenshots = media.screenshots;
   if (media.videos) product.videos = media.videos;
   return product;
-}
-
-const PS_CONSOLE_NAME = /\bPlayStation\s*[45]\b/gi;
-
-export function cleanPsProductTitle(title: string): string {
-  if (!title) return '';
-  return baseTitle(title.replaceAll(PS_CONSOLE_NAME, ''));
-}
-
-function hasLegacyOnlyPlayStationPlatform(product: ParsedPlayStationProduct): boolean {
-  if (!product.platforms || product.platforms.length === 0) return false;
-  const hasModern = product.platforms.some((p) => /ps[45]|playstation\s*[45]/i.test(p));
-  const hasLegacy = product.platforms.some((p) => /ps[23]|vita|psp/i.test(p));
-  return hasLegacy && !hasModern;
-}
-
-function normalizeTitleForExactCheck(title: string): string {
-  return title
-    .toLowerCase()
-    .replaceAll(/[™®©]/g, '')
-    .replaceAll(/[^\p{L}\p{N}]+/gu, '');
-}
-
-/** Same edition earns a bonus; a different edition is penalised but stays matchable (score ≥ 50). */
-function editionAdjustedScore(score: number, searchEdition: EditionKey, productEdition: EditionKey): number {
-  if (productEdition === searchEdition) return score + (searchEdition === 'base' ? 15 : 25);
-  if (searchEdition !== 'base' && productEdition === 'base') return Math.max(50, score - 15);
-  return Math.max(50, score - 25);
-}
-
-function scorePlayStationProduct(
-  product: ParsedPlayStationProduct,
-  searchTitle: string,
-): number {
-  const cleanedSearch = cleanPsProductTitle(searchTitle);
-  const cleanedTitle = cleanPsProductTitle(product.title);
-
-  const scoreCleaned = cleanedSearch
-    ? scoreProductTitleMatch(cleanedTitle, cleanedSearch)
-    : 0;
-  const scoreCleanTitleMatch = scoreProductTitleMatch(cleanedTitle, searchTitle);
-  const scoreRaw = scoreProductTitleMatch(product.title, searchTitle);
-  let titleScore = Math.max(scoreCleaned, scoreCleanTitleMatch, scoreRaw);
-
-  if (titleScore < 50) return 0;
-
-  const searchEdition = editionKey(searchTitle);
-  const productEdition = editionKey(product.title);
-
-  titleScore = editionAdjustedScore(titleScore, searchEdition, productEdition);
-
-  const normSearch = normalizeTitleForExactCheck(searchTitle);
-  const normProduct = normalizeTitleForExactCheck(product.title);
-  if (normSearch && normProduct === normSearch) {
-    titleScore += 10;
-  }
-
-  return Math.max(0, titleScore);
-}
-
-export function pickBestAvailablePlayStationProduct(
-  products: ParsedPlayStationProduct[],
-  matchTitle: string,
-): ParsedPlayStationProduct | null {
-  const nonAddOns = products.filter((product) => !product.is_add_on);
-  const modernProducts = nonAddOns.filter((product) => !hasLegacyOnlyPlayStationPlatform(product));
-  const candidatePool = modernProducts.length > 0 ? modernProducts : nonAddOns;
-
-  const available = candidatePool.filter((product) => !isUnavailablePrice(product.price));
-
-  const matchCandidate = (pool: ParsedPlayStationProduct[]): ParsedPlayStationProduct | null => {
-    let best: ParsedPlayStationProduct | null = null;
-    let bestScore = 0;
-
-    for (const product of pool) {
-      const score = scorePlayStationProduct(product, matchTitle);
-      if (score < 50) continue;
-
-      if (score > bestScore) {
-        best = product;
-        bestScore = score;
-      } else if (score === bestScore && best !== null) {
-        const currentPrice = extractNumericPrice(product.price);
-        const bestPrice = extractNumericPrice(best.price);
-        if (currentPrice !== null && bestPrice !== null && currentPrice < bestPrice) {
-          best = product;
-        }
-      }
-    }
-
-    return bestScore >= 50 ? best : null;
-  };
-
-  return matchCandidate(available) ?? matchCandidate(candidatePool);
 }
 
 /*

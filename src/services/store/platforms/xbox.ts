@@ -6,7 +6,6 @@ import { baseTitle } from '@/services/store/editions';
 import { fetchJson, fetchPostJson, fetchText, throwIfAborted, withRetry } from '@/services/store/fetch';
 import { firstResult } from '@/services/store/sequence';
 import { pickXboxSearchImage } from '@/services/store/platforms/xbox-image';
-import { rankXboxPriceHits } from '@/services/store/platforms/xbox-match';
 import { xboxMetadataFromProduct } from '@/services/store/platforms/xbox-metadata';
 import { getXboxListPrice, type XboxSelectedPrice } from '@/services/store/platforms/xbox-price';
 import {
@@ -215,43 +214,6 @@ async function xboxPriceFromSelected(
   return result;
 }
 
-export async function fetchXboxPrice(
-  lookupTitle: string,
-  matchTitle: string = lookupTitle,
-  options?: StoreRequestOptions,
-): Promise<PlatformPriceResult | null> {
-  const products = await searchXboxProducts(lookupTitle, options);
-  const candidates = rankXboxPriceHits(products.map(({ hit }) => hit), matchTitle);
-  if (candidates.length === 0) return null;
-
-  const productById = new Map(products.map((entry) => [entry.hit.id, entry.product]));
-  const pricedCandidates = candidates.slice(0, 8).map((candidate) => ({
-    ...candidate,
-    prices: getXboxListPrice(productById.get(candidate.hit.id) ?? {}),
-  }));
-
-  let firstFree: (typeof pricedCandidates)[number] | null = null;
-  let selected: (typeof pricedCandidates)[number] | null = null;
-
-  for (const candidate of pricedCandidates) {
-    const prices = candidate.prices;
-    if (!prices) continue;
-    if (prices.isFree) {
-      if (candidate.exact || candidate.score >= 100) {
-        selected = candidate;
-        break;
-      }
-      firstFree ??= candidate;
-      continue;
-    }
-    selected = candidate;
-    break;
-  }
-
-  selected ??= firstFree;
-  if (!selected?.prices) return null;
-  return xboxPriceFromSelected(selected.prices, selected.hit.store_url, options?.signal);
-}
 
 const PC_ONLY_TITLE = /\(\s*PC\s*\)/i;
 

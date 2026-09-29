@@ -6,7 +6,7 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { resetCurrencyCacheForTests, setFxRatesForTests } = await import('@/services/store/currency');
-const { fetchEpicDeals, fetchEpicDetails, fetchEpicEditionOffers, fetchEpicFreeGames, fetchEpicPrice, searchEpic } = await import(
+const { fetchEpicDeals, fetchEpicDetails, fetchEpicEditionOffers, fetchEpicFreeGames, searchEpic } = await import(
   '@/services/store/platforms/epic'
 );
 
@@ -100,10 +100,10 @@ describe('searchEpic', () => {
   });
 });
 
-describe('fetchEpicPrice', () => {
-  test('prices the best offer in TL with its store link', async () => {
+describe('Epic edition prices', () => {
+  test('prices the offer in TL with its store link', async () => {
     routeFetch(() => Response.json({ offers: [HADES] }));
-    expect(await fetchEpicPrice('Hades')).toEqual({
+    expect((await fetchEpicEditionOffers('Hades'))[0]?.price).toEqual({
       platform: 'Epic Games',
       price: '100,00 TL',
       original_price: '200,00 TL',
@@ -113,19 +113,18 @@ describe('fetchEpicPrice', () => {
     });
   });
 
-  test('returns null without a match or without a price', async () => {
+  test('skips offers without a price and returns nothing without a match', async () => {
     routeFetch(() => Response.json({ offers: [] }));
-    expect(await fetchEpicPrice('Nothing')).toBeNull();
+    expect(await fetchEpicEditionOffers('Nothing')).toEqual([]);
 
     const { price: _price, ...unpriced } = HADES;
     routeFetch(() => Response.json({ offers: [{ ...unpriced, productSlug: null, urlSlug: null }] }));
-    expect(await fetchEpicPrice('Hades')).toBeNull();
+    expect(await fetchEpicEditionOffers('Hades')).toEqual([]);
   });
 
-  test('omits the store link when the offer has no product path', async () => {
+  test('falls back to the store home when the offer has no product path', async () => {
     routeFetch(() => Response.json({ offers: [{ ...HADES, productSlug: null }] }));
-    const result = await fetchEpicPrice('Hades');
-    expect(result?.store_url).toBe('https://store.epicgames.com/');
+    expect((await fetchEpicEditionOffers('Hades'))[0]?.price.store_url).toBe('https://store.epicgames.com/');
   });
 });
 

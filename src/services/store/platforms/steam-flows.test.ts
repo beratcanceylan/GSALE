@@ -6,7 +6,7 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { resetCurrencyCacheForTests, setFxRatesForTests } = await import('@/services/store/currency');
-const { fetchSteamDeals, fetchSteamDetails, fetchSteamEditionOffers, fetchSteamFreeGames, fetchSteamPrice, searchSteam } = await import(
+const { fetchSteamDeals, fetchSteamDetails, fetchSteamEditionOffers, fetchSteamFreeGames, searchSteam } = await import(
   '@/services/store/platforms/steam'
 );
 
@@ -53,77 +53,54 @@ describe('searchSteam', () => {
   });
 });
 
-describe('fetchSteamPrice', () => {
+describe('Steam edition prices', () => {
+  const priceOf = async (title: string) => (await fetchSteamEditionOffers(title))[0]?.price ?? null;
+
   test('uses the search price in TRY, including the discount', async () => {
-    const urls = routeFetch(() =>
-      search({ id: 10, name: 'Hades', price: { currency: 'TRY', final: 5000, initial: 10000, discount_percent: 50 } }),
+    const urls = routeFetch((url) =>
+      url.includes('storesearch')
+        ? search({ id: 10, name: 'Hades', price: { currency: 'TRY', final: 5000, initial: 10000, discount_percent: 50 } })
+        : {},
     );
-    expect(await fetchSteamPrice('Hades', 'base')).toMatchObject({
+    expect(await priceOf('Hades')).toMatchObject({
       price: '50,00 TL',
       original_price: '100,00 TL',
       discount: '-50%',
       store_url: 'https://store.steampowered.com/app/10/',
     });
-    expect(urls).toHaveLength(1);
+    expect(urls.filter((url) => url.includes('storesearch'))).toHaveLength(1);
   });
 
   test('converts a foreign currency and derives a missing discount', async () => {
-    routeFetch(() => search({ id: 11, name: 'Hades', price: { currency: 'USD', final: 500, initial: 1000 } }));
-    expect(await fetchSteamPrice('Hades', 'base')).toMatchObject({
-      price: '200,00 TL',
-      original_price: '400,00 TL',
-      discount: '-50%',
-    });
+    routeFetch((url) => (url.includes('storesearch') ? search({ id: 11, name: 'Hades', price: { currency: 'USD', final: 500, initial: 1000 } }) : {}));
+    expect(await priceOf('Hades')).toMatchObject({ price: '200,00 TL', original_price: '400,00 TL', discount: '-50%' });
 
-    routeFetch(() => search({ id: 11, name: 'Hades', price: { currency: 'USD', final: 500 } }));
-    expect(await fetchSteamPrice('Hades', 'base')).toMatchObject({ price: '200,00 TL', original_price: null, discount: '' });
+    routeFetch((url) => (url.includes('storesearch') ? search({ id: 11, name: 'Hades', price: { currency: 'USD', final: 500 } }) : {}));
+    expect(await priceOf('Hades')).toMatchObject({ price: '200,00 TL', original_price: null, discount: '' });
   });
 
   test('a zero search price is free', async () => {
-    routeFetch(() => search({ id: 12, name: 'Hades', price: { currency: 'USD', final: 0 } }));
-    expect(await fetchSteamPrice('Hades', 'base')).toMatchObject({ price: 'Ücretsiz', original_price: null });
+    routeFetch((url) => (url.includes('storesearch') ? search({ id: 12, name: 'Hades', price: { currency: 'USD', final: 0 } }) : {}));
+    expect(await priceOf('Hades')).toMatchObject({ price: 'Ücretsiz', original_price: null });
   });
 
-  test('falls back to app details: free, priced, unknown or missing', async () => {
+  test('a base game without a search price is priced from its app details', async () => {
     const withDetails = (details: unknown) =>
-      routeFetch((url) => (url.includes('/storesearch/') ? search({ id: 13, name: 'Hades', price: { final: 'x' } }) : details));
+      routeFetch((url) => (url.includes('/storesearch/') ? search({ id: 13, name: 'Hades' }) : details));
 
     withDetails({ 13: { success: true, data: { name: 'Hades', is_free: true } } });
-    expect((await fetchSteamPrice('Hades', 'base'))?.price).toBe('Ücretsiz');
+    expect((await priceOf('Hades'))?.price).toBe('Ücretsiz');
 
     withDetails({ 13: { success: true, data: { name: 'Hades', price_overview: { currency: 'TRY', final: 2500, initial: 2500 } } } });
-    expect((await fetchSteamPrice('Hades', 'base'))?.price).toBe('25,00 TL');
-
-    withDetails({ 13: { success: true, data: { name: 'Hades' } } });
-    expect((await fetchSteamPrice('Hades', 'base'))?.price).toBe('Bilinmiyor');
+    expect((await priceOf('Hades'))?.price).toBe('25,00 TL');
 
     withDetails({ 13: { success: false } });
-    expect(await fetchSteamPrice('Hades', 'base')).toBeNull();
+    expect(await priceOf('Hades')).toBeNull();
   });
 
-  test('returns null when nothing matches', async () => {
+  test('returns nothing when no title matches', async () => {
     routeFetch(() => search({ id: 14, name: 'Completely Different' }));
-    expect(await fetchSteamPrice('Hades', 'base')).toBeNull();
-  });
-
-  test('prefers the requested edition, then prime upgrades', async () => {
-    const items = [
-      { id: 20, name: 'Hades', price: { currency: 'TRY', final: 1000, initial: 1000 } },
-      { id: 21, name: 'Hades Deluxe Edition', price: { currency: 'TRY', final: 2000, initial: 2000 } },
-      { id: 22, name: 'Hades Prime Status Upgrade', price: { currency: 'TRY', final: 3000, initial: 3000 } },
-    ];
-    routeFetch(() => search(...items));
-    expect((await fetchSteamPrice('Hades Deluxe Edition', 'deluxe'))?.store_url).toContain('/app/21/');
-    expect((await fetchSteamPrice('Hades Prime', 'base', 'Hades Prime'))?.store_url).toContain('/app/22/');
-
-    routeFetch(() => search(items[0], items[2]));
-    expect((await fetchSteamPrice('Hades', 'base', 'Hades prime status upgrade'))?.store_url).toContain('/app/22/');
-
-    // An edition match is replaced by the upgrade when the search itself is an upgrade.
-    routeFetch(() => search(...items));
-    expect((await fetchSteamPrice('Hades Deluxe Edition', 'deluxe', 'Hades Deluxe Prime'))?.store_url).toContain(
-      '/app/22/',
-    );
+    expect(await fetchSteamEditionOffers('Hades')).toEqual([]);
   });
 });
 

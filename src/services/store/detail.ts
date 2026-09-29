@@ -9,7 +9,7 @@ import { fetchNintendoDetails, searchNintendo } from '@/services/store/platforms
 import { fetchPlayStationDetails, searchPlayStation } from '@/services/store/platforms/ps';
 import { fetchSteamDetails, searchSteam } from '@/services/store/platforms/steam';
 import { fetchXboxDetails, searchXbox } from '@/services/store/platforms/xbox';
-import { fetchAllPrices } from '@/services/store/prices';
+import { fetchEditionTable } from '@/services/store/prices';
 import type { LiveGame, PlatformSearchHit, StoreRequestOptions } from '@/services/store/types';
 
 const PLATFORM_HINT_MAP: Record<string, string> = {
@@ -152,11 +152,7 @@ export async function fetchGameDetailLive(
   }
 
   const edition = game.edition ?? editionKey(game.title);
-  const priceOptions = {
-    edition,
-    signal: options?.signal,
-    ...(game.deals ? { knownDeals: game.deals } : {}),
-  };
-  const deals = await fetchAllPrices(game.title, priceOptions);
-  return { ...game, deals, edition };
+  const table = await fetchEditionTable(game.title, options);
+  const deals = table.find((option) => option.key === edition)?.deals ?? [];
+  return { ...game, deals: [...deals], edition };
 }

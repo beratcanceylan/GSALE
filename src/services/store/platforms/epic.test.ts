@@ -12,7 +12,6 @@ import {
   epicMetadataFromOffer,
   pickBestEpicOffers,
   pickBestEpicOffer,
-  pickBestEpicOfferForTitles,
 } from '@/services/store/platforms/epic-search';
 import { parseEpicBrowseOffers } from '@/services/store/platforms/epic-browse';
 import { resetCurrencyCacheForTests, setFxRatesForTests } from '@/services/store/currency';
@@ -202,22 +201,6 @@ describe('Epic offer search mapping', () => {
       platform: 'Epic Games',
       store_url: 'https://store.epicgames.com/p/grand-theft-auto-v',
     });
-  });
-
-  test('can match an expanded GTA title when the original query used an acronym', () => {
-    const match = pickBestEpicOfferForTitles(
-      [
-        {
-          id: 'gta',
-          namespace: 'b0cd075465c44f87be3b505ac04a2e46',
-          title: 'Grand Theft Auto V Enhanced',
-          offerType: 'BASE_GAME',
-        },
-      ],
-      ['gta v enhanced', 'Grand Theft Auto v enhanced'],
-    );
-
-    expect(match?.id).toBe('gta');
   });
 
   test('maps Epic offer metadata and media into game detail fields', () => {

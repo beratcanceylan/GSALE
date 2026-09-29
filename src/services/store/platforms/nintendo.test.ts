@@ -3,7 +3,6 @@ import { describe, expect, test } from 'bun:test';
 import {
   parseNintendoProduct,
   parseNintendoSearchResponse,
-  pickBestNintendoProduct,
 } from '@/services/store/platforms/nintendo-parse';
 
 const nbaHit = {
@@ -38,7 +37,7 @@ describe('Nintendo.com Algolia parsing', () => {
     });
   });
 
-  test('deduplicates hits and picks a purchasable base game over DLC', () => {
+  test('deduplicates hits and marks DLC as add-ons', () => {
     const results = parseNintendoSearchResponse({
       hits: [
         { ...nbaHit, objectID: 'dlc-1', title: 'NBA 2K27 DLC', dlcType: 'DLC' },
@@ -47,7 +46,7 @@ describe('Nintendo.com Algolia parsing', () => {
       ],
     });
     expect(results).toHaveLength(2);
-    expect(pickBestNintendoProduct(results, 'NBA 2K27')?.id).toBe('7100116953');
+    expect(results.map((result) => result.is_add_on)).toEqual([true, false]);
   });
 
   test('does not fabricate a price for a catalog item without one', () => {

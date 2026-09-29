@@ -5,12 +5,18 @@ mock.module('expo-secure-store', () => ({
   setItemAsync: async () => undefined,
 }));
 
-const { fetchGogPrice } = await import('@/services/store/platforms/gog');
-const { fetchNintendoPrice } = await import('@/services/store/platforms/nintendo');
-const { fetchPlayStationPrice, searchPlayStation } = await import('@/services/store/platforms/ps');
-const { fetchSteamPrice } = await import('@/services/store/platforms/steam');
-const { fetchXboxPrice } = await import('@/services/store/platforms/xbox');
-const { fetchAllPrices } = await import('@/services/store/prices');
+const { fetchGogEditionOffers } = await import('@/services/store/platforms/gog');
+const { fetchNintendoEditionOffers } = await import('@/services/store/platforms/nintendo');
+const { fetchPlayStationEditionOffers, searchPlayStation } = await import('@/services/store/platforms/ps');
+const { fetchSteamEditionOffers } = await import('@/services/store/platforms/steam');
+const { fetchXboxEditionOffers } = await import('@/services/store/platforms/xbox');
+
+type EditionOffersFetcher = (title: string) => Promise<{ price: { price: string; original_price?: string | null; discount?: string | null; store_url?: string } }[]>;
+
+/** The first edition offer's price, as the old per-store price functions returned it. */
+async function firstPrice(fetchOffers: EditionOffersFetcher, title: string) {
+  return (await fetchOffers(title))[0]?.price ?? null;
+}
 
 const originalFetch = globalThis.fetch;
 
@@ -28,7 +34,7 @@ describe('store adapter request reuse', () => {
     globalThis.fetch = originalFetch;
   });
 
-  test('uses the Steam search price without a second appdetails request', async () => {
+  test('prices Steam from search and reads editions from one appdetails request', async () => {
     urls = [];
     globalThis.fetch = async (input) => {
       const url = String(input);
@@ -48,12 +54,14 @@ describe('store adapter request reuse', () => {
       });
     };
 
-    const result = await fetchSteamPrice('GSALE Direct Steam Price', 'base');
+    const result = await firstPrice(fetchSteamEditionOffers, 'GSALE Direct Steam Price');
 
     expect(result?.price).toBe('14,99 TL');
     expect(result?.original_price).toBe('19,99 TL');
     expect(result?.discount).toBe('-25%');
-    expect(urls).toHaveLength(1);
+    // One search, plus the base app's details for its edition packages.
+    expect(urls).toHaveLength(2);
+    expect(urls[1]).toContain('/api/appdetails');
     expect(urls[0]).toContain('/api/storesearch/');
   });
 
@@ -73,7 +81,7 @@ describe('store adapter request reuse', () => {
       });
     };
 
-    const result = await fetchSteamPrice('GSALE Steam Fallback', 'base');
+    const result = await firstPrice(fetchSteamEditionOffers, 'GSALE Steam Fallback');
 
     expect(result?.price).toBe('Ücretsiz');
     expect(urls).toHaveLength(2);
@@ -101,7 +109,7 @@ describe('store adapter request reuse', () => {
       });
     };
 
-    const result = await fetchGogPrice('GSALE GOG Price');
+    const result = await firstPrice(fetchGogEditionOffers, 'GSALE GOG Price');
 
     expect(result?.price).toBe('12,50 TL');
     expect(urls).toHaveLength(1);
@@ -144,7 +152,7 @@ describe('store adapter request reuse', () => {
       });
     };
 
-    const result = await fetchXboxPrice('GSALE Xbox Price');
+    const result = await firstPrice(fetchXboxEditionOffers, 'GSALE Xbox Price');
 
     expect(result?.price).toBe('29,99 TL');
     expect(urls).toHaveLength(2);
@@ -179,7 +187,7 @@ describe('store adapter request reuse', () => {
       });
     };
 
-    const result = await fetchXboxPrice('GSALE Xbox HTML Fallback');
+    const result = await firstPrice(fetchXboxEditionOffers, 'GSALE Xbox HTML Fallback');
 
     expect(result?.price).toBe('39,99 TL');
     expect(urls).toHaveLength(3);
@@ -204,7 +212,7 @@ describe('store adapter request reuse', () => {
       });
     };
 
-    const result = await fetchPlayStationPrice('GSALE PS Price');
+    const result = await firstPrice(fetchPlayStationEditionOffers, 'GSALE PS Price');
 
     expect(result?.price).toBe('499,00 TL');
     expect(result?.store_url).toContain('/product/UP0000-PPSA00000_00-GSALEPS00000000');
@@ -246,7 +254,7 @@ describe('store adapter request reuse', () => {
       };
       return jsonResponse(url.includes('/container/') ? product : { links: [product] });
     };
-    expect((await fetchPlayStationPrice('GSALE PS Detail'))?.price).toBe('99,00 TL');
+    expect((await firstPrice(fetchPlayStationEditionOffers, 'GSALE PS Detail'))?.price).toBe('99,00 TL');
     expect(urls.some((url) => url.includes('/container/'))).toBeTrue();
   });
 
@@ -262,7 +270,7 @@ describe('store adapter request reuse', () => {
       );
     };
 
-    const result = await fetchPlayStationPrice('GSALE PS Legacy');
+    const result = await firstPrice(fetchPlayStationEditionOffers, 'GSALE PS Legacy');
 
     expect(result).toMatchObject({
       platform: 'PlayStation',
@@ -295,7 +303,7 @@ describe('store adapter request reuse', () => {
       });
     };
 
-    const result = await fetchNintendoPrice('GSALE Nintendo Price');
+    const result = await firstPrice(fetchNintendoEditionOffers, 'GSALE Nintendo Price');
 
     expect(result).toMatchObject({
       platform: 'Nintendo',
@@ -305,34 +313,5 @@ describe('store adapter request reuse', () => {
     });
     expect(urls).toHaveLength(1);
     expect(urls[0]).toContain('algolia.net/1/indexes/store_game_en_us/query');
-  });
-
-  test('reuses authoritative source deals and keeps canonical provider order', async () => {
-    urls = [];
-    globalThis.fetch = async (input) => {
-      urls.push(String(input));
-      throw new Error('No provider request should be needed');
-    };
-
-    const deals = await fetchAllPrices('GSALE Known Deals', {
-      knownDeals: [
-        { platform: 'Xbox', price: '40,00 TL', discount: '', tier: 'console' },
-        { platform: 'Steam', price: '10,00 TL', discount: '', tier: 'pc' },
-        { platform: 'PlayStation', price: '30,00 TL', discount: '', tier: 'console' },
-        { platform: 'Nintendo', price: '25,00 TL', discount: '', tier: 'console' },
-        { platform: 'GOG', price: '20,00 TL', discount: '', tier: 'pc' },
-        { platform: 'Epic Games', price: '15,00 TL', discount: '', tier: 'pc' },
-      ],
-    });
-
-    expect(deals.map((deal) => deal.platform)).toEqual([
-      'Steam',
-      'Epic Games',
-      'GOG',
-      'Xbox',
-      'PlayStation',
-      'Nintendo',
-    ]);
-    expect(urls).toHaveLength(0);
   });
 });

@@ -6,10 +6,10 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { resetCurrencyCacheForTests, setFxRatesForTests } = await import('@/services/store/currency');
-const { fetchNintendoDeals, fetchNintendoDetails, fetchNintendoEditionOffers, fetchNintendoPrice, searchNintendo } = await import(
+const { fetchNintendoDeals, fetchNintendoDetails, fetchNintendoEditionOffers, searchNintendo } = await import(
   '@/services/store/platforms/nintendo'
 );
-const { parseNintendoProduct, pickBestNintendoProduct } = await import('@/services/store/platforms/nintendo-parse');
+const { parseNintendoProduct } = await import('@/services/store/platforms/nintendo-parse');
 
 const originalFetch = globalThis.fetch;
 
@@ -97,47 +97,12 @@ describe('parseNintendoProduct', () => {
     expect(parseNintendoProduct({ title: 'No id' })).toBeNull();
     expect(parseNintendoProduct({ objectID: 'x' })).toBeNull();
   });
-
-  test('matches titles that only add optional edition words, either way round', () => {
-    const products = ['Mario Deluxe Edition', 'Mario Party', 'Zelda'].map((title, index) =>
-      parseNintendoProduct({ objectID: String(index), title, price: { finalPrice: 10 } }),
-    ).filter((product) => product !== null);
-    expect(pickBestNintendoProduct(products, 'Mario')?.title).toBe('Mario Deluxe Edition');
-    expect(pickBestNintendoProduct(products, 'Zelda Switch Edition')?.title).toBe('Zelda');
-    expect(pickBestNintendoProduct(products, 'Metroid')).toBeNull();
-    const party = products.filter((product) => product.title === 'Mario Party');
-    expect(pickBestNintendoProduct(party, 'Mario')).toBeNull();
-  });
-
-  test('picks nothing from add-ons only', () => {
-    const addOn = parseNintendoProduct({ objectID: 'a', title: 'Mario', dlcType: 'bundle' });
-    expect(pickBestNintendoProduct(addOn ? [addOn] : [], 'Mario')).toBeNull();
-  });
 });
 
 describe('Nintendo store adapter', () => {
   test('search keeps products with an image', async () => {
     respond({ hits: [MARIO, { objectID: 'no-image', title: 'No image' }, MARIO] });
     expect((await searchNintendo('Mario')).map((hit) => hit.id)).toEqual(['nintendo-mario-wonder']);
-  });
-
-  test('prices the best match in TL, free games as free, and null without a match', async () => {
-    respond({ hits: [MARIO] });
-    expect(await fetchNintendoPrice('Super Mario Bros. Wonder')).toMatchObject({
-      price: '1.999,60 TL',
-      original_price: '2.799,60 TL',
-      discount: '-29%',
-      store_url: 'https://www.nintendo.com/us/store/products/super-mario-bros-wonder-switch/',
-    });
-
-    respond({ hits: [{ ...MARIO, price: { finalPrice: 0 } }] });
-    expect((await fetchNintendoPrice('Super Mario Bros. Wonder'))?.price).toBe('Ücretsiz');
-
-    respond({ hits: [{ ...MARIO, url: '', price: {} }] });
-    expect(await fetchNintendoPrice('Super Mario Bros. Wonder')).toBeNull();
-
-    respond({ hits: [] });
-    expect(await fetchNintendoPrice('Super Mario Bros. Wonder')).toBeNull();
   });
 
   test('details come from the Algolia object', async () => {

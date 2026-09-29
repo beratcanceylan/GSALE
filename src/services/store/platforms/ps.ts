@@ -13,7 +13,6 @@ import {
 import {
   getPlayStationStoreUrl,
   getPsSearchQueryCandidates,
-  pickBestAvailablePlayStationProduct,
   parsePlayStationChihiroResponse,
   parsePlayStationProductHtml,
   parsePlayStationSearchHtml,
@@ -22,7 +21,6 @@ import {
 
 import type {
   LiveGame,
-  PlatformPriceResult,
   PlatformSearchHit,
   StoreRequestOptions,
 } from '@/services/store/types';
@@ -232,23 +230,6 @@ async function ignoreUnlessAborted<T>(request: Promise<T>, signal: AbortSignal |
   }
 }
 
-/** Chihiro search, then the legacy HTML search, then a looser pick among the first results. */
-async function findPlayStationMatch(
-  lookupTitle: string,
-  matchTitle: string,
-  options?: StoreRequestOptions,
-): Promise<ParsedPlayStationProduct | null> {
-  const pick = (products: ParsedPlayStationProduct[]) => pickBestAvailablePlayStationProduct(products, matchTitle);
-  const search = await searchPsCandidates(getPsSearchQueryCandidates(lookupTitle), pick, options);
-  if (search.result) return search.result;
-
-  if (!search.sawEmptyLinks) {
-    const html = await ignoreUnlessAborted(fetchPsHtml(psLegacySearchUrl(lookupTitle), options), options?.signal);
-    const legacyMatch = html === null ? null : pick(parsePlayStationSearchHtml(html, getPsPathLocale()));
-    if (legacyMatch) return legacyMatch;
-  }
-  return search.firstProducts.length > 0 ? pick(search.firstProducts) : null;
-}
 
 /** Search results can lack a price; the product page usually has it. */
 async function withKnownPrice(
@@ -260,26 +241,6 @@ async function withKnownPrice(
   return detailed && !isUnavailablePrice(detailed.price) ? detailed : product;
 }
 
-export async function fetchPlayStationPrice(
-  lookupTitle: string,
-  matchTitle: string = lookupTitle,
-  options?: StoreRequestOptions,
-): Promise<PlatformPriceResult | null> {
-  if (!getPsCurrency()) return null;
-  const match = await findPlayStationMatch(lookupTitle, matchTitle, options);
-  if (!match) return null;
-
-  const product = await localizePsProduct(await withKnownPrice(match, options), options?.signal);
-  if (isUnavailablePrice(product.price)) return null;
-  return {
-    platform: 'PlayStation',
-    price: product.price,
-    original_price: product.original_price,
-    discount: product.discount,
-    tier: 'console',
-    store_url: product.store_url,
-  };
-}
 
 /** Every edition of `title`'s game on PlayStation, from one search with the base title. */
 export async function fetchPlayStationEditionOffers(

@@ -7,7 +7,6 @@ import { fetchJson, fetchPostJson, throwIfAborted, withRetry } from '@/services/
 import {
   parseNintendoProduct,
   parseNintendoSearchResponse,
-  pickBestNintendoProduct,
   type ParsedNintendoProduct,
 } from '@/services/store/platforms/nintendo-parse';
 import type {
@@ -158,15 +157,6 @@ export async function fetchNintendoDeals(
   return games.flatMap((game) => (game ? [game] : []));
 }
 
-export async function fetchNintendoPrice(
-  lookupTitle: string,
-  matchTitle: string = lookupTitle,
-  options?: StoreRequestOptions,
-): Promise<PlatformPriceResult | null> {
-  const products = await searchNintendoProducts(lookupTitle, options);
-  const match = pickBestNintendoProduct(products, matchTitle);
-  return match ? productToPriceResult(match, options?.signal) : null;
-}
 
 /** Every edition of `title`'s game on the US eShop, from one search with the base title. */
 export async function fetchNintendoEditionOffers(

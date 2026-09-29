@@ -6,7 +6,7 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { resetCurrencyCacheForTests, setFxRatesForTests } = await import('@/services/store/currency');
-const { fetchGogDeals, fetchGogDetails, fetchGogEditionOffers, fetchGogPrice, searchGog } = await import(
+const { fetchGogDeals, fetchGogDetails, fetchGogEditionOffers, searchGog } = await import(
   '@/services/store/platforms/gog'
 );
 const { gogPriceFromProduct } = await import('@/services/store/platforms/gog-price');
@@ -45,7 +45,7 @@ afterEach(() => {
   resetCurrencyCacheForTests();
 });
 
-describe('searchGog and fetchGogPrice', () => {
+describe('searchGog and GOG edition prices', () => {
   test('maps catalog products to hits with store links', async () => {
     routeFetch(() => ({ products: [WITCHER, { ...WITCHER, id: 2, storeLink: 'https://www.gog.com/en/game/x' }] }));
     const hits = await searchGog('Witcher');
@@ -55,9 +55,9 @@ describe('searchGog and fetchGogPrice', () => {
     ]);
   });
 
-  test('prices the best match, or returns null without one', async () => {
+  test('prices each match in TL, or returns nothing without one', async () => {
     routeFetch(() => ({ products: [WITCHER] }));
-    expect(await fetchGogPrice('The Witcher 3')).toMatchObject({
+    expect((await fetchGogEditionOffers('The Witcher 3'))[0]?.price).toMatchObject({
       price: '400,00 TL',
       original_price: '800,00 TL',
       discount: '-50%',
@@ -65,7 +65,7 @@ describe('searchGog and fetchGogPrice', () => {
     });
 
     routeFetch(() => ({}));
-    expect(await fetchGogPrice('The Witcher 3')).toBeNull();
+    expect(await fetchGogEditionOffers('The Witcher 3')).toEqual([]);
   });
 });
 

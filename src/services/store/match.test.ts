@@ -2,7 +2,6 @@ import { describe, expect, test } from 'bun:test';
 
 import {
   cleanTitleForCrossPlatform,
-  getPriceLookupTitles,
   isStrictMatch,
   pickBestTitleMatch,
   scoreProductTitleMatch,
@@ -61,11 +60,6 @@ describe('store match', () => {
   test('matches GTA V Enhanced to Xbox story mode listing', () => {
     const search = cleanTitleForCrossPlatform('Grand Theft Auto V Enhanced');
     expect(scoreProductTitleMatch('Grand Theft Auto V: Hikaye Modu (Xbox Series X|S)', search)).toBeGreaterThanOrEqual(55);
-  });
-
-  test('getPriceLookupTitles includes base name without Enhanced', () => {
-    const titles = getPriceLookupTitles('Grand Theft Auto V Enhanced');
-    expect(titles).toEqual(['Grand Theft Auto V']);
   });
 
   test('prefers base GTA V over DLC in pickBestTitleMatch', () => {

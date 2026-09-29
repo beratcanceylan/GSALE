@@ -8,11 +8,11 @@ mock.module('expo-secure-store', () => ({
 const { setAppCountry } = await import('@/services/country');
 const { resetCurrencyCacheForTests, setFxRatesForTests } = await import('@/services/store/currency');
 const { searchEpic } = await import('@/services/store/platforms/epic');
-const { fetchGogPrice } = await import('@/services/store/platforms/gog');
-const { fetchPlayStationPrice, searchPlayStation } = await import('@/services/store/platforms/ps');
+const { fetchGogEditionOffers } = await import('@/services/store/platforms/gog');
+const { fetchPlayStationEditionOffers, searchPlayStation } = await import('@/services/store/platforms/ps');
 const { searchSteam } = await import('@/services/store/platforms/steam');
 const { searchXbox } = await import('@/services/store/platforms/xbox');
-const { fetchPlatformDeal } = await import('@/services/store/prices');
+const { fetchEditionTable } = await import('@/services/store/prices');
 
 const originalFetch = globalThis.fetch;
 
@@ -50,7 +50,7 @@ describe('store requests follow the selected country', () => {
   test('GOG', async () => {
     const urls = recordFetch({ products: [] });
     await setAppCountry('DE');
-    await fetchGogPrice('Witcher', 'Witcher');
+    await fetchGogEditionOffers('Witcher');
     expect(urls[0]).toContain('countryCode=DE');
   });
 
@@ -73,7 +73,7 @@ describe('store requests follow the selected country', () => {
     const urls = recordFetch({ links: [] });
     await setAppCountry('KZ');
     expect(await searchPlayStation('Hades')).toEqual([]);
-    expect(await fetchPlayStationPrice('Hades')).toBeNull();
+    expect(await fetchPlayStationEditionOffers('Hades')).toEqual([]);
     expect(urls).toHaveLength(0);
   });
 
@@ -91,7 +91,7 @@ describe('store requests follow the selected country', () => {
         ],
       });
     await setAppCountry('DE');
-    const result = await fetchPlayStationPrice('GSALE PS Region');
+    const result = (await fetchPlayStationEditionOffers('GSALE PS Region'))[0]?.price;
     expect(result?.price).toBe('400,00 TL');
     expect(result?.store_url ?? '').toContain('/de-de/');
   });
@@ -100,9 +100,9 @@ describe('store requests follow the selected country', () => {
     const urls = recordFetch({
       items: [{ id: 991004, name: 'GSALE Country Cache', price: { currency: 'TRY', final: 1000, initial: 1000 } }],
     });
-    await fetchPlatformDeal('Steam', 'GSALE Country Cache');
+    await fetchEditionTable('GSALE Country Cache');
     await setAppCountry('US');
-    await fetchPlatformDeal('Steam', 'GSALE Country Cache');
+    await fetchEditionTable('GSALE Country Cache');
 
     expect(urls.some((url) => url.includes('cc=TR'))).toBeTrue();
     expect(urls.some((url) => url.includes('cc=US'))).toBeTrue();

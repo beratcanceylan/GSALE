@@ -1,8 +1,7 @@
 import { STORE_CONFIG, getSteamLang, getStoreCountry } from '@/services/store/config';
 import { fetchJson, throwIfAborted, withRetry } from '@/services/store/fetch';
 import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } from '@/services/store/edition-table';
-import { baseTitle, editionKey } from '@/services/store/editions';
-import { pickBestTitleMatch } from '@/services/store/match';
+import { baseTitle } from '@/services/store/editions';
 import { formatPriceAsTry } from '@/services/store/currency';
 import { formatSteamPrice } from '@/services/store/price-parse';
 import { platformPriceToGameDeal } from '@/services/store/deals';
@@ -329,56 +328,8 @@ export async function fetchSteamDetails(
   return game;
 }
 
-function isPrimeUpgradeTitle(title: string): boolean {
-  return /\b(prime|seçkin|secKin|status\s+upgrade|yükseltme|yukseltme)\b/i.test(title);
-}
 
-function pickSteamPriceMatch(
-  products: SteamSearchProduct[],
-  edition: string,
-  matchTitle: string,
-): SteamSearchProduct | undefined {
-  const hits = products.map((product) => product.hit);
-  let match =
-    edition === 'base'
-      ? undefined
-      : hits.find((hit) => editionKey(hit.title) === edition);
 
-  if (!match && isPrimeUpgradeTitle(matchTitle)) {
-    match = hits.find((hit) => isPrimeUpgradeTitle(hit.title));
-  }
-
-  match ??= pickBestTitleMatch(hits, matchTitle, (hit) => hit.title) ?? undefined;
-
-  if (match && isPrimeUpgradeTitle(matchTitle) && !isPrimeUpgradeTitle(match.title)) {
-    const upgradeHit = hits.find((hit) => isPrimeUpgradeTitle(hit.title));
-    if (upgradeHit) match = upgradeHit;
-  }
-
-  return products.find((product) => product.hit === match);
-}
-
-export async function fetchSteamPrice(
-  lookupTitle: string,
-  edition: string,
-  matchTitle: string = lookupTitle,
-  options?: StoreRequestOptions,
-): Promise<PlatformPriceResult | null> {
-  const products = await searchSteamProducts(lookupTitle, options);
-  const match = pickSteamPriceMatch(products, edition, matchTitle);
-
-  if (!match) return null;
-
-  const { hit } = match;
-  const directPrice = match.price
-    ? await steamPriceFromOverview(hit.id, match.price, options?.signal)
-    : null;
-  if (directPrice) return directPrice;
-
-  const data = await fetchSteamAppData(hit.id, options);
-  if (!data) return null;
-  return (await steamPriceFromAppData(hit.id, data, options)) ?? steamFixedPrice(hit.id, 'Bilinmiyor');
-}
 
 export async function fetchSteamFreeGames(options?: StoreRequestOptions): Promise<LiveGame[]> {
   const url = `https://store.steampowered.com/api/featuredcategories/?cc=${getStoreCountry()}&l=${getSteamLang()}`;
@@ -422,11 +373,19 @@ function steamPackageOverview(sub: SteamPackageSub, currency: string | undefined
 
 /** Editions Steam sells as packages of one app ("Deluxe Edition" subs of the base game). */
 async function steamPackageOffers(
-  appId: string,
+  base: Readonly<{ appId: string; title: string; hasSearchPrice: boolean }>,
   title: string,
   options?: StoreRequestOptions,
 ): Promise<EditionOffer[]> {
-  const data = await fetchSteamAppData(appId, options);
+  const { appId } = base;
+  let data: SteamAppData | null;
+  try {
+    data = await fetchSteamAppData(appId, options);
+  } catch (error) {
+    // Packages are extra editions; a failed details request keeps the search offers.
+    if (options?.signal?.aborted) throw error;
+    return [];
+  }
   const currency = data?.price_overview?.currency;
   const subs = (data?.package_groups ?? []).flatMap((group) => group.subs ?? []);
   const offers = await Promise.all(subs.map(async (sub): Promise<EditionOffer | null> => {
@@ -444,7 +403,12 @@ async function steamPackageOffers(
       price: { ...price, store_url: `https://store.steampowered.com/sub/${sub.packageid}/` },
     };
   }));
-  return offers.flatMap((offer) => (offer ? [offer] : []));
+  // Free-to-play and some paid apps have no price in search results; their app details do.
+  const appPrice = !base.hasSearchPrice && data ? await steamPriceFromAppData(appId, data, options) : null;
+  const appOffer: EditionOffer[] = appPrice
+    ? [{ platform: 'Steam', edition: 'base', title: base.title, id: appId, price: appPrice }]
+    : [];
+  return [...appOffer, ...offers.flatMap((offer) => (offer ? [offer] : []))];
 }
 
 /** Every edition of `title`'s game on Steam: search apps plus the base app's packages. */
@@ -468,8 +432,14 @@ export async function fetchSteamEditionOffers(
   }));
   throwIfAborted(options?.signal);
 
-  const baseApp = accepted.find(({ edition }) => edition === 'base')?.product.hit.id;
-  const packages = baseApp ? await steamPackageOffers(baseApp, title, options) : [];
+  const baseProduct = accepted.find(({ edition }) => edition === 'base')?.product;
+  const packages = baseProduct
+    ? await steamPackageOffers(
+        { appId: baseProduct.hit.id, title: baseProduct.hit.title, hasSearchPrice: Boolean(baseProduct.price) },
+        title,
+        options,
+      )
+    : [];
   throwIfAborted(options?.signal);
   return [...appOffers.flatMap((offer) => (offer ? [offer] : [])), ...packages];
 }

@@ -6,7 +6,7 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { resetCurrencyCacheForTests, setFxRatesForTests } = await import('@/services/store/currency');
-const { fetchXboxDeals, fetchXboxDetails, fetchXboxEditionOffers, fetchXboxPrice, searchXbox } = await import(
+const { fetchXboxDeals, fetchXboxDetails, fetchXboxEditionOffers, searchXbox } = await import(
   '@/services/store/platforms/xbox'
 );
 
@@ -61,10 +61,12 @@ describe('searchXbox', () => {
   });
 });
 
-describe('fetchXboxPrice', () => {
+describe('Xbox edition prices', () => {
+  const priceOf = async (title: string) => (await fetchXboxEditionOffers(title))[0]?.price ?? null;
+
   test('converts a foreign-currency price and derives the discount', async () => {
     mockXbox(['A'], [product('A', 'Halo', [{ CurrencyCode: 'USD', ListPrice: 10, MSRP: 20 }])]);
-    expect(await fetchXboxPrice('Halo')).toMatchObject({
+    expect(await priceOf('Halo')).toMatchObject({
       price: '400,00 TL',
       original_price: '800,00 TL',
       discount: '-50%',
@@ -74,32 +76,20 @@ describe('fetchXboxPrice', () => {
 
   test('treats a price without a currency as TRY', async () => {
     mockXbox(['A'], [product('A', 'Halo', [{ ListPrice: 300, MSRP: 300 }])]);
-    expect(await fetchXboxPrice('Halo')).toMatchObject({ price: '300,00 TL', original_price: null, discount: '' });
+    expect(await priceOf('Halo')).toMatchObject({ price: '300,00 TL', original_price: null, discount: '' });
   });
 
-  test('prefers a paid match over a loose free one, and an exact free one over paid', async () => {
-    mockXbox(['F', 'P'], [
-      product('F', 'Halo Infinite Multiplayer Free', [{ CurrencyCode: 'TRY', ListPrice: 0, MSRP: 0 }]),
-      product('P', 'Halo', [{ CurrencyCode: 'TRY', ListPrice: 500, MSRP: 500 }]),
-    ]);
-    expect((await fetchXboxPrice('Halo'))?.price).toBe('500,00 TL');
-
-    mockXbox(['F', 'P'], [
-      product('F', 'Halo', [{ CurrencyCode: 'TRY', ListPrice: 0, MSRP: 0 }]),
-      product('P', 'Halo Deluxe', [{ CurrencyCode: 'TRY', ListPrice: 500, MSRP: 500 }]),
-    ]);
-    expect((await fetchXboxPrice('Halo'))?.price).toBe('Ücretsiz');
+  test('a zero list price is free', async () => {
+    mockXbox(['F'], [product('F', 'Halo', [{ CurrencyCode: 'TRY', ListPrice: 0, MSRP: 0 }])]);
+    expect(await priceOf('Halo')).toMatchObject({ price: 'Ücretsiz' });
   });
 
-  test('falls back to a loose free match, and returns null when nothing is priced or matched', async () => {
-    mockXbox(['F'], [product('F', 'Halo Trial', [{ CurrencyCode: 'TRY', ListPrice: 0, MSRP: 0 }])]);
-    expect((await fetchXboxPrice('Halo'))?.price).toBe('Ücretsiz');
-
+  test('skips unpriced and unrelated products', async () => {
     mockXbox(['A'], [product('A', 'Halo')]);
-    expect(await fetchXboxPrice('Halo')).toBeNull();
+    expect(await fetchXboxEditionOffers('Halo')).toEqual([]);
 
     mockXbox(['A'], [product('A', 'Something Else', [{ ListPrice: 1 }])]);
-    expect(await fetchXboxPrice('Halo')).toBeNull();
+    expect(await fetchXboxEditionOffers('Halo')).toEqual([]);
   });
 });
 

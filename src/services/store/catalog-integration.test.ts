@@ -8,7 +8,7 @@ mock.module('expo-secure-store', () => ({
 
 const { CATALOG_SCHEMA_SQL, catalogSearchKey } = await import('@/services/catalog/schema');
 const { setActiveCatalog } = await import('@/services/catalog/state');
-const { fetchAllPrices } = await import('@/services/store/prices');
+const { fetchEditionTable } = await import('@/services/store/prices');
 const { searchLiveGames } = await import('@/services/store/search');
 
 const originalFetch = globalThis.fetch;
@@ -46,7 +46,7 @@ describe('catalog platform detection', () => {
     activateCatalog([['steam', '42', 'GSALE Catalog Only Steam']]);
     const urls = recordEmptyStores();
 
-    await fetchAllPrices('GSALE Catalog Only Steam');
+    await fetchEditionTable('GSALE Catalog Only Steam');
 
     expect(hitsStore(urls, 'store.steampowered.com')).toBeTrue();
     expect(hitsStore(urls, 'catalog.gog.com')).toBeTrue();
@@ -60,7 +60,7 @@ describe('catalog platform detection', () => {
     activateCatalog([['steam', '42', 'Something Else Entirely']]);
     const urls = recordEmptyStores();
 
-    await fetchAllPrices('GSALE Unknown Brand New Game');
+    await fetchEditionTable('GSALE Unknown Brand New Game');
 
     expect(hitsStore(urls, 'playstation.com')).toBeTrue();
     expect(hitsStore(urls, 'algolia.net')).toBeTrue();
@@ -70,7 +70,7 @@ describe('catalog platform detection', () => {
     activateCatalog([['steam', '42', 'GSALE Stale Catalog Game']], 45);
     const urls = recordEmptyStores();
 
-    await fetchAllPrices('GSALE Stale Catalog Game');
+    await fetchEditionTable('GSALE Stale Catalog Game');
 
     expect(hitsStore(urls, 'playstation.com')).toBeTrue();
   });

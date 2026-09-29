@@ -17,7 +17,6 @@ import {
   getEpicRouteSlug,
   pickBestEpicOffers,
   pickBestEpicOffer,
-  pickBestEpicOfferForTitles,
   type EpicMediaResponse,
 } from '@/services/store/platforms/epic-search';
 import type {
@@ -153,31 +152,6 @@ export async function searchEpic(
   return hits;
 }
 
-export async function fetchEpicPrice(
-  lookupTitle: string,
-  matchTitle: string = lookupTitle,
-  options?: StoreRequestOptions,
-): Promise<PlatformPriceResult | null> {
-  const { elements, matchedQuery } = await runEpicSearchVariants(lookupTitle, 12, options);
-  const el = pickBestEpicOfferForTitles(elements, [matchTitle, matchedQuery, lookupTitle]);
-  if (!el) return null;
-
-  const priceInfo = el.price?.price;
-  if (!priceInfo) return null;
-
-  const priced = await epicPriceFromMinorUnits(priceInfo, options?.signal);
-  const hit = epicOfferToSearchHit(el);
-
-  const result: PlatformPriceResult = {
-    platform: 'Epic Games',
-    price: priced.price,
-    original_price: priced.original_price,
-    discount: priced.discount,
-    tier: 'pc',
-  };
-  if (hit?.store_url) result.store_url = hit.store_url;
-  return result;
-}
 
 /** Every edition of `title`'s game on Epic, from one search with the base title. */
 export async function fetchEpicEditionOffers(
