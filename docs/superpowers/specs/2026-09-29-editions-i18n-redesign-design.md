@@ -28,15 +28,14 @@ Bir mağazanın fiyatı, yalnızca o mağazadaki ürünün `editionKey` değeri 
 ### Arama
 
 - Oyun başına tek kart kalır (grup anahtarı `baseTitle`).
-- Grup, bulunan sürümleri taşır: `editions: { key, hits: { platform, id }[] }[]`.
 - Kart base ürüne yönlendirir; base yoksa en iyi sıralanan sürüme.
 
 ### Detay
 
 - Route id somut bir ürün; açılışta seçili sürüm = o ürünün `editionKey`'i (Deluxe kartından girilirse Deluxe seçili).
-- Sürüm listesi: altı mağazanın `baseTitle` araması (+ Steam `appdetails.package_groups` alt paketleri, ek istek yok) → `baseTitle` eşleşmesi ≥ 50 olan, DLC olmayan isabetler → `editionKey`'e göre gruplanır. Sıra: base önce, sonra sabit sürüm sırası.
-- Seçili sürümün fiyatları seçimde yüklenir: mağazada o sürüme ait isabet varsa id ile (detay fetcher'ı), yoksa arama+katı sürüm eşleşmesiyle. Önbellek anahtarı sürümü içerir (zaten içeriyor). Sürüm değişince önceki sürümün istekleri iptal edilir.
-- `gameDetailStore` anahtarı `slug|platform|edition` olur; sürüm listesi ve fiyatlar ayrı durumlardır (`editions`, `pricesByEdition`).
+- Sürüm × mağaza fiyat tablosu tek geçişte kurulur: her mağaza adapter'ı `baseTitle` ile **bir** arama yapar ve `EditionOffer[]` döner (her isabetin sürüm anahtarı + fiyatı; mağaza aramaları fiyatı zaten içeriyor). Steam için en iyi base uygulamanın `appdetails.package_groups` alt paketleri de sürüm olarak eklenir. `baseTitle` eşleşmesi < 50 olan ve DLC isabetleri atılır. Sıra: base önce, sonra sabit sürüm sırası.
+- Sürüm seçimi anlıktır (ek istek yok). Fiyat önbelleği (60 sn) mağaza+ülke+dil+baseTitle anahtarıyla tabloyu tutar. Bu, önceki "seçimde tembel yükleme" fikrinin yerine geçer: daha az istek, tek iptal noktası.
+- `gameDetailStore` anahtarı `slug|platform` kalır; snapshot `editions` tablosunu ve `selectedEdition`'ı taşır; `selectEdition()` yalnız UI durumunu değiştirir.
 
 ### Kaldırılanlar
 
@@ -71,6 +70,10 @@ Bir mağazanın fiyatı, yalnızca o mağazadaki ürünün `editionKey` değeri 
 - Dil (`gsale_locale`) ve ülke (`gsale_country`) bağımsızdır; anahtarlar aynı kalır.
 - İlk açılış: cihaz dili/bölgesi (`Intl.DateTimeFormat().resolvedOptions().locale`) destekleniyorsa seçilir; değilse dil `en`, ülke `TR`.
 - Ülke yalnız fiyat bölgesini/para birimini belirler. Ülke adları `Intl.DisplayNames` yerine katalogdan gelir (Hermes desteği belirsiz).
+
+### Fiyatlar dilden bağımsız
+
+`PlatformPriceResult`/`GameDeal` sayısal alan taşır: `amount` (TL, `null` = bilinmiyor), `original_amount`, `discount_percent`, `is_free`. Metin ("₺312,00", "Ücretsiz") yalnız UI'da `Intl.NumberFormat(lang, { style: 'currency', currency: 'TRY' })` ve katalogla üretilir. Fiyatlar AGENTS.md gereği TL'ye çevrilmeye devam eder.
 
 ### Mağaza dili: `src/services/store/languages.ts`
 
