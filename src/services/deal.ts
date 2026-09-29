@@ -47,3 +47,18 @@ export function mapDeal(deal: GameDeal): Deal {
     gamePass,
   };
 }
+
+/** A store listing that is free right now (free-games promotions). */
+export function freeDeal(platform: string, url: string): Deal {
+  return {
+    platform,
+    price: '',
+    discount: '',
+    url,
+    amount: 0,
+    originalAmount: null,
+    discountPercent: 0,
+    isFree: true,
+    gamePass: false,
+  };
+}

@@ -1,40 +1,18 @@
-import { Gamepad2 } from 'lucide-react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  type ListRenderItem,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useState, useSyncExternalStore } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import { GameListItem } from '@/components/GameListItem';
-import { Palette, Spacing, Typography } from '@/constants/DesignSystem';
+import { CoverGrid } from '@/components/CoverGrid';
+import { EmptyState } from '@/components/EmptyState';
+import { ScreenHeader } from '@/components/ScreenHeader';
+import { SearchField } from '@/components/SearchField';
+import { Palette, Spacing, useType } from '@/constants/DesignSystem';
 import { useScrollSafeAreaStyle } from '@/hooks/useScrollSafeAreaStyle';
-import { type Game } from '@/services/gameData';
+import { plural, useT } from '@/i18n';
 import { searchStore } from '@/services/screenData';
 
-type SearchListHeaderProps = Readonly<{
-  searchQuery: string;
-  searching: boolean;
-}>;
-
-function SearchListHeader({ searchQuery, searching }: SearchListHeaderProps) {
-  if (searchQuery.trim().length < 2) return null;
-
-  return (
-    <View style={styles.resultHeader}>
-      <Text style={styles.resultLabel}>Arama sonuçları</Text>
-      <Text style={styles.resultTitle} numberOfLines={1}>{searchQuery}</Text>
-      {searching ? (
-        <ActivityIndicator size="small" color={Palette.accent} style={styles.resultSpinner} />
-      ) : null}
-    </View>
-  );
-}
+const MIN_QUERY_LENGTH = 2;
 
 function parseQueryParam(value: string | string[] | undefined): string {
   if (typeof value === 'string') return value;
@@ -42,81 +20,50 @@ function parseQueryParam(value: string | string[] | undefined): string {
   return '';
 }
 
-type SearchEmptyStateProps = Readonly<{
-  searching: boolean;
-  hasSearched: boolean;
-}>;
-
-function SearchEmptyState({ searching, hasSearched }: SearchEmptyStateProps) {
-  if (searching) {
-    return (
-      <>
-        <ActivityIndicator size="large" color={Palette.accent} />
-        <Text style={styles.emptyText}>Aranıyor…</Text>
-      </>
-    );
-  }
-
-  if (hasSearched) {
-    return (
-      <>
-        <Gamepad2 size={48} color={Palette.textTertiary} />
-        <Text style={styles.emptyText}>Sonuç bulunamadı</Text>
-      </>
-    );
-  }
-
-  return (
-    <Text style={styles.emptyText}>
-      Arama yapmak için anasayfadaki arama çubuğunu kullanın.
-    </Text>
-  );
-}
-
-type SearchScreenBodyProps = Readonly<{
-  routeQuery: string;
-}>;
-
-function SearchScreenBody({ routeQuery }: SearchScreenBodyProps) {
+function SearchResults({ routeQuery }: Readonly<{ routeQuery: string }>) {
+  const t = useT();
+  const type = useType();
   const containerStyle = useScrollSafeAreaStyle();
+  const [input, setInput] = useState(routeQuery);
+  const [tooShort, setTooShort] = useState(false);
   const { games, searchQuery, searching, hasSearched } = useSyncExternalStore(
     (onStoreChange) => searchStore.subscribeQuery(routeQuery, onStoreChange),
     searchStore.getSnapshot,
   );
 
-  const renderGameItem: ListRenderItem<Game> = useCallback(
-    (info) => <GameListItem game={info.item} hidePrice />,
-    [],
-  );
+  const submit = () => {
+    const query = input.trim();
+    setTooShort(query.length < MIN_QUERY_LENGTH);
+    if (query.length >= MIN_QUERY_LENGTH) searchStore.search(query);
+  };
 
-  const listHeader = useMemo(
-    () => <SearchListHeader searchQuery={searchQuery} searching={searching} />,
-    [searchQuery, searching],
+  let empty = <EmptyState message={t('search.hint')} />;
+  if (searching) {
+    empty = (
+      <View style={styles.searching}>
+        <ActivityIndicator color={Palette.textMuted} />
+        <Text style={[type('body'), styles.muted]}>{t('search.loading')}</Text>
+      </View>
+    );
+  } else if (hasSearched && !tooShort) {
+    empty = <EmptyState message={t('search.empty', { query: searchQuery })} />;
+  }
+
+  const header = (
+    <View style={styles.header}>
+      <SearchField value={input} onChangeText={setInput} onSubmit={submit} autoFocus={routeQuery.length === 0} />
+      {tooShort ? <Text style={[type('caption'), styles.muted]}>{t('search.hint')}</Text> : null}
+      {games.length > 0 && !searching ? (
+        <Text style={[type('caption'), styles.muted]}>{plural('search.resultCount', games.length)}</Text>
+      ) : null}
+    </View>
   );
 
   return (
     <View style={[styles.container, containerStyle]}>
       <StatusBar style="light" />
-
-      <FlatList
-        data={games}
-        renderItem={renderGameItem}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
-        contentInsetAdjustmentBehavior="automatic"
-        keyboardShouldPersistTaps="handled"
-        ListHeaderComponent={listHeader}
-        initialNumToRender={8}
-        maxToRenderPerBatch={6}
-        windowSize={5}
-        removeClippedSubviews
-        ListEmptyComponent={
-          <View style={styles.center}>
-            <SearchEmptyState searching={searching} hasSearched={hasSearched} />
-          </View>
-        }
-      />
+      <ScreenHeader title={t('tabs.search')} />
+      <CoverGrid games={searching ? [] : games} header={header} empty={empty} />
     </View>
   );
 }
@@ -124,55 +71,24 @@ function SearchScreenBody({ routeQuery }: SearchScreenBodyProps) {
 export default function SearchScreen() {
   const params = useLocalSearchParams<{ q?: string | string[] }>();
   const routeQuery = parseQueryParam(params.q);
-
-  return <SearchScreenBody key={routeQuery} routeQuery={routeQuery} />;
+  return <SearchResults key={routeQuery} routeQuery={routeQuery} />;
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: Palette.background,
   },
-  resultHeader: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.md,
+  header: {
+    gap: Spacing.sm,
+    paddingBottom: Spacing.lg,
   },
-  resultLabel: {
-    color: Palette.textSecondary,
-    fontSize: Typography.sectionLabel.fontSize,
-    fontFamily: Typography.sectionLabel.fontFamily,
-    lineHeight: Typography.sectionLabel.lineHeight,
-    letterSpacing: Typography.sectionLabel.letterSpacing,
-    textTransform: 'uppercase',
-  },
-  resultTitle: {
-    color: Palette.text,
-    fontSize: Typography.h2.fontSize,
-    fontFamily: Typography.h2.fontFamily,
-    lineHeight: Typography.h2.lineHeight,
-    marginTop: Spacing.xs,
-    paddingRight: Spacing.xl,
-  },
-  resultSpinner: {
-    position: 'absolute',
-    right: Spacing.md,
-    bottom: Spacing.md + Spacing.xs,
-  },
-  listContent: {
-    paddingBottom: Spacing.xl + Spacing.md,
-  },
-  center: {
-    justifyContent: 'center',
+  searching: {
     alignItems: 'center',
-    padding: Spacing.xl + Spacing.sm,
-    marginTop: Spacing.xl * 2,
+    gap: Spacing.md,
+    paddingVertical: Spacing.xxl,
   },
-  emptyText: {
-    color: Palette.textSecondary,
-    marginTop: Spacing.md,
-    fontSize: Typography.body.fontSize,
-    fontFamily: Typography.body.fontFamily,
-    textAlign: 'center',
+  muted: {
+    color: Palette.textMuted,
   },
 });

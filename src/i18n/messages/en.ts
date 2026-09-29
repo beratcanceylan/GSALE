@@ -27,11 +27,14 @@ export const en = {
   'free.title': 'Free right now',
   'free.empty': 'No free games right now.',
   'free.loading': 'Loading free games…',
+  'free.upcoming': 'Free next',
 
   'favorites.title': 'Favorites',
   'favorites.empty': 'Games you favorite appear here.',
   'favorites.add': 'Add to favorites',
   'favorites.remove': 'Remove from favorites',
+  'favorites.search': 'Search favorites',
+  'favorites.noMatch': 'No favorites match “{query}”.',
 
   'detail.loading': 'Checking prices…',
   'detail.error': 'Could not load this game.',

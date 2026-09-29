@@ -4,6 +4,8 @@ declare module 'bun:test' {
     toBe(expected: unknown): R;
     toEqual(expected: unknown): R;
     toContain(expected: unknown): R;
+    toContainEqual(expected: unknown): R;
+    toBeDefined(): R;
     toBeGreaterThan(expected: number): R;
     toBeGreaterThanOrEqual(expected: number): R;
     toBeLessThan(expected: number): R;

@@ -30,6 +30,8 @@ export const searchStoreMock = {
     games: [], searchQuery: '', searching: false, hasSearched: false, version: 0,
   }),
   queries: [] as string[],
+  searches: [] as string[],
+  search(query: string) { this.searches.push(query); },
   subscribeQuery(query: string, listener: Listener) {
     this.queries.push(query);
     return this.subscribe(listener);

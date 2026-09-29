@@ -1,116 +1,106 @@
-import { Gift } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import {
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useSyncExternalStore } from 'react';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
+
+import { CoverCard } from '@/components/CoverCard';
 import { EmptyState } from '@/components/EmptyState';
-import { GameListItem } from '@/components/GameListItem';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { ScreenLoading } from '@/components/ScreenLoading';
-import { Palette, Spacing, Typography } from '@/constants/DesignSystem';
+import { Palette, Spacing, useType } from '@/constants/DesignSystem';
 import { useScrollSafeAreaStyle } from '@/hooks/useScrollSafeAreaStyle';
-import { type Game } from '@/services/gameData';
+import { useT } from '@/i18n';
+import { freeDeal } from '@/services/deal';
+import type { Game } from '@/services/gameData';
 import { freeGamesStore } from '@/services/screenData';
 
-type FreeGamesLoadedViewProps = Readonly<{
-  games: Game[];
-  refreshing: boolean;
-  onRefresh: () => void;
-}>;
+type FreeRow = Readonly<{ key: string; title: string; games: Game[] }>;
 
-function FreeGamesLoadedView({ games, refreshing, onRefresh }: FreeGamesLoadedViewProps) {
-  const containerStyle = useScrollSafeAreaStyle();
-  const refreshControl = useMemo(
-    () => (
-      <RefreshControl
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-        tintColor={Palette.accent}
-        colors={[Palette.accent]}
-      />
-    ),
-    [onRefresh, refreshing],
+/** Games free right now carry a free price tag; upcoming ones are shown without a price. */
+function asFreeNow(game: Game): Game {
+  const platform = game.source_platform || game.platform;
+  return { ...game, deals: [freeDeal(platform, game.url)] };
+}
+
+function pairs(games: readonly Game[]): Game[][] {
+  const rows: Game[][] = [];
+  for (let index = 0; index < games.length; index += 2) rows.push(games.slice(index, index + 2));
+  return rows;
+}
+
+function FreeSection({ section }: Readonly<{ section: FreeRow }>) {
+  const type = useType();
+  return (
+    <View style={styles.section}>
+      <Text style={[type('heading'), styles.sectionTitle]} accessibilityRole="header">{section.title}</Text>
+      {pairs(section.games).map((row) => (
+        <View key={row.map((game) => game.id).join('|')} style={styles.row}>
+          {row.map((game) => <CoverCard key={game.id} game={game} />)}
+          {row.length === 1 ? <View style={styles.spacer} /> : null}
+        </View>
+      ))}
+    </View>
   );
+}
 
-  const activeGames = games.filter((g) => !g.upcoming);
-  const upcomingGames = games.filter((g) => g.upcoming);
+const renderSection = ({ item }: { item: FreeRow }) => <FreeSection section={item} />;
+
+function FreeGamesLoaded({ games, refreshing }: Readonly<{ games: Game[]; refreshing: boolean }>) {
+  const t = useT();
+  const containerStyle = useScrollSafeAreaStyle();
+  const now = games.filter((game) => !game.upcoming).map(asFreeNow);
+  const next = games.filter((game) => game.upcoming);
+  const sections: FreeRow[] = [
+    ...(now.length > 0 ? [{ key: 'now', title: t('free.title'), games: now }] : []),
+    ...(next.length > 0 ? [{ key: 'next', title: t('free.upcoming'), games: next }] : []),
+  ];
 
   return (
     <View style={[styles.container, containerStyle]}>
       <StatusBar style="light" />
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
+      <FlatList
+        data={sections}
+        renderItem={renderSection}
+        keyExtractor={(item) => item.key}
+        contentContainerStyle={styles.list}
         contentInsetAdjustmentBehavior="automatic"
-        refreshControl={refreshControl}
-      >
-        <ScreenHeader title="Bedava Oyunlar" align="center" subtitle="Mağaza kampanyaları" />
-        {activeGames.length > 0 ? (
-          <View>
-            <Text style={styles.sectionTitle}>Şu anda bedava</Text>
-            {activeGames.map((game) => (
-              <GameListItem key={game.id} game={game} hidePrice />
-            ))}
-          </View>
-        ) : null}
-
-        {upcomingGames.length > 0 ? (
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Gelecek hafta</Text>
-            {upcomingGames.map((game) => (
-              <GameListItem key={game.id} game={game} hidePrice />
-            ))}
-          </View>
-        ) : null}
-
-        {games.length === 0 ? <EmptyState icon={Gift} message="Şu anda bedava oyun yok" /> : null}
-      </ScrollView>
+        showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={() => { freeGamesStore.load(true); }}
+        ListHeaderComponent={<ScreenHeader title={t('tabs.free')} />}
+        ListEmptyComponent={<EmptyState message={t('free.empty')} />}
+      />
     </View>
   );
 }
 
 export default function FreeGamesScreen() {
-  const { data: games, refreshing } = useSyncExternalStore(
-    freeGamesStore.subscribe,
-    freeGamesStore.getSnapshot,
-  );
-
-  const onRefresh = useCallback(() => {
-    freeGamesStore.load(true);
-  }, []);
-
-  if (games === null) {
-    return <ScreenLoading message="Bedava oyunlar yükleniyor…" />;
-  }
-
-  return <FreeGamesLoadedView games={games} refreshing={refreshing} onRefresh={onRefresh} />;
+  const t = useT();
+  const { data: games, refreshing } = useSyncExternalStore(freeGamesStore.subscribe, freeGamesStore.getSnapshot);
+  if (games === null) return <ScreenLoading message={t('free.loading')} />;
+  return <FreeGamesLoaded games={games} refreshing={refreshing} />;
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: Palette.background,
   },
-  listContent: {
-    paddingBottom: Spacing.xl + Spacing.md,
+  list: {
+    gap: Spacing.xxl,
+    paddingBottom: Spacing.xxl,
   },
-  sectionContainer: {
-    marginTop: Spacing.lg,
+  section: {
+    gap: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
   },
   sectionTitle: {
-    fontSize: Typography.sectionLabel.fontSize,
-    fontFamily: Typography.sectionLabel.fontFamily,
-    lineHeight: Typography.sectionLabel.lineHeight,
-    letterSpacing: Typography.sectionLabel.letterSpacing,
-    color: Palette.textSecondary,
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.sm,
-    textTransform: 'uppercase',
+    color: Palette.text,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  spacer: {
+    flex: 1,
   },
 });

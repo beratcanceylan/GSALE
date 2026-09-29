@@ -28,11 +28,14 @@ export const tr = {
   'free.title': 'Şu an bedava',
   'free.empty': 'Şu an bedava oyun yok.',
   'free.loading': 'Bedava oyunlar yükleniyor…',
+  'free.upcoming': 'Yakında bedava',
 
   'favorites.title': 'Favoriler',
   'favorites.empty': 'Favorilere eklediğiniz oyunlar burada görünür.',
   'favorites.add': 'Favorilere ekle',
   'favorites.remove': 'Favorilerden çıkar',
+  'favorites.search': 'Favorilerde ara',
+  'favorites.noMatch': '“{query}” ile eşleşen favori yok.',
 
   'detail.loading': 'Fiyatlar kontrol ediliyor…',
   'detail.error': 'Oyun bilgileri yüklenemedi.',
