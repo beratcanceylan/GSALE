@@ -19,11 +19,11 @@ export function uniqueNonEmpty(values: (string | null | undefined)[]): string[] 
 export function cleanStoreText(value: string | null | undefined): string {
   if (!value) return '';
   return value
-    .replace(/<\s*br\s*\/?>/gi, ' ')
-    .replace(/<\/p\s*>/gi, ' ')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/!\[[^\]]*]\([^)]*\)/g, ' ')
-    .replace(/\[[^\]]*]\([^)]*\)/g, ' ')
+    .replaceAll(/<\s*br\s*\/?>/gi, ' ')
+    .replaceAll(/<\/p\s*>/gi, ' ')
+    .replaceAll(/<[^<>]*>/g, ' ')
+    .replaceAll(/!\[[^[\]]*]\([^()]*\)/g, ' ')
+    .replaceAll(/\[[^[\]]*]\([^()]*\)/g, ' ')
     .replaceAll('&nbsp;', ' ')
     .replaceAll('&#160;', ' ')
     .replaceAll('&amp;', '&')

@@ -76,7 +76,7 @@ function main(): void {
     console.log(`${store}: ${rows.length} rows`);
   }
 
-  const version = sourceDates.filter(Boolean).sort().at(-1) ?? new Date().toISOString();
+  const version = sourceDates.filter(Boolean).sort((a, b) => a.localeCompare(b)).at(-1) ?? new Date().toISOString();
   db.prepare('INSERT INTO meta (key, value) VALUES (?, ?)').run('version', version);
   db.exec('VACUUM');
   db.close();

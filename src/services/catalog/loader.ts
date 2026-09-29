@@ -8,6 +8,7 @@ import {
   type CatalogManifest,
 } from '@/services/catalog/schema';
 import { setActiveCatalog } from '@/services/catalog/state';
+import { trimTrailingChar } from '@/services/store/text';
 
 const CATALOG_DIRECTORY = 'catalog';
 const DOWNLOAD_NAME = 'catalog.download';
@@ -20,7 +21,7 @@ let pending: Promise<void> | null = null;
 /** GitHub release download base, e.g. https://github.com/<owner>/<repo>/releases/download/catalog-latest */
 function catalogBaseUrl(): string | null {
   // Must stay a literal `process.env.EXPO_PUBLIC_…` access so Expo can inline it.
-  const base = (process.env.EXPO_PUBLIC_CATALOG_BASE_URL ?? '').replace(/\/+$/, '');
+  const base = trimTrailingChar(process.env.EXPO_PUBLIC_CATALOG_BASE_URL ?? '', '/');
   return HTTPS_BASE_PATTERN.test(base) ? base : null;
 }
 
@@ -68,25 +69,30 @@ async function syncCatalog(): Promise<void> {
   const dbFile = new File(directory, CATALOG_DB_NAME);
   const manifestFile = new File(directory, CATALOG_MANIFEST_NAME);
 
-  // Search works from the existing copy while the update check runs.
-  const remoteRequest = fetchRemoteManifest(base);
   const local = await readLocalManifest(manifestFile);
-  if (local && dbFile.exists && !openDb) await activate(directory, local);
+  // Search works from the existing copy while the update check runs.
+  const [, remote] = await Promise.all([
+    local && dbFile.exists && !openDb ? activate(directory, local) : Promise.resolve(),
+    fetchRemoteManifest(base),
+  ]);
+  if (remote && remote.version !== local?.version) {
+    await replaceCatalog(base, directory, remote);
+  }
+}
 
-  const remote = await remoteRequest;
-  if (!remote || remote.version === local?.version) return;
-
-  const download = new File(directory, DOWNLOAD_NAME);
-  if (download.exists) download.delete();
-  await File.downloadFileAsync(`${base}/${remote.file}`, download, { idempotent: true });
+/** Downloads a new catalog next to the current one and swaps it in once complete. */
+async function replaceCatalog(base: string, directory: Directory, remote: CatalogManifest): Promise<void> {
+  const target = new File(directory, DOWNLOAD_NAME);
+  if (target.exists) target.delete();
+  const download = await File.downloadFileAsync(`${base}/${remote.file}`, target, { idempotent: true });
   if (download.size !== remote.bytes) {
     download.delete();
     return;
   }
 
   await deactivate();
-  await download.move(dbFile, { overwrite: true });
-  manifestFile.write(JSON.stringify(remote));
+  await download.move(new File(directory, CATALOG_DB_NAME), { overwrite: true });
+  new File(directory, CATALOG_MANIFEST_NAME).write(JSON.stringify(remote));
   await activate(directory, remote);
 }
 

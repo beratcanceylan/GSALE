@@ -66,7 +66,7 @@ describe('search hit merge', () => {
       .map((game) => game.title)
       .filter((title) => /save the world|dünyayı kurtar/i.test(title));
     expect(stwTitles).toHaveLength(1);
-    expect(games.some((game) => game.title === 'Fortnite')).toBe(true);
+    expect(games.some((game) => game.title === 'Fortnite')).toBeTrue();
   });
 
   test('keeps explicit currency results when the query asks for currency', () => {

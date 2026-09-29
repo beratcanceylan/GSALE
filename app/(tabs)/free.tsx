@@ -2,15 +2,16 @@ import { Gift } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import {
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { EmptyState } from '@/components/EmptyState';
 import { GameListItem } from '@/components/GameListItem';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { ScreenLoading } from '@/components/ScreenLoading';
 import { Palette, Spacing, Typography } from '@/constants/DesignSystem';
 import { useScrollSafeAreaStyle } from '@/hooks/useScrollSafeAreaStyle';
 import { type Game } from '@/services/gameData';
@@ -68,12 +69,7 @@ function FreeGamesLoadedView({ games, refreshing, onRefresh }: FreeGamesLoadedVi
           </View>
         ) : null}
 
-        {games.length === 0 ? (
-          <View style={styles.center}>
-            <Gift size={48} color={Palette.textTertiary} />
-            <Text style={styles.emptyText}>Şu anda bedava oyun yok</Text>
-          </View>
-        ) : null}
+        {games.length === 0 ? <EmptyState icon={Gift} message="Şu anda bedava oyun yok" /> : null}
       </ScrollView>
     </View>
   );
@@ -90,13 +86,7 @@ export default function FreeGamesScreen() {
   }, []);
 
   if (games === null) {
-    return (
-      <View style={[styles.container, styles.center]}>
-        <StatusBar style="light" />
-        <ActivityIndicator size="large" color={Palette.accent} />
-        <Text style={styles.loadingText}>Bedava oyunlar yükleniyor…</Text>
-      </View>
-    );
+    return <ScreenLoading message="Bedava oyunlar yükleniyor…" />;
   }
 
   return <FreeGamesLoadedView games={games} refreshing={refreshing} onRefresh={onRefresh} />;
@@ -107,26 +97,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
   },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl + Spacing.sm,
-  },
-  loadingText: {
-    color: Palette.textSecondary,
-    marginTop: Spacing.sm + Spacing.xs,
-    fontSize: Typography.body.fontSize,
-    fontFamily: Typography.body.fontFamily,
-  },
   listContent: {
     paddingBottom: Spacing.xl + Spacing.md,
-  },
-  emptyText: {
-    color: Palette.textSecondary,
-    marginTop: Spacing.sm + Spacing.xs,
-    fontSize: Typography.body.fontSize,
-    fontFamily: Typography.body.fontFamily,
   },
   sectionContainer: {
     marginTop: Spacing.lg,

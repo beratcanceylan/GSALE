@@ -62,7 +62,7 @@ describe('Xbox list price', () => {
     });
     expect(priced?.list).toBe(18.25);
     expect(priced?.currency).toBe('TRY');
-    expect(priced?.isFree).toBe(false);
+    expect(priced?.isFree).toBeFalse();
   });
 
   test('marks products with only zero prices as free', () => {

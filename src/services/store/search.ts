@@ -1,5 +1,4 @@
 import { searchCatalog } from '@/services/catalog/state';
-import { attachDealsToGames } from '@/services/store/attach';
 import { throwIfAborted } from '@/services/store/fetch';
 import { mergeSearchHits, prepareLiveGame } from '@/services/store/merge';
 import { searchEpic } from '@/services/store/platforms/epic';
@@ -43,15 +42,11 @@ async function runMultiPlatformSearch(
   return hits;
 }
 
+/** Search hits from every store merged into one list; prices are looked up on the detail screen. */
 export async function searchLiveGames(
   query: string,
-  attachDeals = true,
   options?: StoreRequestOptions,
 ): Promise<LiveGame[]> {
   const hits = await runMultiPlatformSearch(query, options);
-  let games = mergeSearchHits(hits, query).map(prepareLiveGame);
-  if (attachDeals) {
-    games = await attachDealsToGames(games, { concurrency: 3, signal: options?.signal });
-  }
-  return games;
+  return mergeSearchHits(hits, query).map(prepareLiveGame);
 }

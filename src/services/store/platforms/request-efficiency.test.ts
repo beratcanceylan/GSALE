@@ -6,7 +6,7 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { fetchGogPrice } = await import('@/services/store/platforms/gog');
-const { fetchNintendoPrice, fetchNintendoPrices } = await import('@/services/store/platforms/nintendo');
+const { fetchNintendoPrice } = await import('@/services/store/platforms/nintendo');
 const { fetchPlayStationPrice } = await import('@/services/store/platforms/ps');
 const { fetchSteamPrice } = await import('@/services/store/platforms/steam');
 const { fetchXboxPrice } = await import('@/services/store/platforms/xbox');
@@ -267,50 +267,6 @@ describe('store adapter request reuse', () => {
     });
     expect(urls).toHaveLength(1);
     expect(urls[0]).toContain('algolia.net/1/indexes/store_game_en_us/query');
-  });
-
-  test('batches Nintendo home prices into one Algolia multi-query request', async () => {
-    urls = [];
-    globalThis.fetch = async (input) => {
-      urls.push(String(input));
-      return jsonResponse({
-        results: [
-          {
-            hits: [{
-              objectID: '7100000002',
-              nsuid: '70010000000002',
-              title: 'GSALE Bulk One',
-              url: '/us/store/products/gsale-bulk-one/',
-              productImageSquare: 'https://assets.nintendo.com/image/upload/bulk-one.jpg',
-              platform: 'Nintendo Switch',
-              price: { finalPrice: 10, regPrice: 10 },
-              eshopDetails: { currency: 'TRY', regularPrice: 10 },
-              productType: ['Games'],
-            }],
-          },
-          {
-            hits: [{
-              objectID: '7100000003',
-              nsuid: '70010000000003',
-              title: 'GSALE Bulk Two',
-              url: '/us/store/products/gsale-bulk-two/',
-              productImageSquare: 'https://assets.nintendo.com/image/upload/bulk-two.jpg',
-              platform: 'Nintendo Switch',
-              price: { finalPrice: 20, regPrice: 20 },
-              eshopDetails: { currency: 'TRY', regularPrice: 20 },
-              productType: ['Games'],
-            }],
-          },
-        ],
-      });
-    };
-
-    const results = await fetchNintendoPrices(['GSALE Bulk One', 'GSALE Bulk Two']);
-
-    expect(results.get('GSALE Bulk One')?.price).toBe('10,00 TL');
-    expect(results.get('GSALE Bulk Two')?.price).toBe('20,00 TL');
-    expect(urls).toHaveLength(1);
-    expect(urls[0]).toContain('algolia.net/1/indexes/*/queries');
   });
 
   test('reuses authoritative source deals and keeps canonical provider order', async () => {

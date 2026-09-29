@@ -42,9 +42,9 @@ export function xboxMetadataFromProduct(product: XboxDisplayProductForMetadata):
     product.Properties?.Category,
   ]);
   const screenshots = uniqueNonEmpty(
-    (loc?.Images ?? [])
-      .filter((image) => image.ImagePurpose === 'Screenshot')
-      .map((image) => image.Uri ? normalizeProtocolRelativeUri(image.Uri) : ''),
+    (loc?.Images ?? []).flatMap((image) =>
+      image.ImagePurpose === 'Screenshot' && image.Uri ? [normalizeProtocolRelativeUri(image.Uri)] : [],
+    ),
   );
   const videos = (loc?.CMSVideos ?? []).flatMap((video, index) => {
     const url = video.HLS || video.DASH || '';

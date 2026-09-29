@@ -61,8 +61,8 @@ describe('screen request cancellation', () => {
     await flush();
 
     expect(searchSignals).toHaveLength(1);
-    expect(searchSignals[0]?.aborted).toBe(true);
-    expect(searchStore.getSnapshot().searching).toBe(false);
+    expect(searchSignals[0]?.aborted).toBeTrue();
+    expect(searchStore.getSnapshot().searching).toBeFalse();
     unsubscribe();
   });
 
@@ -76,8 +76,8 @@ describe('screen request cancellation', () => {
     await flush();
 
     expect(searchSignals).toHaveLength(1);
-    expect(searchSignals[0]?.aborted).toBe(true);
-    expect(searchStore.getSnapshot().searching).toBe(false);
+    expect(searchSignals[0]?.aborted).toBeTrue();
+    expect(searchStore.getSnapshot().searching).toBeFalse();
     clearUnsubscribe();
     unsubscribe();
   });
@@ -92,9 +92,9 @@ describe('screen request cancellation', () => {
     await flush();
 
     expect(detailSignals).toHaveLength(2);
-    expect(detailSignals[0]?.aborted).toBe(true);
-    expect(detailSignals[1]?.aborted).toBe(false);
-    expect(gameDetailStore.getSnapshot(slug, 'Steam').loading).toBe(true);
+    expect(detailSignals[0]?.aborted).toBeTrue();
+    expect(detailSignals[1]?.aborted).toBeFalse();
+    expect(gameDetailStore.getSnapshot(slug, 'Steam').loading).toBeTrue();
     unsubscribe();
   });
 });

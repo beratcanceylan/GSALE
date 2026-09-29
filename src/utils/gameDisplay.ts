@@ -2,17 +2,13 @@ import type { ImageSource } from 'expo-image';
 
 import type { Game } from '@/services/gameData';
 import { normalizeProtocolRelativeUri } from '@/services/store/image-uri';
+import {
+  extractNumericPrice,
+  isExplicitlyFreePrice,
+  isUnavailablePrice,
+} from '@/services/store/price-parse';
 
-export function isUnavailablePrice(price: string | undefined | null): boolean {
-  if (!price) return true;
-  const lowered = price.toLowerCase();
-  return (
-    lowered.includes('mevcut değil') ||
-    lowered.includes('uygun değil') ||
-    lowered.includes('not available') ||
-    lowered.includes('bilinmiyor')
-  );
-}
+export { isUnavailablePrice } from '@/services/store/price-parse';
 
 export function getTitleInitial(title: string): string {
   const match = /[A-Za-zÇĞİÖŞÜçğıöşü]/.exec(title);
@@ -20,7 +16,7 @@ export function getTitleInitial(title: string): string {
 }
 
 /** Ensure https scheme and Xbox protocol-relative URIs work in expo-image. */
-export function normalizeImageUri(uri: string): string {
+function normalizeImageUri(uri: string): string {
   const trimmed = uri.trim();
   if (!trimmed) return '';
   return normalizeProtocolRelativeUri(trimmed);
@@ -107,39 +103,6 @@ export function getGameImageSources(
   return entries;
 }
 
-function extractNumericPrice(price: string): number | null {
-  const clean = price.replaceAll(/[^0-9.,]/g, '');
-  if (!clean) return null;
-  if (clean.includes(',')) {
-    const value = Number.parseFloat(clean.replaceAll('.', '').replace(',', '.'));
-    return Number.isFinite(value) ? value : null;
-  }
-  if (clean.includes('.')) {
-    const parts = clean.split('.');
-    const last = parts.at(-1);
-    if (last?.length === 3 && parts.length > 1) {
-      const value = Number.parseFloat(parts.join(''));
-      return Number.isFinite(value) ? value : null;
-    }
-    const value = Number.parseFloat(clean);
-    return Number.isFinite(value) ? value : null;
-  }
-  const value = Number.parseFloat(clean);
-  return Number.isFinite(value) ? value : null;
-}
-
-export function isExplicitlyFreePrice(price: string | undefined | null): boolean {
-  if (!price || isUnavailablePrice(price)) return false;
-  const lower = price.toLowerCase().trim();
-  const numeric = extractNumericPrice(price);
-  if (numeric !== null && numeric > 0) return false;
-  if (lower === 'ücretsiz' || lower === 'free') return true;
-  if (/\bgame\s*pass\b/i.test(lower) || /\bfree\s*to\s*play\b/i.test(lower)) return false;
-  if (/\bücretsiz\b/.test(lower)) return numeric === null || numeric === 0;
-  if (/\bfree\b/.test(lower)) return numeric === null || numeric === 0;
-  return numeric === 0;
-}
-
 export function parseComparablePrice(price: string): number {
   if (isUnavailablePrice(price)) return Number.POSITIVE_INFINITY;
   const numeric = extractNumericPrice(price);
@@ -204,7 +167,7 @@ export function resolveCardPrice(game: Game): CardPriceInfo {
     price: '',
     discount: '',
     unavailableLabel:
-      game.deals.length > 0 ? 'Türkiye\'de satın alınamıyor' : 'Fiyat bilinmiyor',
+      game.deals.length > 0 ? 'Bu bölgede satın alınamıyor' : 'Fiyat bilinmiyor',
   };
 }
 

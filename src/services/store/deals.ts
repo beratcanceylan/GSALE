@@ -32,7 +32,7 @@ export function liveGameWithDeal(hit: PlatformSearchHit, price: PlatformPriceRes
   };
 }
 
-export function pickCheapestDeal(deals: GameDeal[]): GameDeal | null {
+function pickCheapestDeal(deals: GameDeal[]): GameDeal | null {
   const available = deals.filter((deal) => !isUnavailablePrice(deal.price));
   const paid = available.filter((deal) => !isExplicitlyFreePrice(deal.price));
   const pool = paid.length > 0 ? paid : available;
@@ -70,7 +70,7 @@ export function applyDealsToGame(game: LiveGame, deals: GameDeal[]): LiveGame {
     ...(game.platforms ?? []),
     ...deals.map((deal) => deal.platform),
   ].filter(Boolean))];
-  const storeLinks = { ...(game.store_links ?? {}) };
+  const storeLinks = { ...game.store_links };
   for (const deal of deals) {
     if (deal.store_url) storeLinks[deal.platform] = deal.store_url;
   }

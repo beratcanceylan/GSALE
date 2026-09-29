@@ -175,7 +175,7 @@ describe('home deal strips', () => {
     const platforms = (await getHomeSections()).map((section) => section.platform);
 
     expect(platforms).not.toContain('PlayStation');
-    expect(urls.some((url) => url.includes('playstation.com'))).toBe(false);
+    expect(urls.some((url) => url.includes('playstation.com'))).toBeFalse();
   });
 
   test('regional PlayStation deal prices are converted to TL', async () => {

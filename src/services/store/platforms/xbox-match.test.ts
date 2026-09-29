@@ -32,10 +32,10 @@ describe('Xbox price title ranking', () => {
     );
 
     expect(ranked[0]?.hit.title).toBe('Fortnite');
-    expect(ranked[0]?.exact).toBe(true);
+    expect(ranked[0]?.exact).toBeTrue();
   });
 
   test('normalizes platform parentheticals for exact Xbox title checks', () => {
-    expect(isExactXboxTitleMatch('Grand Theft Auto V (Xbox Series X|S)', 'Grand Theft Auto V')).toBe(true);
+    expect(isExactXboxTitleMatch('Grand Theft Auto V (Xbox Series X|S)', 'Grand Theft Auto V')).toBeTrue();
   });
 });

@@ -14,7 +14,7 @@ describe('store match', () => {
   });
 
   test('cs2 vs csgo mismatch', () => {
-    expect(isStrictMatch('Counter-Strike 2', 'Counter-Strike: Global Offensive')).toBe(false);
+    expect(isStrictMatch('Counter-Strike 2', 'Counter-Strike: Global Offensive')).toBeFalse();
     expect(scoreProductTitleMatch('Counter-Strike: Global Offensive', 'Counter-Strike 2')).toBe(0);
     expect(scoreProductTitleMatch('Counter-Strike: Global Offensive', 'counter strike')).toBe(0);
   });
@@ -33,12 +33,12 @@ describe('store match', () => {
   });
 
   test('similar titles match', () => {
-    expect(isStrictMatch('Elden Ring', 'ELDEN RING')).toBe(true);
+    expect(isStrictMatch('Elden Ring', 'ELDEN RING')).toBeTrue();
   });
 
   test('rejects GTA V cross-match to Ballad of Gay Tony', () => {
     const search = cleanTitleForCrossPlatform('Grand Theft Auto V');
-    expect(isStrictMatch('Grand Theft Auto: The Ballad of Gay Tony', search)).toBe(false);
+    expect(isStrictMatch('Grand Theft Auto: The Ballad of Gay Tony', search)).toBeFalse();
     expect(scoreProductTitleMatch('Grand Theft Auto: The Ballad of Gay Tony', search)).toBe(0);
   });
 
@@ -48,19 +48,13 @@ describe('store match', () => {
     expect(scoreProductTitleMatch('Grand Theft Auto V Enhanced (PC)', search)).toBeGreaterThanOrEqual(75);
   });
 
-  test('rejects GTA V cross-match to GTA VI', () => {
+  test.each([
+    ['GTA VI', 'Grand Theft Auto VI'],
+    ['GTA Online', 'Grand Theft Auto Online'],
+    ['other GTA subtitles without a V version', 'Grand Theft Auto: San Andreas'],
+  ] as const)('rejects GTA V cross-match to %s', (_label, found) => {
     const search = cleanTitleForCrossPlatform('Grand Theft Auto V Enhanced');
-    expect(scoreProductTitleMatch('Grand Theft Auto VI', search)).toBe(0);
-  });
-
-  test('rejects GTA V cross-match to GTA Online', () => {
-    const search = cleanTitleForCrossPlatform('Grand Theft Auto V Enhanced');
-    expect(scoreProductTitleMatch('Grand Theft Auto Online', search)).toBe(0);
-  });
-
-  test('rejects GTA V cross-match to other GTA subtitles without V version', () => {
-    const search = cleanTitleForCrossPlatform('Grand Theft Auto V Enhanced');
-    expect(scoreProductTitleMatch('Grand Theft Auto: San Andreas', search)).toBe(0);
+    expect(scoreProductTitleMatch(found, search)).toBe(0);
   });
 
   test('matches GTA V Enhanced to Xbox story mode listing', () => {

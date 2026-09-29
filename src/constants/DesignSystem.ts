@@ -151,8 +151,9 @@ const GENRE_PALETTE = [
 
 export function getGenreColor(genre: string): { bg: string; text: string } {
   let hash = 0;
-  for (let i = 0; i < genre.length; i++) {
-    hash = (hash * 31 + genre.charCodeAt(i)) | 0;
+  for (const char of genre) {
+    // 32-bit wrap-around, like Java's String.hashCode.
+    hash = Math.imul(Math.imul(hash, 31) + (char.codePointAt(0) ?? 0), 1);
   }
   const index = Math.abs(hash) % GENRE_PALETTE.length;
   return GENRE_PALETTE[index] ?? GENRE_PALETTE[0];

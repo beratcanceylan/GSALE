@@ -1,25 +1,39 @@
+// Typings for the subset of bun:test the project uses (the app has no @types/bun).
 declare module 'bun:test' {
-  type Matcher = {
-    toBe(expected: unknown): void;
-    toEqual(expected: unknown): void;
-    toContain(expected: unknown): void;
-    toBeGreaterThan(expected: number): void;
-    toBeGreaterThanOrEqual(expected: number): void;
-    toHaveLength(expected: number): void;
-    toMatchObject(expected: unknown): void;
-    toMatch(expected: RegExp | string): void;
-    toBeUndefined(): void;
+  type Matchers<R> = {
+    toBe(expected: unknown): R;
+    toEqual(expected: unknown): R;
+    toContain(expected: unknown): R;
+    toBeGreaterThan(expected: number): R;
+    toBeGreaterThanOrEqual(expected: number): R;
+    toBeLessThan(expected: number): R;
+    toHaveLength(expected: number): R;
+    toMatchObject(expected: unknown): R;
+    toMatch(expected: RegExp | string): R;
+    toBeUndefined(): R;
+    toBeNull(): R;
+    toBeTrue(): R;
+    toBeFalse(): R;
+    toThrow(expected?: RegExp | string): R;
   };
 
-  type Expectation = Matcher & {
-    not: Matcher;
-    resolves: Matcher;
-    rejects: Matcher;
+  type Expectation = Matchers<void> & {
+    not: Matchers<void>;
+    resolves: Matchers<Promise<void>>;
+    rejects: Matchers<Promise<void>>;
   };
 
-  export function describe(name: string, fn: () => void): void;
-  export function afterEach(fn: () => void | Promise<void>): void;
-  export function test(name: string, fn: () => void | Promise<void>): void;
+  type TestFn = () => void | Promise<void>;
+
+  type Each = <T extends readonly unknown[]>(
+    cases: readonly T[],
+  ) => (name: string, fn: (...args: [...T]) => void | Promise<void>) => void;
+
+  export const describe: ((name: string, fn: () => void) => void) & { each: Each };
+  export const test: ((name: string, fn: TestFn, timeoutMs?: number) => void) & { each: Each };
+  export function beforeEach(fn: TestFn): void;
+  export function afterEach(fn: TestFn): void;
+  export function afterAll(fn: TestFn): void;
   export function expect<T>(value: T): Expectation;
 
   export const mock: {

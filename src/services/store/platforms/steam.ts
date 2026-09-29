@@ -70,18 +70,20 @@ function steamImage(appId: number | string, tiny?: string): string {
   return `https://cdn.akamai.steamstatic.com/steam/apps/${appId}/header.jpg`;
 }
 
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function derivedDiscountPercent(final: number, initial: number): number {
+  return initial > final && initial > 0 ? Math.round((1 - final / initial) * 100) : 0;
+}
+
 function completeSteamPrice(overview: Partial<SteamPriceOverview>): SteamPriceOverview | null {
-  if (typeof overview.final !== 'number' || !Number.isFinite(overview.final)) return null;
-  const initial =
-    typeof overview.initial === 'number' && Number.isFinite(overview.initial)
-      ? overview.initial
-      : overview.final;
-  const discount =
-    typeof overview.discount_percent === 'number' && Number.isFinite(overview.discount_percent)
-      ? overview.discount_percent
-      : initial > overview.final && initial > 0
-        ? Math.round((1 - overview.final / initial) * 100)
-        : 0;
+  if (!isFiniteNumber(overview.final)) return null;
+  const initial = isFiniteNumber(overview.initial) ? overview.initial : overview.final;
+  const discount = isFiniteNumber(overview.discount_percent)
+    ? overview.discount_percent
+    : derivedDiscountPercent(overview.final, initial);
   return {
     final: overview.final,
     initial,
@@ -89,6 +91,22 @@ function completeSteamPrice(overview: Partial<SteamPriceOverview>): SteamPriceOv
     ...(overview.currency !== undefined ? { currency: overview.currency } : {}),
     ...(overview.final_formatted !== undefined ? { final_formatted: overview.final_formatted } : {}),
     ...(overview.initial_formatted !== undefined ? { initial_formatted: overview.initial_formatted } : {}),
+  };
+}
+
+function steamStoreUrl(appId: number | string): string {
+  return `https://store.steampowered.com/app/${appId}/`;
+}
+
+/** A price with no amounts: free-to-play or unknown. */
+function steamFixedPrice(appId: string, label: string): PlatformPriceResult {
+  return {
+    platform: 'Steam',
+    price: label,
+    original_price: null,
+    discount: '',
+    store_url: steamStoreUrl(appId),
+    tier: 'pc',
   };
 }
 
@@ -100,16 +118,7 @@ async function steamPriceFromOverview(
   const price = completeSteamPrice(overview);
   if (!price) return null;
 
-  if (price.final <= 0) {
-    return {
-      platform: 'Steam',
-      price: 'Ücretsiz',
-      original_price: null,
-      discount: '',
-      store_url: `https://store.steampowered.com/app/${appId}/`,
-      tier: 'pc',
-    };
-  }
+  if (price.final <= 0) return steamFixedPrice(appId, 'Ücretsiz');
 
   if (price.currency === 'TRY') {
     const formatted = formatSteamPrice(price);
@@ -118,7 +127,7 @@ async function steamPriceFromOverview(
       price: formatted.price,
       original_price: formatted.original_price,
       discount: price.discount_percent > 0 ? `-${price.discount_percent}%` : '',
-      store_url: `https://store.steampowered.com/app/${appId}/`,
+      store_url: steamStoreUrl(appId),
       tier: 'pc',
     };
   }
@@ -133,7 +142,7 @@ async function steamPriceFromOverview(
     price: finalTry,
     original_price: originalTry,
     discount: price.discount_percent > 0 ? `-${price.discount_percent}%` : '',
-    store_url: `https://store.steampowered.com/app/${appId}/`,
+    store_url: steamStoreUrl(appId),
     tier: 'pc',
   };
 }
@@ -165,16 +174,7 @@ async function steamPriceFromAppData(
   data: SteamAppData,
   options?: StoreRequestOptions,
 ): Promise<PlatformPriceResult | null> {
-  if (data.is_free) {
-    return {
-      platform: 'Steam',
-      price: 'Ücretsiz',
-      original_price: null,
-      discount: '',
-      store_url: `https://store.steampowered.com/app/${appId}/`,
-      tier: 'pc',
-    };
-  }
+  if (data.is_free) return steamFixedPrice(appId, 'Ücretsiz');
   return data.price_overview
     ? steamPriceFromOverview(appId, data.price_overview, options?.signal)
     : null;
@@ -193,7 +193,7 @@ function steamSearchProduct(item: SteamSearchItem): SteamSearchProduct {
       title: item.name,
       image_url: steamImage(item.id),
       platform: 'Steam',
-      store_url: `https://store.steampowered.com/app/${item.id}/`,
+      store_url: steamStoreUrl(item.id),
     },
     ...(item.price ? { price: item.price } : {}),
   };
@@ -259,7 +259,7 @@ export async function fetchSteamDeals(
       ...(deal.original_price ? { original_price: deal.original_price } : {}),
       deals: [deal],
       rating: null,
-      store_links: { Steam: `https://store.steampowered.com/app/${item.id}/` },
+      store_links: { Steam: steamStoreUrl(item.id) },
     }];
   });
 }
@@ -310,7 +310,7 @@ export async function fetchSteamDetails(
         return url ? [{ platform: 'steam', id: String(m.id), url, thumbnail: m.thumbnail || '' }] : [];
       }) ?? [],
     rating: null,
-    store_links: { Steam: `https://store.steampowered.com/app/${cleanAppId}/` },
+    store_links: { Steam: steamStoreUrl(cleanAppId) },
   };
   if (data.short_description) game.description = data.short_description;
   if (data.release_date?.date) game.release_date = data.release_date.date;
@@ -367,30 +367,7 @@ export async function fetchSteamPrice(
 
   const data = await fetchSteamAppData(hit.id, options);
   if (!data) return null;
-
-  if (data.is_free) {
-    return {
-      platform: 'Steam',
-      price: 'Ücretsiz',
-      original_price: null,
-      discount: '',
-      store_url: `https://store.steampowered.com/app/${hit.id}/`,
-      tier: 'pc',
-    };
-  }
-
-  const price = data.price_overview;
-  if (!price) {
-    return {
-      platform: 'Steam',
-      price: 'Bilinmiyor',
-      discount: '',
-      store_url: `https://store.steampowered.com/app/${hit.id}/`,
-      tier: 'pc',
-    };
-  }
-
-  return steamPriceFromOverview(hit.id, price, options?.signal);
+  return (await steamPriceFromAppData(hit.id, data, options)) ?? steamFixedPrice(hit.id, 'Bilinmiyor');
 }
 
 export async function fetchSteamFreeGames(options?: StoreRequestOptions): Promise<LiveGame[]> {

@@ -74,7 +74,7 @@ export function mergeDetailMetadata(
   const videos = firstVideos(sources);
   const storeLinks = sources.reduce<Record<string, string>>((links, source) => ({
     ...links,
-    ...(source.store_links ?? {}),
+    ...source.store_links,
   }), {});
   const platforms = cleanUnique(sources.flatMap((source) => source.platforms ?? []));
 

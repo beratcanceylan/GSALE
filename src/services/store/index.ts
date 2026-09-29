@@ -15,7 +15,7 @@ export async function searchGames(
   query: string,
   options?: StoreRequestOptions,
 ): Promise<GameSummary[]> {
-  const games = await searchLiveGames(query, false, options);
+  const games = await searchLiveGames(query, options);
   rememberDetailPreviews(games);
   return games.map(liveGameToSummary);
 }
@@ -44,20 +44,16 @@ export async function getFreeGames(options?: StoreRequestOptions): Promise<GameS
 
   throwIfAborted(options?.signal);
 
-  const unique: typeof games = [];
+  // Epic and Steam can both give away the same game; keep the first listing.
   const seen = new Set<string>();
-  for (const g of games) {
-    const key = g.title.toLowerCase().trim();
-    if (!seen.has(key)) {
+  const unique = games
+    .filter((game) => {
+      const key = game.title.toLowerCase().trim();
+      if (seen.has(key)) return false;
       seen.add(key);
-      unique.push(g);
-    }
-  }
-
-  const summaries: GameSummary[] = [];
-  rememberDetailPreviews(unique.map(prepareLiveGame));
-  for (const game of unique) {
-    summaries.push(liveGameToSummary(prepareLiveGame(game)));
-  }
-  return summaries;
+      return true;
+    })
+    .map(prepareLiveGame);
+  rememberDetailPreviews(unique);
+  return unique.map(liveGameToSummary);
 }

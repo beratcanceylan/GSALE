@@ -43,8 +43,8 @@ describe('store requests follow the selected country', () => {
     const urls = recordFetch({ elements: [] });
     await setAppCountry('DE');
     await searchEpic('Hades');
-    expect(urls.some((url) => url.includes('country=DE'))).toBe(true);
-    expect(urls.some((url) => url.includes('country=TR'))).toBe(false);
+    expect(urls.some((url) => url.includes('country=DE'))).toBeTrue();
+    expect(urls.some((url) => url.includes('country=TR'))).toBeFalse();
   });
 
   test('GOG', async () => {
@@ -73,7 +73,7 @@ describe('store requests follow the selected country', () => {
     const urls = recordFetch({ links: [] });
     await setAppCountry('KZ');
     expect(await searchPlayStation('Hades')).toEqual([]);
-    expect(await fetchPlayStationPrice('Hades')).toBe(null);
+    expect(await fetchPlayStationPrice('Hades')).toBeNull();
     expect(urls).toHaveLength(0);
   });
 
@@ -104,7 +104,7 @@ describe('store requests follow the selected country', () => {
     await setAppCountry('US');
     await fetchPlatformDeal('Steam', 'GSALE Country Cache');
 
-    expect(urls.some((url) => url.includes('cc=TR'))).toBe(true);
-    expect(urls.some((url) => url.includes('cc=US'))).toBe(true);
+    expect(urls.some((url) => url.includes('cc=TR'))).toBeTrue();
+    expect(urls.some((url) => url.includes('cc=US'))).toBeTrue();
   });
 });

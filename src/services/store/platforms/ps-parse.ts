@@ -1,4 +1,10 @@
 import { scoreProductTitleMatch } from '@/services/store/match';
+import {
+  foldTurkishI,
+  removeWithLeadingSpace,
+  replaceFolded,
+  replaceWithSingleSpace,
+} from '@/services/store/text';
 import { extractNumericPrice, formatTryPrice, isUnavailablePrice } from '@/services/store/price-parse';
 
 const PS_STORE_BASE = 'https://store.playstation.com';
@@ -42,17 +48,17 @@ function decodeHtmlEntities(value: string): string {
     .replaceAll('&#160;', ' ')
     .replaceAll('&lt;', '<')
     .replaceAll('&gt;', '>')
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCodePoint(Number.parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(Number.parseInt(dec, 10)));
+    .replaceAll(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCodePoint(Number.parseInt(hex, 16)))
+    .replaceAll(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(Number.parseInt(dec, 10)));
 }
 
 function normalizeText(value: string | undefined | null): string {
   if (!value) return '';
   return decodeHtmlEntities(value)
     .replaceAll('Â ', ' ')
-    .replace(/<[^>]*>/g, ' ')
+    .replaceAll(/<[^<>]*>/g, ' ')
     .replaceAll('\u00a0', ' ')
-    .replace(/\s+/g, ' ')
+    .replaceAll(/\s+/g, ' ')
     .trim();
 }
 
@@ -70,7 +76,12 @@ function normalizePrice(value: string | undefined | null): string {
   if (!text) return 'Bilinmiyor';
   const lower = text.toLowerCase();
   if (lower.includes('ücretsiz') || lower === 'free') return 'Ücretsiz';
-  return text.replace(/\s*TL$/i, ' TL');
+  return withTlSuffix(text);
+}
+
+/** Normalises a trailing "TL" (any case, any spacing) to " TL". */
+function withTlSuffix(text: string): string {
+  return /tl$/i.test(text) ? `${text.slice(0, -2).trimEnd()} TL` : text;
 }
 
 function normalizeImageUrl(value: string): string {
@@ -94,49 +105,38 @@ function normalizeImageUrl(value: string): string {
   return queryIndex >= 0 ? decoded.slice(0, queryIndex) : decoded;
 }
 
-export function getPsSearchQueryCandidates(query: string): string[] {
-  const candidates: string[] = [];
-  const rawTerm = query.trim().replace(/\s+/g, '_');
+function stripPsQueryPunctuation(text: string): string {
+  return text.replaceAll(/[™®©]/g, '').replaceAll(/['’`,.]/g, '');
+}
 
-  const sanitized = query
-    .replace(/[™®©]/g, '')
-    .replace(/['’`,\.]/g, '')
-    .replace(/[:/]/g, ' ')
-    .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
-    .replace(/\s+/g, ' ')
+/** Search terms to try in order: hyphen variants, the sanitized query, the raw query, then the part before ":". */
+export function getPsSearchQueryCandidates(query: string): string[] {
+  const rawTerm = query.trim().replaceAll(/\s+/g, '_');
+  const sanitized = stripPsQueryPunctuation(query)
+    .replaceAll(/[:/]/g, ' ')
+    .replaceAll(/[^\p{L}\p{N}\s-]/gu, ' ')
+    .replaceAll(/\s+/g, ' ')
     .trim();
 
-  const sanitizedTerm = sanitized.replace(/\s+/g, '_');
-
+  const candidates = new Set<string>();
   if (sanitized.includes('-')) {
-    const noHyphen = sanitized.replace(/-/g, '').replace(/\s+/g, '_');
-    if (noHyphen && !candidates.includes(noHyphen)) candidates.push(noHyphen);
-    const spaceHyphen = sanitized.replace(/-/g, ' ').replace(/\s+/g, '_');
-    if (spaceHyphen && !candidates.includes(spaceHyphen)) candidates.push(spaceHyphen);
+    candidates.add(sanitized.replaceAll('-', '').replaceAll(/\s+/g, '_'));
+    candidates.add(sanitized.replaceAll('-', ' ').replaceAll(/\s+/g, '_'));
   }
-
-  if (sanitizedTerm && !candidates.includes(sanitizedTerm)) {
-    candidates.push(sanitizedTerm);
-  }
-  if (rawTerm && !candidates.includes(rawTerm)) {
-    candidates.push(rawTerm);
-  }
+  candidates.add(sanitized.replaceAll(/\s+/g, '_'));
+  candidates.add(rawTerm);
 
   const colonIndex = query.indexOf(':');
   if (colonIndex > 0) {
-    const prefix = query
-      .slice(0, colonIndex)
-      .replace(/[™®©]/g, '')
-      .replace(/['’`,\.]/g, '')
-      .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
-      .replace(/\s+/g, '_')
+    const prefix = stripPsQueryPunctuation(query.slice(0, colonIndex))
+      .replaceAll(/[^\p{L}\p{N}\s-]/gu, ' ')
+      .replaceAll(/\s+/g, '_')
       .trim();
-    if (prefix && !candidates.includes(prefix) && prefix.length >= 3) {
-      candidates.push(prefix);
-    }
+    if (prefix.length >= 3) candidates.add(prefix);
   }
 
-  return candidates.length > 0 ? candidates : [rawTerm];
+  candidates.delete('');
+  return candidates.size > 0 ? [...candidates] : [rawTerm];
 }
 
 export function getPlayStationStoreUrl(productId: string, pathLocale: string): string {
@@ -368,6 +368,60 @@ function parseConceptMedia(records: Record<string, unknown>[]): Pick<ParsedPlayS
   return parsed;
 }
 
+type CtaPrice = { price: string; original_price: string | null; discount: string };
+
+/** The non-subscription offer PlayStation applies to this SKU, if any. */
+function applicableOffer(local: Record<string, unknown>): Record<string, unknown> | undefined {
+  const telemetry = isRecord(local['telemetryMeta']) ? local['telemetryMeta'] : undefined;
+  const skuDetail = isRecord(telemetry?.['skuDetail']) ? telemetry['skuDetail'] : undefined;
+  const priceDetails: unknown[] = Array.isArray(skuDetail?.['skuPriceDetail']) ? skuDetail['skuPriceDetail'] : [];
+  return priceDetails.find(
+    (detail): detail is Record<string, unknown> =>
+      isRecord(detail) && detail['offerApplicability'] === 'APPLICABLE' && !detail['offerIsTiedToSubscription'],
+  );
+}
+
+/** The applicable offer's formatted prices win over the CTA's own, except "dahil" (included). */
+function offerPrices(
+  offer: Record<string, unknown> | undefined,
+  price: string,
+  original: string,
+): { price: string; original: string } {
+  if (!offer) return { price, original };
+  const discounted = stringField(offer, 'discountPriceFormatted');
+  const offerOriginal = stringField(offer, 'originalPriceFormatted');
+  const usesDiscounted = Boolean(discounted) && !isUnavailablePrice(discounted) && discounted.toLowerCase() !== 'dahil';
+  return {
+    price: usesDiscounted ? discounted : price,
+    original: offerOriginal && offerOriginal !== discounted ? offerOriginal : original,
+  };
+}
+
+/** Price shown by one call-to-action record; null for subscription-only or price-less CTAs. */
+function ctaPrice(cta: Record<string, unknown>): CtaPrice | null {
+  const local = isRecord(cta['local']) ? cta['local'] : {};
+  const priceObj = isRecord(cta['price']) ? cta['price'] : {};
+  const discountBadge = stringField(local, 'discountBadgeText') || stringField(priceObj, 'displayDiscountText');
+  const { price: finalPrice, original: finalOriginal } = offerPrices(
+    applicableOffer(local),
+    stringField(local, 'priceOrText') || stringField(priceObj, 'discountedPrice'),
+    stringField(local, 'originalPrice') || stringField(priceObj, 'basePrice'),
+  );
+
+  const isFreeText = /ücretsiz|free/i.test(finalPrice);
+  if (priceObj['isTiedToSubscription'] === true && isFreeText) return null;
+  if (extractNumericPrice(finalPrice) === null && !isFreeText) return null;
+
+  const price = normalizePrice(finalPrice);
+  const originalPrice =
+    extractNumericPrice(finalOriginal) !== null && finalOriginal !== finalPrice ? normalizePrice(finalOriginal) : null;
+  return {
+    price,
+    original_price: originalPrice,
+    discount: discountBadge ? discountFromText(discountBadge) : discountFromPrices(price, originalPrice),
+  };
+}
+
 function extractProductPriceFromCacheRecords(
   cacheRecords: Record<string, unknown>[],
   productId: string,
@@ -396,53 +450,29 @@ function extractProductPriceFromCacheRecords(
   });
 
   for (const cta of sortedCtas) {
-    const local = isRecord(cta['local']) ? cta['local'] : {};
-    const priceObj = isRecord(cta['price']) ? cta['price'] : {};
-    const rawPrice = stringField(local, 'priceOrText') || stringField(priceObj, 'discountedPrice');
-    const rawOriginal = stringField(local, 'originalPrice') || stringField(priceObj, 'basePrice');
-    const discountBadge = stringField(local, 'discountBadgeText') || stringField(priceObj, 'displayDiscountText');
-
-    const telemetry = isRecord(local['telemetryMeta']) ? local['telemetryMeta'] : undefined;
-    const skuDetail = isRecord(telemetry?.['skuDetail']) ? telemetry['skuDetail'] : undefined;
-    const priceDetails = Array.isArray(skuDetail?.['skuPriceDetail']) ? skuDetail['skuPriceDetail'] : [];
-    const applicableOffer = priceDetails.find(
-      (p) => isRecord(p) && p['offerApplicability'] === 'APPLICABLE' && !p['offerIsTiedToSubscription'],
-    ) as Record<string, unknown> | undefined;
-
-    let finalPrice = rawPrice;
-    let finalOriginal = rawOriginal;
-
-    if (applicableOffer) {
-      const discFormatted = stringField(applicableOffer, 'discountPriceFormatted');
-      const origFormatted = stringField(applicableOffer, 'originalPriceFormatted');
-      if (discFormatted && !isUnavailablePrice(discFormatted) && discFormatted.toLowerCase() !== 'dahil') {
-        finalPrice = discFormatted;
-      }
-      if (origFormatted && origFormatted !== discFormatted) {
-        finalOriginal = origFormatted;
-      }
-    }
-
-    if (priceObj['isTiedToSubscription'] === true && /ücretsiz|free/i.test(finalPrice)) {
-      continue;
-    }
-
-    if (extractNumericPrice(finalPrice) !== null || /ücretsiz|free/i.test(finalPrice)) {
-      const normPrice = normalizePrice(finalPrice);
-      const normOriginal =
-        extractNumericPrice(finalOriginal) !== null && finalOriginal !== finalPrice
-          ? normalizePrice(finalOriginal)
-          : null;
-      const discount = discountBadge ? discountFromText(discountBadge) : discountFromPrices(normPrice, normOriginal);
-      return {
-        price: normPrice,
-        original_price: normOriginal,
-        discount,
-      };
-    }
+    const price = ctaPrice(cta);
+    if (price) return price;
   }
 
   return null;
+}
+
+function jsonLdImage(jsonLd: ProductJsonLd | null): string {
+  return normalizeText(Array.isArray(jsonLd?.image) ? jsonLd.image[0] : jsonLd?.image);
+}
+
+/** Cached CTA price, then the page's `priceOrText`, then the JSON-LD offer. */
+function productHtmlPrice(html: string, cachedPrice: CtaPrice | null, jsonLd: ProductJsonLd | null): string {
+  const price = cachedPrice?.price ?? normalizePrice(extractJsonField(html, 'priceOrText'));
+  const offerPrice = jsonLd?.offers?.price === undefined ? Number.NaN : Number(jsonLd.offers.price);
+  if (!isUnavailablePrice(price) || !Number.isFinite(offerPrice)) return price;
+  return offerPrice <= 0 ? 'Ücretsiz' : formatTryPrice(offerPrice);
+}
+
+function productHtmlOriginalPrice(html: string, cachedPrice: CtaPrice | null): string | null {
+  if (cachedPrice) return cachedPrice.original_price;
+  const raw = extractJsonField(html, 'originalPrice');
+  return raw ? normalizePrice(raw) : null;
 }
 
 export function parsePlayStationProductHtml(
@@ -453,46 +483,32 @@ export function parsePlayStationProductHtml(
   const jsonLd = parseJsonLd(html);
   const cacheRecords = parseJsonCacheRecords(html);
   const productRecords = cacheRecords.filter((record) => stringField(record, 'id') === productId);
-  const fallbackTitle = firstStringField(productRecords, 'name') || firstStringField(productRecords, 'invariantName');
-  const title = normalizeText(jsonLd?.name) || fallbackTitle;
-  const image =
-    Array.isArray(jsonLd?.image)
-      ? normalizeText(jsonLd.image[0])
-      : normalizeText(jsonLd?.image);
-  const description = normalizeText(jsonLd?.description);
-  const publisher = firstStringField(productRecords, 'publisherName');
-  const releaseDate = firstStringField(productRecords, 'releaseDate');
-  const genres = mergedLocalizedGenres(productRecords);
-  const media = parseConceptMedia(cacheRecords);
+  const title =
+    normalizeText(jsonLd?.name) ||
+    firstStringField(productRecords, 'name') ||
+    firstStringField(productRecords, 'invariantName');
   const cachedPrice = extractProductPriceFromCacheRecords(cacheRecords, productId);
-  let price = cachedPrice?.price ?? normalizePrice(extractJsonField(html, 'priceOrText'));
-  if (isUnavailablePrice(price) && jsonLd?.offers?.price !== undefined) {
-    const jsonLdNum = Number(jsonLd.offers.price);
-    if (Number.isFinite(jsonLdNum)) {
-      price = jsonLdNum <= 0 ? 'Ücretsiz' : formatTryPrice(jsonLdNum);
-    }
-  }
-  const originalPriceRaw = extractJsonField(html, 'originalPrice');
-  const originalPrice =
-    cachedPrice !== null
-      ? cachedPrice.original_price
-      : (originalPriceRaw ? normalizePrice(originalPriceRaw) : null);
-  const discount =
-    cachedPrice?.discount ||
-    discountFromText(extractJsonField(html, 'discountBadgeText')) ||
-    discountFromPrices(price, originalPrice);
-
+  const price = productHtmlPrice(html, cachedPrice, jsonLd);
   if (!title && price === 'Bilinmiyor') return null;
 
+  const originalPrice = productHtmlOriginalPrice(html, cachedPrice);
   const product: ParsedPlayStationProduct = {
     id: productId,
     title,
     price,
     original_price: originalPrice,
-    discount,
-    image_url: image,
+    discount:
+      cachedPrice?.discount ||
+      discountFromText(extractJsonField(html, 'discountBadgeText')) ||
+      discountFromPrices(price, originalPrice),
+    image_url: jsonLdImage(jsonLd),
     store_url: getPlayStationStoreUrl(productId, pathLocale),
   };
+  const description = normalizeText(jsonLd?.description);
+  const publisher = firstStringField(productRecords, 'publisherName');
+  const releaseDate = firstStringField(productRecords, 'releaseDate');
+  const genres = mergedLocalizedGenres(productRecords);
+  const media = parseConceptMedia(cacheRecords);
   if (description) product.description = description;
   if (releaseDate) product.release_date = releaseDate;
   if (publisher) product.developers = [publisher];
@@ -502,31 +518,56 @@ export function parsePlayStationProductHtml(
   return product;
 }
 
+const PS_TR_EDITION_NAMES = [
+  'Standart',
+  'Lüks',
+  'Deluxe',
+  String.raw`Dijital\s+Deluxe`,
+  'Dijital',
+  'Seçkin',
+  'Özel',
+  'Nihai',
+  'Genişletilmiş',
+  'Tam',
+  'Complete',
+  'Yönetmenin',
+];
+const PS_EN_EDITION_NAMES = [
+  'Deluxe', 'Ultimate', 'Definitive', 'Enhanced', 'GOTY', 'Game of the Year', 'Complete',
+  'Special', 'Remastered', 'Anniversary', 'Collector', 'Standard', "Director'?s Cut",
+];
+const PS_TR_EDITION_SUFFIX = new RegExp(
+  String.raw`(?:[-–—]\s*)?(?:${PS_TR_EDITION_NAMES.join('|')})\s*Sürüm[üu]?`,
+  'iu',
+);
+const PS_EN_EDITION_SUFFIX = new RegExp(String.raw`(?:[-–—]\s*)?(?:${PS_EN_EDITION_NAMES.join('|')})\s*Edition`, 'iu');
+const PS_EN_EDITION_WORD = new RegExp(String.raw`(?:[-–—]\s*)?(?:${PS_EN_EDITION_NAMES.join('|')})\b`, 'iu');
+const PS_CROSS_GEN = /(?:[-–—]\s*)?(?:Cross-Gen|Çapraz Nesil)(?:\s*(?:Paketi?|Bundle))?/iu;
+const PS_PARENTHESISED = /\([^()]*\)/;
+const PS_TRAILING_PRODUCT_WORDS =
+  /(?:^|\s)(?:Sürüm[üu]?|Edition|Console\s+Edition|Bundle|Paketi?|Başlatıcısı|Launcher)(?:\s|$)/giu;
+const PS_TITLE_SEPARATORS = '-–—:/';
+
+/** Drops one trailing run of separators (" - ", " :") and the spaces around it. */
+function stripTrailingSeparators(text: string): string {
+  let end = text.trimEnd().length;
+  while (end > 0 && PS_TITLE_SEPARATORS.includes(text.charAt(end - 1))) end -= 1;
+  return end === text.trimEnd().length ? text : text.slice(0, end).trimEnd();
+}
+
 export function cleanPsProductTitle(title: string): string {
   if (!title) return '';
-  return title
-    .replace(/[™®©]/g, '')
-    .replace(
-      /\s*[-–—]?\s*(Standart|Lüks|Deluxe|D[iİıI]j[iİıI]tal\s+Deluxe|D[iİıI]j[iİıI]tal|Seçk[iİıI]n|Özel|N[iİıI]ha[iİıI]|Gen[iİıI]şlet[iİıI]lm[iİıI]ş|Tam|Complete|Yönetmen[iİıI]n)\s*Sürüm[üu]?/gi,
-      '',
-    )
-    .replace(
-      /\s*[-–—]?\s*(Deluxe|Ultimate|Definitive|Enhanced|GOTY|Game of the Year|Complete|Special|Remastered|Anniversary|Collector|Standard|Director'?s Cut)\s*Edition/gi,
-      '',
-    )
-    .replace(
-      /\s*[-–—]?\s*(Deluxe|Ultimate|Definitive|Enhanced|GOTY|Game of the Year|Complete|Special|Remastered|Anniversary|Collector|Standard|Director'?s Cut)\b/gi,
-      '',
-    )
-    .replace(/\s*[-–—]?\s*(Cross-Gen|Çapraz Nesil)(\s*(Paket[iİıI]?|Bundle))?/gi, '')
-    .replace(/\b(PS4\s*(ve|&|\/)\s*PS5|PS5\s*(ve|&|\/)\s*PS4)\b/gi, '')
-    .replace(/\bPS[45]\b/gi, '')
-    .replace(/\bPlayStation\s*[45]\b/gi, '')
-    .replace(/(?:^|\s)(Sürüm[üu]?|Edition|Console\s+Edition|Bundle|Paket[iİıI]?|Başlatıcısı|Launcher)(?:\s|$)/gi, ' ')
-    .replace(/\s*\([^)]*\)\s*/g, ' ')
-    .replace(/\s*[-–—:/]+\s*$/, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  let cleaned = title.replaceAll(/[™®©]/g, '');
+  for (const pattern of [PS_TR_EDITION_SUFFIX, PS_EN_EDITION_SUFFIX, PS_EN_EDITION_WORD, PS_CROSS_GEN]) {
+    cleaned = removeWithLeadingSpace(cleaned, pattern, foldTurkishI);
+  }
+  cleaned = cleaned
+    .replaceAll(/\b(?:PS4\s*(?:ve|&|\/)\s*PS5|PS5\s*(?:ve|&|\/)\s*PS4)\b/giu, '')
+    .replaceAll(/\bPS[45]\b/gi, '')
+    .replaceAll(/\bPlayStation\s*[45]\b/gi, '');
+  cleaned = replaceFolded(cleaned, PS_TRAILING_PRODUCT_WORDS, ' ', foldTurkishI);
+  cleaned = stripTrailingSeparators(replaceWithSingleSpace(cleaned, PS_PARENTHESISED));
+  return cleaned.replaceAll(/\s+/g, ' ').trim();
 }
 
 function hasLegacyOnlyPlayStationPlatform(product: ParsedPlayStationProduct): boolean {
@@ -551,76 +592,56 @@ export type PsEditionType =
   | 'vault'
   | 'bundle';
 
-const PS_STANDARD_REGEX =
-  /\b(standart|standard)(?:\s*(?:s[üÜuU]r[üÜuU]m[üÜuU]?|edition))?\b/iu;
-
-const PS_DIRECTORS_CUT_REGEX =
-  /\b(director'?s\s*cut|y[öÖoO]netmen[iİıI]n\s*s[üÜuU]r[üÜuU]m[üÜuU]?)\b/iu;
-
-const PS_DELUXE_REGEX =
-  /\b(deluxe|l[üÜuU]ks|d[iİıI]j[iİıI]tal\s+deluxe|digital\s+deluxe|d[iİıI]j[iİıI]tal\s+l[üÜuU]ks|digital\s+l[üÜuU]ks)\b/iu;
-
-const PS_ULTIMATE_REGEX =
-  /\b(ultimate|n[iİıI]ha[iİıI]\s*s[üÜuU]r[üÜuU]m[üÜuU]?|n[iİıI]ha[iİıI])\b/iu;
-
-const PS_COMPLETE_REGEX =
-  /\b(complete(?:\s+edition)?|tam\s*s[üÜuU]r[üÜuU]m[üÜuU]?)\b/iu;
-
-const PS_GOTY_REGEX =
-  /\b(goty|game\s+of\s+the\s+year|y[ıI]l[ıI]n\s+oyunu)\b/iu;
-
-const PS_GOLD_REGEX =
-  /\b(gold(?:\s+edition)?|alt[ıI]n\s*s[üÜuU]r[üÜuU]m[üÜuU]?)\b/iu;
-
-const PS_PREMIUM_REGEX =
-  /\b(premium(?:\s+edition)?|se[çc]k[iİıI]n\s*s[üÜuU]r[üÜuU]m[üÜuU]?|se[çc]k[iİıI]n)\b/iu;
-
-const PS_COLLECTOR_REGEX =
-  /\b(collector'?s?(?:\s*edition)?|koleks[iİıI]yon(?:cu)?\s*s[üÜuU]r[üÜuU]m[üÜuU]?)\b/iu;
-
-const PS_VAULT_REGEX =
-  /\b(vault(?:\s+edition)?|kasa\s*s[üÜuU]r[üÜuU]m[üÜuU]?)\b/iu;
-
-const PS_SPECIAL_REGEX =
-  /\b(special(?:\s+edition)?|[öÖoO]zel\s*s[üÜuU]r[üÜuU]m[üÜuU]?|[öÖoO]zel)\b/iu;
-
-const PS_ANNIVERSARY_REGEX =
-  /\b(anniversary(?:\s+edition)?|y[ıI]ld[öÖoO]n[üÜuU]m[üÜuU]?(?:\s*s[üÜuU]r[üÜuU]m[üÜuU]?)?)\b/iu;
+/**
+ * Edition markers, checked in order against `foldTurkishI(title)`; the first edition
+ * with a matching pattern wins. English and Turkish forms are separate patterns.
+ */
+const PS_EDITION_PATTERNS: readonly (readonly [PsEditionType, readonly RegExp[]])[] = [
+  ['base', [/\b(?:standart|standard)(?:\s*(?:s[üu]r[üu]m[üu]?|edition))?\b/iu]],
+  ['directors_cut', [/\bdirector'?s\s*cut\b/iu, /\by[öo]netmenin\s*s[üu]r[üu]m[üu]?\b/iu]],
+  ['deluxe', [/\b(?:deluxe|l[üu]ks)\b/iu]],
+  ['ultimate', [/\bultimate\b/iu, /\bnihai(?:\s*s[üu]r[üu]m[üu]?)?\b/iu]],
+  ['complete', [/\bcomplete(?:\s+edition)?\b/iu, /\btam\s*s[üu]r[üu]m[üu]?\b/iu]],
+  ['goty', [/\b(?:goty|game\s+of\s+the\s+year)\b/iu, /\byilin\s+oyunu\b/iu]],
+  ['gold', [/\bgold(?:\s+edition)?\b/iu, /\baltin\s*s[üu]r[üu]m[üu]?\b/iu]],
+  ['premium', [/\bpremium(?:\s+edition)?\b/iu, /\bse[çc]kin(?:\s*s[üu]r[üu]m[üu]?)?\b/iu]],
+  ['collector', [/\bcollector'?s?(?:\s*edition)?\b/iu, /\bkoleksiyon(?:cu)?\s*s[üu]r[üu]m[üu]?\b/iu]],
+  ['vault', [/\bvault(?:\s+edition)?\b/iu, /\bkasa\s*s[üu]r[üu]m[üu]?\b/iu]],
+  ['special', [/\bspecial(?:\s+edition)?\b/iu, /\b[öo]zel(?:\s*s[üu]r[üu]m[üu]?)?\b/iu]],
+  ['anniversary', [/\banniversary(?:\s+edition)?\b/iu, /\byild[öo]n[üu]m[üu]?(?:\s*s[üu]r[üu]m[üu]?)?\b/iu]],
+];
 
 function hasPsBundleEdition(title: string): boolean {
-  const withoutCrossGen = title.replace(
-    /\s*[-–—]?\s*(cross-gen|[çc]apraz\s+nes[iİıI]l)(\s*(paket[iİıI]?|bundle))?\b/giu,
-    ' ',
+  const withoutCrossGen = replaceWithSingleSpace(
+    foldTurkishI(title),
+    /(?:[-–—]\s*)?(?:cross-gen|[çc]apraz\s+nesil)(?:\s*(?:paketi?|bundle))?\b/iu,
   );
-  return /\b(bundle|paket[iİıI]?)\b/iu.test(withoutCrossGen);
+  return /\b(bundle|paketi?)\b/iu.test(withoutCrossGen);
 }
 
 export function extractPsEdition(title: string): PsEditionType {
   if (!title) return 'base';
-  if (PS_STANDARD_REGEX.test(title)) return 'base';
-  if (PS_DIRECTORS_CUT_REGEX.test(title)) return 'directors_cut';
-  if (PS_DELUXE_REGEX.test(title)) return 'deluxe';
-  if (PS_ULTIMATE_REGEX.test(title)) return 'ultimate';
-  if (PS_COMPLETE_REGEX.test(title)) return 'complete';
-  if (PS_GOTY_REGEX.test(title)) return 'goty';
-  if (PS_GOLD_REGEX.test(title)) return 'gold';
-  if (PS_PREMIUM_REGEX.test(title)) return 'premium';
-  if (PS_COLLECTOR_REGEX.test(title)) return 'collector';
-  if (PS_VAULT_REGEX.test(title)) return 'vault';
-  if (PS_SPECIAL_REGEX.test(title)) return 'special';
-  if (PS_ANNIVERSARY_REGEX.test(title)) return 'anniversary';
-  if (hasPsBundleEdition(title)) return 'bundle';
-  return 'base';
+  const folded = foldTurkishI(title);
+  const edition = PS_EDITION_PATTERNS.find(([, patterns]) => patterns.some((pattern) => pattern.test(folded)));
+  if (edition) return edition[0];
+  return hasPsBundleEdition(title) ? 'bundle' : 'base';
 }
 
 function normalizeTitleForExactCheck(title: string): string {
   return title
     .toLowerCase()
-    .replace(/[™®©]/g, '')
-    .replace(/[^\p{L}\p{N}]+/gu, '');
+    .replaceAll(/[™®©]/g, '')
+    .replaceAll(/[^\p{L}\p{N}]+/gu, '');
 }
 
-export function scorePlayStationProduct(
+/** Same edition earns a bonus; a different edition is penalised but stays matchable (score ≥ 50). */
+function editionAdjustedScore(score: number, searchEdition: PsEditionType, productEdition: PsEditionType): number {
+  if (productEdition === searchEdition) return score + (searchEdition === 'base' ? 15 : 25);
+  if (searchEdition !== 'base' && productEdition === 'base') return Math.max(50, score - 15);
+  return Math.max(50, score - 25);
+}
+
+function scorePlayStationProduct(
   product: ParsedPlayStationProduct,
   searchTitle: string,
 ): number {
@@ -639,21 +660,7 @@ export function scorePlayStationProduct(
   const searchEdition = extractPsEdition(searchTitle);
   const productEdition = extractPsEdition(product.title);
 
-  if (searchEdition === 'base') {
-    if (productEdition === 'base') {
-      titleScore += 15;
-    } else {
-      titleScore = Math.max(50, titleScore - 25);
-    }
-  } else {
-    if (productEdition === searchEdition) {
-      titleScore += 25;
-    } else if (productEdition === 'base') {
-      titleScore = Math.max(50, titleScore - 15);
-    } else {
-      titleScore = Math.max(50, titleScore - 25);
-    }
-  }
+  titleScore = editionAdjustedScore(titleScore, searchEdition, productEdition);
 
   const normSearch = normalizeTitleForExactCheck(searchTitle);
   const normProduct = normalizeTitleForExactCheck(product.title);
@@ -755,7 +762,7 @@ function chihiroPrice(product: ChihiroProductLike): string {
   if (lower.includes('free') || lower.includes('ucretsiz') || lower.includes('ücretsiz')) {
     return '\u00dccretsiz';
   }
-  if (normalizedDisplay) return normalizedDisplay.replace(/\s*TL$/i, ' TL');
+  if (normalizedDisplay) return withTlSuffix(normalizedDisplay);
   if (Number.isFinite(amount)) {
     if (amount <= 0) return '\u00dccretsiz';
     return formatTryPrice(amount / 100);
@@ -771,7 +778,7 @@ function chihiroOriginalPrice(product: ChihiroProductLike): string | null {
     chihiroString(record['originalPrice']) ||
     chihiroString(sku?.['original_price']) ||
     chihiroString(sku?.['originalPrice']);
-  return raw ? raw.replaceAll('Â ', ' ').replace(/\s*TL$/i, ' TL') : null;
+  return raw ? withTlSuffix(raw.replaceAll('Â ', ' ')) : null;
 }
 
 function chihiroDiscount(product: ChihiroProductLike, price: string, original: string | null): string {
@@ -807,35 +814,28 @@ function chihiroGenres(product: ChihiroProductLike): string[] {
   return [...new Set(values)];
 }
 
+function recordsOf(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+/** Preview "shots" are either `{ url }` records or plain URL strings. */
+function previewShotUrls(shots: unknown): unknown[] {
+  return Array.isArray(shots) ? (shots as unknown[]).map((shot) => (isRecord(shot) ? shot['url'] : shot)) : [];
+}
+
 function chihiroMedia(product: ChihiroProductLike): Pick<ParsedPlayStationProduct, 'screenshots' | 'videos'> {
   if (!isRecord(product.mediaList)) return {};
-  const mediaList = product.mediaList;
-  const screenshots: string[] = [];
-  const videos: NonNullable<ParsedPlayStationProduct['videos']> = [];
-  const addScreenshot = (value: unknown): void => {
-    const url = chihiroString(value);
-    if (url && !screenshots.includes(url)) screenshots.push(url);
-  };
-
-  const rawScreenshots = Array.isArray(mediaList['screenshots']) ? mediaList['screenshots'] : [];
-  for (const raw of rawScreenshots) {
-    if (!isRecord(raw)) continue;
-    addScreenshot(raw['url']);
-  }
-
-  const rawPreviews = Array.isArray(mediaList['previews']) ? mediaList['previews'] : [];
-  for (const raw of rawPreviews) {
-    if (!isRecord(raw)) continue;
-    const url = chihiroString(raw['url']);
-    if (!url) continue;
-    videos.push({ platform: 'ps', id: `ps-video-${videos.length}`, url });
-    if (Array.isArray(raw['shots'])) {
-      for (const shot of raw['shots']) {
-        if (isRecord(shot)) addScreenshot(shot['url']);
-        else addScreenshot(shot);
-      }
-    }
-  }
+  const previews = recordsOf(product.mediaList['previews']).filter((preview) => chihiroString(preview['url']));
+  const screenshotCandidates = [
+    ...recordsOf(product.mediaList['screenshots']).map((screenshot) => screenshot['url']),
+    ...previews.flatMap((preview) => previewShotUrls(preview['shots'])),
+  ];
+  const screenshots = [...new Set(screenshotCandidates.map(chihiroString).filter(Boolean))];
+  const videos = previews.map((preview, index) => ({
+    platform: 'ps',
+    id: `ps-video-${index}`,
+    url: chihiroString(preview['url']),
+  }));
 
   return {
     ...(screenshots.length > 0 ? { screenshots } : {}),

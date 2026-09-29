@@ -56,62 +56,49 @@ type GroupedGame = {
   platformBest: Map<string, { hit: PlatformSearchHit; rank: number }>;
 };
 
-export function mergeSearchHits(hits: PlatformSearchHit[], query?: string): LiveGame[] {
-  const groups = new Map<string, GroupedGame>();
-
-  for (const hit of hits) {
-    if (!hit.image_url) continue;
-    if (!isRelevantSearchHit(hit, query)) continue;
-
-    const game = hitToLiveGame(hit);
-    const titleKey = canonicalMergeTitleKey(game.title);
-    const rank = searchResultRank(game, query);
-
-    const group = groups.get(titleKey);
-    if (!group) {
-      const platformBest = new Map<string, { hit: PlatformSearchHit; rank: number }>();
-      platformBest.set(hit.platform, { hit, rank });
-      groups.set(titleKey, {
-        bestGame: game,
-        bestRank: rank,
-        platformBest,
-      });
-      continue;
-    }
-
-    if (rank > group.bestRank) {
-      group.bestGame = game;
-      group.bestRank = rank;
-    }
-
-    const currentPlatformBest = group.platformBest.get(hit.platform);
-    if (!currentPlatformBest || rank > currentPlatformBest.rank) {
-      group.platformBest.set(hit.platform, { hit, rank });
-    }
-  }
-
-  const results: LiveGame[] = [];
-  for (const group of groups.values()) {
-    const platforms = [...new Set([...(group.bestGame.platforms ?? []), ...group.platformBest.keys()])].filter(Boolean);
-    const store_links: Record<string, string> = { ...(group.bestGame.store_links ?? {}) };
-
-    for (const [platform, entry] of group.platformBest.entries()) {
-      if (entry.hit.store_url) {
-        store_links[platform] = entry.hit.store_url;
-      }
-    }
-
-    results.push({
-      ...group.bestGame,
-      platforms,
-      store_links,
+function addHitToGroups(groups: Map<string, GroupedGame>, hit: PlatformSearchHit, query?: string): void {
+  const game = hitToLiveGame(hit);
+  const titleKey = canonicalMergeTitleKey(game.title);
+  const rank = searchResultRank(game, query);
+  const group = groups.get(titleKey);
+  if (!group) {
+    groups.set(titleKey, {
+      bestGame: game,
+      bestRank: rank,
+      platformBest: new Map([[hit.platform, { hit, rank }]]),
     });
+    return;
   }
 
-  return dedupeByRouteId(results);
+  if (rank > group.bestRank) {
+    group.bestGame = game;
+    group.bestRank = rank;
+  }
+  const currentPlatformBest = group.platformBest.get(hit.platform);
+  if (!currentPlatformBest || rank > currentPlatformBest.rank) {
+    group.platformBest.set(hit.platform, { hit, rank });
+  }
 }
 
-export function dedupeByRouteId(games: LiveGame[]): LiveGame[] {
+/** The best-ranked hit, listing every store that sells the title and each store's best link. */
+function groupToGame(group: GroupedGame): LiveGame {
+  const platforms = [...new Set([...(group.bestGame.platforms ?? []), ...group.platformBest.keys()])].filter(Boolean);
+  const store_links: Record<string, string> = { ...group.bestGame.store_links };
+  for (const [platform, entry] of group.platformBest.entries()) {
+    if (entry.hit.store_url) store_links[platform] = entry.hit.store_url;
+  }
+  return { ...group.bestGame, platforms, store_links };
+}
+
+export function mergeSearchHits(hits: PlatformSearchHit[], query?: string): LiveGame[] {
+  const groups = new Map<string, GroupedGame>();
+  for (const hit of hits) {
+    if (hit.image_url && isRelevantSearchHit(hit, query)) addHitToGroups(groups, hit, query);
+  }
+  return dedupeByRouteId([...groups.values()].map(groupToGame));
+}
+
+function dedupeByRouteId(games: LiveGame[]): LiveGame[] {
   const seen = new Set<string>();
   return games.filter((game) => {
     if (!game.id || seen.has(game.id)) return false;
@@ -120,7 +107,7 @@ export function dedupeByRouteId(games: LiveGame[]): LiveGame[] {
   });
 }
 
-export function getLiveRouteId(game: LiveGame): string {
+function getLiveRouteId(game: LiveGame): string {
   if (game.platform === 'Epic Games') return game.slug ?? game.id;
   if (game.platform === 'Steam') return (game.slug ?? game.id).replace(/^steam-/, '');
   return game.id || game.slug || game.title;

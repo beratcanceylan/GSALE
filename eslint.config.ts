@@ -3,7 +3,7 @@ import type { Linter } from 'eslint';
 import { configs as tseslintConfigs } from 'typescript-eslint';
 import gsalePlugin from './eslint-plugin';
 
-const typedFiles = ['src/**/*.{ts,tsx}', 'eslint-plugin/**/*.ts'];
+const typedFiles = ['app/**/*.{ts,tsx}', 'src/**/*.{ts,tsx}', 'eslint-plugin/**/*.ts'];
 
 const config: Linter.Config[] = [
   {
@@ -41,7 +41,7 @@ const config: Linter.Config[] = [
     },
   },
   {
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['app/**/*.{ts,tsx}', 'src/**/*.{ts,tsx}'],
     rules: {
       '@typescript-eslint/restrict-template-expressions': [
         'error',
@@ -50,7 +50,7 @@ const config: Linter.Config[] = [
     },
   },
   {
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['app/**/*.{ts,tsx}', 'src/**/*.{ts,tsx}'],
     plugins: {
       gsale: gsalePlugin,
     },

@@ -39,7 +39,7 @@ describe('store currency', () => {
 
   test('unknown currencies are reported instead of being treated as USD', async () => {
     setUsdToTryRateForTests(40);
-    expect(Number.isNaN(await convertToTry(10, 'GBP'))).toBe(true);
+    expect(Number.isNaN(await convertToTry(10, 'GBP'))).toBeTrue();
     expect(await formatPriceAsTry(10, 'GBP')).toBe('Bilinmiyor');
   });
 });

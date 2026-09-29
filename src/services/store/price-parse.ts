@@ -67,17 +67,6 @@ export function formatTryPrice(amount: number): string {
   return `${formatted} TL`;
 }
 
-export function appendTrySuffixIfNeeded(priceStr: string): string {
-  const trimmed = priceStr.trim();
-  if (!trimmed || isUnavailablePrice(trimmed)) return trimmed;
-  const lower = trimmed.toLowerCase();
-  if (lower.includes('tl') || lower.includes('try') || lower.includes('₺') || lower.includes('$') || lower.includes('€')) {
-    return trimmed;
-  }
-  if (/^\d+([.,]\d+)?$/.test(trimmed)) return `${trimmed} TL`;
-  return trimmed;
-}
-
 export interface SteamPriceParts {
   currency?: string;
   final: number;

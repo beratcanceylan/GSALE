@@ -47,18 +47,24 @@ function bestMetadataHit(
   return bestScore >= 50 ? best : null;
 }
 
+async function searchPlatformHits(
+  platform: string,
+  search: (typeof DETAIL_METADATA_SEARCHES)[number]['search'],
+  title: string,
+  options?: StoreRequestOptions,
+): Promise<{ platform: string; hits: Awaited<ReturnType<typeof search>> }> {
+  return { platform, hits: await search(title, options) };
+}
+
 async function fetchMetadataCandidates(
   title: string,
   excludePlatform: string,
   options?: StoreRequestOptions,
 ): Promise<LiveGame[]> {
   const searchResults = await Promise.allSettled(
-    DETAIL_METADATA_SEARCHES
-      .filter(({ platform }) => platform !== excludePlatform)
-      .map(async ({ platform, search }) => ({
-        platform,
-        hits: await search(title, options),
-      })),
+    DETAIL_METADATA_SEARCHES.flatMap(({ platform, search }) =>
+      platform === excludePlatform ? [] : [searchPlatformHits(platform, search, title, options)],
+    ),
   );
   throwIfAborted(options?.signal);
 
@@ -85,20 +91,32 @@ async function fetchMetadataCandidates(
   );
 }
 
-function detectPlatform(slug: string, hint?: string): string {
-  if (slug.startsWith('epic-')) return 'epic';
-  if (slug.startsWith('ps-')) return 'ps';
-  if (slug.startsWith('xbox-')) return 'xbox';
-  if (slug.startsWith('gog-')) return 'gog';
-  if (slug.startsWith('nintendo-')) return 'nintendo';
-  if (/^\d+$/.test(slug)) return 'steam';
-  if (slug.includes('_') && !slug.startsWith('gog-')) return 'epic';
+type DetailFetcher = (slug: string, options?: StoreRequestOptions) => Promise<LiveGame | null>;
 
-  if (hint) {
-    const mapped = PLATFORM_HINT_MAP[hint];
-    if (mapped) return mapped;
-  }
-  return 'steam';
+const DETAIL_FETCHERS: Readonly<Record<string, DetailFetcher>> = {
+  steam: fetchSteamDetails,
+  epic: (slug, options) => fetchEpicDetails(slug, undefined, options),
+  ps: fetchPlayStationDetails,
+  xbox: fetchXboxDetails,
+  gog: fetchGogDetails,
+  nintendo: fetchNintendoDetails,
+};
+
+const SLUG_PREFIXES: readonly (readonly [string, string])[] = [
+  ['epic-', 'epic'],
+  ['ps-', 'ps'],
+  ['xbox-', 'xbox'],
+  ['gog-', 'gog'],
+  ['nintendo-', 'nintendo'],
+];
+
+/** Route ids carry their store: a prefix, a numeric Steam app id, or an Epic "<namespace>_<offer>". */
+function detectPlatform(slug: string, hint?: string): string {
+  const prefixed = SLUG_PREFIXES.find(([prefix]) => slug.startsWith(prefix));
+  if (prefixed) return prefixed[1];
+  if (/^\d+$/.test(slug)) return 'steam';
+  if (slug.includes('_')) return 'epic';
+  return (hint && PLATFORM_HINT_MAP[hint]) || 'steam';
 }
 
 export async function fetchGameBySlug(
@@ -106,24 +124,8 @@ export async function fetchGameBySlug(
   platformHint?: string,
   options?: StoreRequestOptions,
 ): Promise<LiveGame | null> {
-  const platform = detectPlatform(slug, platformHint);
-
-  switch (platform) {
-    case 'steam':
-      return fetchSteamDetails(slug, options);
-    case 'epic':
-      return fetchEpicDetails(slug, undefined, options);
-    case 'ps':
-      return fetchPlayStationDetails(slug, options);
-    case 'xbox':
-      return fetchXboxDetails(slug, options);
-    case 'gog':
-      return fetchGogDetails(slug, options);
-    case 'nintendo':
-      return fetchNintendoDetails(slug, options);
-    default:
-      return fetchSteamDetails(slug, options);
-  }
+  const fetchDetails = DETAIL_FETCHERS[detectPlatform(slug, platformHint)] ?? fetchSteamDetails;
+  return fetchDetails(slug, options);
 }
 
 export async function fetchGameDetailLive(

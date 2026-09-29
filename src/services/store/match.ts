@@ -1,3 +1,5 @@
+import { foldTurkishI, removeWithLeadingSpace, replaceWithSingleSpace } from '@/services/store/text';
+
 function normalize(title: string): string {
   return title
     .toLowerCase()
@@ -99,28 +101,26 @@ function isGtaVStoryModeMainProduct(foundTitle: string, searchTitle: string): bo
   );
 }
 
+const EDITION_SUFFIX =
+  /(?:-\s*)?(?:Deluxe|Ultimate|Definitive|Enhanced|GOTY|Game of the Year|Complete|Special|Remastered|Anniversary|Collector|Standard|Director'?s\s*Cut)\s*Edition/i;
+const DIRECTORS_CUT_SUFFIX = /(?:[-–—]\s*)?Director'?s\s*Cut\b/i;
+const DIRECTORS_CUT_SUFFIX_TR = /(?:[-–—]\s*)?Y[öo]netmenin\s*S[üu]r[üu]m[üu]?(?=$|\s|[^\p{L}\p{N}])/iu;
+const PARENTHESISED = /\([^()]*\)/;
+
+/** Removes edition, platform and parenthesised suffixes so titles compare across stores. */
 export function cleanTitleForCrossPlatform(title: string): string {
   if (!title) return title;
-  return title
-    .replace(/[™®©]/g, '')
-    .replace(
-      /\s*-\s*(Deluxe|Ultimate|Definitive|Enhanced|GOTY|Game of the Year|Complete|Special|Remastered|Anniversary|Collector|Standard|Director'?s\s*Cut)\s*Edition/gi,
-      '',
-    )
-    .replace(
-      /\s*(Deluxe|Ultimate|Definitive|Enhanced|GOTY|Game of the Year|Complete|Special|Remastered|Anniversary|Collector|Standard|Director'?s\s*Cut)\s*Edition/gi,
-      '',
-    )
-    .replace(/\s*[-–—]?\s*Director'?s\s*Cut\b/gi, '')
-    .replace(/\s*[-–—]?\s*Y[öÖoO]netmen[iİıI]n\s*S[üÜuU]r[üÜuU]m[üÜuU]?(?=$|\s|[^\p{L}\p{N}])/giu, '')
-    .replace(/\bConsole\s+Edition\b/gi, '')
-    .replace(/\bEdition\b/gi, '')
-    .replace(/\bPS[45]\b/gi, '')
-    .replace(/\bXbox\b/gi, '')
-    .replace(/\bPC\b/gi, '')
-    .replace(/\s*\([^)]*\)\s*/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  let cleaned = title.replaceAll(/[™®©]/g, '');
+  cleaned = removeWithLeadingSpace(cleaned, EDITION_SUFFIX);
+  cleaned = removeWithLeadingSpace(cleaned, DIRECTORS_CUT_SUFFIX);
+  cleaned = removeWithLeadingSpace(cleaned, DIRECTORS_CUT_SUFFIX_TR, foldTurkishI);
+  cleaned = cleaned
+    .replaceAll(/\bConsole\s+Edition\b/gi, '')
+    .replaceAll(/\bEdition\b/gi, '')
+    .replaceAll(/\bPS[45]\b/gi, '')
+    .replaceAll(/\bXbox\b/gi, '')
+    .replaceAll(/\bPC\b/gi, '');
+  return replaceWithSingleSpace(cleaned, PARENTHESISED).replaceAll(/\s+/g, ' ').trim();
 }
 
 const EDITION_IN_TITLE =
@@ -130,7 +130,8 @@ export function extractEdition(title: string): string {
   const match = EDITION_IN_TITLE.exec(title.toLowerCase());
   if (!match?.[1]) return 'base';
   const edition = match[1];
-  return edition.replace(/\s+edition$/, '').trim() || edition;
+  // EDITION_IN_TITLE only matches single-spaced phrases.
+  return edition.replace(/ edition$/, '').trim() || edition;
 }
 
 /** DLC / add-on markers — reject when the search title is the base game. */
@@ -178,7 +179,7 @@ function hasProductDlcMarker(title: string): boolean {
   const lower = title.toLowerCase();
   if (DLC_PHRASE_MARKERS.some((phrase) => lower.includes(phrase))) return true;
 
-  return DLC_WORD_MARKERS.some((word) => new RegExp(`\\b${word}\\b`, 'i').test(title));
+  return DLC_WORD_MARKERS.some((word) => new RegExp(String.raw`\b${word}\b`, 'i').test(title));
 }
 
 /** Optional edition tags — not required for cross-store title match. */
@@ -210,32 +211,49 @@ export function getPriceLookupTitles(title: string): string[] {
   return [...new Set(variants)];
 }
 
+/** Longest numerals first, so "viii" is not read as "v". */
+const ROMAN_NUMERALS = ['xvi', 'xv', 'xiv', 'xiii', 'xii', 'xi', 'x', 'ix', 'viii', 'vii', 'vi', 'v', 'iv', 'iii', 'ii', 'i'];
+const DIGITS = String.raw`\d+`;
+const WORD_GAP = String.raw`\s+`;
+const VERSION_ALTERNATIVES = [...ROMAN_NUMERALS, DIGITS].join('|');
+const VERSION_PATTERN = String.raw`(${VERSION_ALTERNATIVES})\b`;
+const ROMAN_TO_NUMBER = new Map(ROMAN_NUMERALS.map((numeral, index) => [numeral, String(16 - index)]));
+
+const PART_VERSION = new RegExp(String.raw`\b(?:part|bölüm)\s*${VERSION_PATTERN}`, 'i');
+
+/** Series whose numbered entries are different games. */
+const VERSIONED_FRANCHISES = [
+  'final fantasy', 'street fighter', 'tekken', 'dark souls', 'witcher', 'resident evil',
+  'god of war', 'monster hunter', 'kingdom hearts', 'diablo', 'fallout', 'far cry', 'doom',
+  'persona', 'dragon quest', 'star ocean', 'ys', 'silent hill',
+];
+const FRANCHISE_VERSIONS = VERSIONED_FRANCHISES.map(
+  (name) => new RegExp(String.raw`\b${name.replaceAll(' ', WORD_GAP)}\s*${VERSION_PATTERN}`, 'i'),
+);
+
+function versionNumber(version: string): string {
+  return ROMAN_TO_NUMBER.get(version.toLowerCase()) ?? version;
+}
+
+/** Version of the leftmost numbered franchise title, e.g. "xvi" in "Final Fantasy XVI". */
+function franchiseVersion(title: string): string | undefined {
+  let leftmost: RegExpExecArray | null = null;
+  for (const pattern of FRANCHISE_VERSIONS) {
+    const match = pattern.exec(title);
+    if (match && (!leftmost || match.index < leftmost.index)) leftmost = match;
+  }
+  return leftmost?.[1];
+}
+
+function hasVersionMismatch(a: string | undefined, b: string | undefined): boolean {
+  return Boolean(a && b && versionNumber(a) !== versionNumber(b));
+}
+
 function hasNumberedSequelMismatch(found: string, search: string): boolean {
-  const toNum = (v: string): string => {
-    const romanMap: Record<string, string> = {
-      i: '1', ii: '2', iii: '3', iv: '4', v: '5',
-      vi: '6', vii: '7', viii: '8', ix: '9', x: '10',
-      xi: '11', xii: '12', xiii: '13', xiv: '14', xv: '15', xvi: '16',
-    };
-    return romanMap[v.toLowerCase()] ?? v;
-  };
-
-  const partRegex = /\b(?:part|bölüm)\s*(xvi|xv|xiv|xiii|xii|xi|x|ix|viii|vii|vi|v|iv|iii|ii|i|\d+)\b/i;
-  const partA = partRegex.exec(found)?.[1];
-  const partB = partRegex.exec(search)?.[1];
-  if (partA && partB && toNum(partA) !== toNum(partB)) {
-    return true;
-  }
-
-  const franchiseVerRegex =
-    /\b(?:final\s+fantasy|street\s+fighter|tekken|dark\s+souls|witcher|resident\s+evil|god\s+of\s+war|monster\s+hunter|kingdom\s+hearts|diablo|fallout|far\s+cry|doom|persona|dragon\s+quest|star\s+ocean|ys|silent\s+hill)\s*(xvi|xv|xiv|xiii|xii|xi|x|ix|viii|vii|vi|v|iv|iii|ii|i|\d+)\b/i;
-  const verA = franchiseVerRegex.exec(found)?.[1];
-  const verB = franchiseVerRegex.exec(search)?.[1];
-  if (verA && verB && toNum(verA) !== toNum(verB)) {
-    return true;
-  }
-
-  return false;
+  return (
+    hasVersionMismatch(PART_VERSION.exec(found)?.[1], PART_VERSION.exec(search)?.[1]) ||
+    hasVersionMismatch(franchiseVersion(found), franchiseVersion(search))
+  );
 }
 
 function shouldBlockProductTitleMatch(found: string, search: string): boolean {

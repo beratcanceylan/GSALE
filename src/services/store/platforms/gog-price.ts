@@ -57,7 +57,7 @@ export function gogImage(product: GogProduct): string {
   return product.coverHorizontal || product.coverVertical || '';
 }
 
-export function gogScreenshotUrl(url: string): string {
+function gogScreenshotUrl(url: string): string {
   return url.replaceAll('{formatter}', '1920');
 }
 

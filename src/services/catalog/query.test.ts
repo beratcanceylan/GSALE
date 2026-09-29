@@ -71,6 +71,6 @@ describe('catalogPlatformsForTitle', () => {
   });
 
   test('returns null for titles the catalog does not know', async () => {
-    expect(await catalogPlatformsForTitle(catalogDb(ROWS), 'Brand New Game 2027')).toBe(null);
+    expect(await catalogPlatformsForTitle(catalogDb(ROWS), 'Brand New Game 2027')).toBeNull();
   });
 });

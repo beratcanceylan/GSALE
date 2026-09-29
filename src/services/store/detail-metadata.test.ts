@@ -16,13 +16,13 @@ function game(overrides: Partial<LiveGame> = {}): LiveGame {
 
 describe('cross-store detail metadata', () => {
   test('detects missing descriptive metadata without depending on a title', () => {
-    expect(needsDetailMetadata(game())).toBe(true);
+    expect(needsDetailMetadata(game())).toBeTrue();
     expect(needsDetailMetadata(game({
       description: 'Description',
       release_date: '2026-05-26',
       developers: ['Studio'],
       genres: ['Action'],
-    }))).toBe(false);
+    }))).toBeFalse();
   });
 
   test('fills missing fields from other platform details and preserves source fields', () => {

@@ -2,6 +2,7 @@ import { STORE_CONFIG, getStoreCountryConfig } from '@/services/store/config';
 import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
 import { formatPriceAsTry } from '@/services/store/currency';
 import { fetchJson, fetchPostJson, fetchText, withRetry } from '@/services/store/fetch';
+import { firstResult } from '@/services/store/sequence';
 import { pickXboxSearchImage } from '@/services/store/platforms/xbox-image';
 import { rankXboxPriceHits } from '@/services/store/platforms/xbox-match';
 import { xboxMetadataFromProduct } from '@/services/store/platforms/xbox-metadata';
@@ -10,7 +11,6 @@ import {
   parseXboxAutosuggestProductIds,
   parseXboxSearchProductIds,
 } from '@/services/store/platforms/xbox-search';
-import { formatTryPrice } from '@/services/store/price-parse';
 import type {
   LiveGame,
   PlatformPriceResult,
@@ -104,26 +104,28 @@ async function searchXboxProductIds(
   query: string,
   options?: StoreRequestOptions,
 ): Promise<string[]> {
-  let autosuggestSucceeded = false;
-  for (const variant of xboxQueryVariants(query)) {
+  const autosuggest: { succeeded: boolean } = { succeeded: false };
+  const suggested = await firstResult(xboxQueryVariants(query), async (variant) => {
     try {
-      const autosuggest = await withRetry(
+      const payload = await withRetry(
         () => fetchJson<unknown>(xboxAutosuggestUrl(variant), { signal: options?.signal }),
         0,
         options?.signal,
       );
-      autosuggestSucceeded = true;
-      const ids = parseXboxAutosuggestProductIds(autosuggest);
-      if (ids.length > 0) return ids;
+      autosuggest.succeeded = true;
+      const ids = parseXboxAutosuggestProductIds(payload);
+      return ids.length > 0 ? ids : null;
     } catch (error) {
       if (options?.signal?.aborted) throw error;
+      return null;
     }
-  }
+  });
+  if (suggested) return suggested;
 
   // A valid empty autosuggest response means the catalog has no candidates.
   // Avoid downloading the much heavier HTML shell in that normal case. Keep
   // the HTML parser as a resilience fallback when the catalog endpoint fails.
-  if (autosuggestSucceeded) return [];
+  if (autosuggest.succeeded) return [];
 
   const url = `https://www.xbox.com/${getStoreCountryConfig().storeLocale}/search?q=${encodeURIComponent(query)}`;
   const html = await withRetry(
@@ -201,19 +203,11 @@ async function xboxPriceFromSelected(
 
   if (prices.isFree) return result;
 
-  const currency = prices.currency;
-  if (currency && currency !== 'TRY') {
-    result.price = await formatPriceAsTry(prices.list, currency, signal);
-    if (prices.msrp > prices.list) {
-      result.original_price = await formatPriceAsTry(prices.msrp, currency, signal);
-      result.discount = `-${Math.round((1 - prices.list / prices.msrp) * 100)}%`;
-    }
-    return result;
-  }
-
-  result.price = formatTryPrice(prices.list);
+  // A price without a currency is the market's own (TRY in Türkiye).
+  const currency = prices.currency ?? 'TRY';
+  result.price = await formatPriceAsTry(prices.list, currency, signal);
   if (prices.msrp > prices.list) {
-    result.original_price = formatTryPrice(prices.msrp);
+    result.original_price = await formatPriceAsTry(prices.msrp, currency, signal);
     result.discount = `-${Math.round((1 - prices.list / prices.msrp) * 100)}%`;
   }
   return result;

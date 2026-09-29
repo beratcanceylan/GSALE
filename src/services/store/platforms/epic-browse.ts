@@ -23,60 +23,79 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+const OPTIONAL_STRING_FIELDS = [
+  'namespace',
+  'description',
+  'releaseDate',
+  'pcReleaseDate',
+  'developerDisplayName',
+  'publisherDisplayName',
+  'productSlug',
+  'urlSlug',
+  'offerType',
+] as const;
+
+type OptionalStringField = (typeof OPTIONAL_STRING_FIELDS)[number];
+
+function recordField(record: Record<string, unknown> | null | undefined, key: string): Record<string, unknown> | null {
+  const value = record?.[key];
+  return isRecord(value) ? value : null;
+}
+
+function recordList(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function optionalStrings(element: Record<string, unknown>): Partial<Record<OptionalStringField, string>> {
+  const fields: Partial<Record<OptionalStringField, string>> = {};
+  for (const key of OPTIONAL_STRING_FIELDS) {
+    const value = element[key];
+    if (typeof value === 'string') fields[key] = value;
+  }
+  return fields;
+}
+
+function browseKeyImages(element: Record<string, unknown>): { type: string; url: string }[] {
+  return recordList(element['keyImages']).flatMap((image) =>
+    typeof image['type'] === 'string' && typeof image['url'] === 'string'
+      ? [{ type: image['type'], url: image['url'] }]
+      : [],
+  );
+}
+
+function browseTags(element: Record<string, unknown>): { name: string }[] {
+  return recordList(element['tags']).flatMap((tag) => (typeof tag['name'] === 'string' ? [{ name: tag['name'] }] : []));
+}
+
+function browsePrice(element: Record<string, unknown>): EpicMinorUnitPrice | null {
+  const totalPrice = recordField(recordField(element, 'price'), 'totalPrice');
+  if (!totalPrice) return null;
+  const decimals = recordField(totalPrice, 'currencyInfo')?.['decimals'];
+  const price: EpicMinorUnitPrice = {};
+  if (typeof totalPrice['currencyCode'] === 'string') price.currencyCode = totalPrice['currencyCode'];
+  if (typeof totalPrice['originalPrice'] === 'number') price.originalPrice = totalPrice['originalPrice'];
+  if (typeof totalPrice['discountPrice'] === 'number') price.discountPrice = totalPrice['discountPrice'];
+  if (typeof decimals === 'number') price.decimals = decimals;
+  return Object.keys(price).length > 0 ? price : null;
+}
+
 function parseBrowseElement(value: unknown): EpicBrowseOffer | null {
   if (!isRecord(value)) return null;
-  const element = value;
-  if (typeof element['title'] !== 'string' || typeof element['id'] !== 'string') return null;
+  if (typeof value['title'] !== 'string' || typeof value['id'] !== 'string') return null;
 
-  const rawPrice = isRecord(element['price']) ? element['price'] : null;
-  const totalPrice = rawPrice && isRecord(rawPrice['totalPrice']) ? rawPrice['totalPrice'] : null;
-  const currencyInfo = totalPrice && isRecord(totalPrice['currencyInfo']) ? totalPrice['currencyInfo'] : null;
-
-  const rawImages = Array.isArray(element['keyImages']) ? element['keyImages'] : [];
-  const keyImages = rawImages.flatMap((image) => {
-    if (!isRecord(image)) return [];
-    return typeof image['type'] === 'string' && typeof image['url'] === 'string'
-      ? [{ type: image['type'], url: image['url'] }]
-      : [];
-  });
-  const rawTags = Array.isArray(element['tags']) ? element['tags'] : [];
-  const tags = rawTags.flatMap((tag) => {
-    if (!isRecord(tag)) return [];
-    return typeof tag['name'] === 'string' ? [{ name: tag['name'] }] : [];
-  });
-  const result: EpicBrowseOffer = {
-    id: element['id'],
-    title: element['title'],
-    ...(typeof element['namespace'] === 'string' ? { namespace: element['namespace'] } : {}),
-    ...(typeof element['description'] === 'string' ? { description: element['description'] } : {}),
-    ...(typeof element['releaseDate'] === 'string' ? { releaseDate: element['releaseDate'] } : {}),
-    ...(typeof element['pcReleaseDate'] === 'string' ? { pcReleaseDate: element['pcReleaseDate'] } : {}),
-    ...(typeof element['developerDisplayName'] === 'string'
-      ? { developerDisplayName: element['developerDisplayName'] }
-      : {}),
-    ...(typeof element['publisherDisplayName'] === 'string'
-      ? { publisherDisplayName: element['publisherDisplayName'] }
-      : {}),
-    ...(typeof element['productSlug'] === 'string' ? { productSlug: element['productSlug'] } : {}),
-    ...(typeof element['urlSlug'] === 'string' ? { urlSlug: element['urlSlug'] } : {}),
-    ...(typeof element['offerType'] === 'string' ? { offerType: element['offerType'] } : {}),
+  const keyImages = browseKeyImages(value);
+  const tags = browseTags(value);
+  const sellerName = recordField(value, 'seller')?.['name'];
+  const price = browsePrice(value);
+  return {
+    id: value['id'],
+    title: value['title'],
+    ...optionalStrings(value),
     ...(keyImages.length > 0 ? { keyImages } : {}),
     ...(tags.length > 0 ? { tags } : {}),
+    ...(typeof sellerName === 'string' ? { seller: { name: sellerName } } : {}),
+    ...(price ? { price: { price } } : {}),
   };
-
-  if (isRecord(element['seller']) && typeof element['seller']['name'] === 'string') {
-    result.seller = { name: element['seller']['name'] };
-  }
-
-  if (totalPrice) {
-    const price: EpicMinorUnitPrice = {};
-    if (typeof totalPrice['currencyCode'] === 'string') price.currencyCode = totalPrice['currencyCode'];
-    if (typeof totalPrice['originalPrice'] === 'number') price.originalPrice = totalPrice['originalPrice'];
-    if (typeof totalPrice['discountPrice'] === 'number') price.discountPrice = totalPrice['discountPrice'];
-    if (typeof currencyInfo?.['decimals'] === 'number') price.decimals = currencyInfo['decimals'];
-    if (Object.keys(price).length > 0) result.price = { price };
-  }
-  return result;
 }
 
 /** Parse the JSON state embedded in Epic's localized browse page. */

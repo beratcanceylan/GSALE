@@ -48,12 +48,12 @@ describe('catalog platform detection', () => {
 
     await fetchAllPrices('GSALE Catalog Only Steam');
 
-    expect(hitsStore(urls, 'store.steampowered.com')).toBe(true);
-    expect(hitsStore(urls, 'catalog.gog.com')).toBe(true);
-    expect(hitsStore(urls, 'playstation.com')).toBe(false);
-    expect(hitsStore(urls, 'displaycatalog')).toBe(false);
-    expect(hitsStore(urls, 'egdata')).toBe(false);
-    expect(hitsStore(urls, 'algolia.net')).toBe(false);
+    expect(hitsStore(urls, 'store.steampowered.com')).toBeTrue();
+    expect(hitsStore(urls, 'catalog.gog.com')).toBeTrue();
+    expect(hitsStore(urls, 'playstation.com')).toBeFalse();
+    expect(hitsStore(urls, 'displaycatalog')).toBeFalse();
+    expect(hitsStore(urls, 'egdata')).toBeFalse();
+    expect(hitsStore(urls, 'algolia.net')).toBeFalse();
   });
 
   test('titles unknown to the catalog query every store', async () => {
@@ -62,8 +62,8 @@ describe('catalog platform detection', () => {
 
     await fetchAllPrices('GSALE Unknown Brand New Game');
 
-    expect(hitsStore(urls, 'playstation.com')).toBe(true);
-    expect(hitsStore(urls, 'algolia.net')).toBe(true);
+    expect(hitsStore(urls, 'playstation.com')).toBeTrue();
+    expect(hitsStore(urls, 'algolia.net')).toBeTrue();
   });
 
   test('a catalog older than 30 days does not rule out stores', async () => {
@@ -72,7 +72,7 @@ describe('catalog platform detection', () => {
 
     await fetchAllPrices('GSALE Stale Catalog Game');
 
-    expect(hitsStore(urls, 'playstation.com')).toBe(true);
+    expect(hitsStore(urls, 'playstation.com')).toBeTrue();
   });
 });
 
@@ -81,7 +81,7 @@ describe('catalog search', () => {
     activateCatalog([['steam', '4242', 'GSALE Catalog Search Hit']]);
     recordEmptyStores();
 
-    const games = await searchLiveGames('GSALE Catalog Search', false);
+    const games = await searchLiveGames('GSALE Catalog Search');
 
     expect(games.map((game) => game.id)).toContain('4242');
   });

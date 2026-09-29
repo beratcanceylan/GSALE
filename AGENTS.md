@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-GSale is a native-only Expo Router application. Routes are in `src/app/`, reusable UI in `src/components/`, and tokens in `src/constants/DesignSystem.ts`. Store integrations are under `src/services/store/`; `platforms/` contains Steam, Epic, GOG, Xbox, PlayStation, and Nintendo adapters. Screen stores are in `src/services/screenData/`, mapping in `src/services/gameData.ts`, and assets in `assets/`. Tests are colocated as `*.test.ts` files.
+GSale is a native-only Expo Router application. Routes are in `app/` (Expo Router's default root), reusable UI in `src/components/`, and tokens in `src/constants/DesignSystem.ts`. Store integrations are under `src/services/store/`; `platforms/` contains Steam, Epic, GOG, Xbox, PlayStation, and Nintendo adapters. Screen stores are in `src/services/screenData/`, mapping in `src/services/gameData.ts`, and assets in `assets/`. Tests are colocated as `*.test.ts` files.
 
 ## Build, Test, and Development Commands
 
@@ -19,7 +19,7 @@ Use Bun exclusively (`bun install`, `bun run ...`, `bunx --bun ...`). Do not use
 
 ## Architecture & Constraints
 
-`index.ts` performs only locale, store country and splash bootstrap. Screens use external stores with `useSyncExternalStore`; do not add React effects in `src/`. Preserve the 30-game limit, provider concurrency, timeout/retry values, and 60-second price cache. Do not introduce a backend, persistent price store, or React Query/SWR. Run `bun run prebuild` after native config or font changes.
+`index.ts` performs only locale, store country and splash bootstrap. Screens use external stores with `useSyncExternalStore`; do not add React effects in `app/` or `src/`. Preserve the 30-game limit, timeout/retry values, and 60-second price cache. Do not introduce a backend, persistent price store, or React Query/SWR. Run `bun run prebuild` after native config or font changes.
 
 The store region comes from the country setting in `src/services/country.ts`; adapters read it through `getStoreCountry()` / `getStoreCountryConfig()` and never hard-code a country, market or `xx-yy` path. Regional prices are converted to TL with `currency.ts` (per-currency FX rates); the in-app price cache key includes the country. Nintendo always uses the US eShop, and PlayStation is skipped where `playStationCurrency` is `null`.
 

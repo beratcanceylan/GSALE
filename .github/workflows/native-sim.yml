@@ -104,31 +104,24 @@ jobs:
         with:
           node-version: 20
 
-      - name: Cache npm + CocoaPods
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - name: Cache Bun + CocoaPods
         uses: actions/cache@v4
         with:
           path: |
-            ~/.npm
+            ~/.bun/install/cache
             ~/Library/Caches/CocoaPods
-          key: native-sim-${{ runner.os }}-${{ hashFiles('**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml') }}
+          key: native-sim-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: native-sim-${{ runner.os }}-
 
       - name: Install JS dependencies
         timeout-minutes: 20
         if: inputs.mode != 'app'
-        run: |
-          set -euo pipefail
-          if [ -f pnpm-lock.yaml ]; then
-            corepack enable && pnpm install --frozen-lockfile
-          elif [ -f yarn.lock ]; then
-            corepack enable
-            # --immutable is Yarn 2+; Yarn 1 wants --frozen-lockfile.
-            yarn install --immutable || yarn install --frozen-lockfile
-          elif [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+        # This repository uses Bun only (bun.lock); no dependency needs a lifecycle script.
+        run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Fingerprint native build inputs
         id: fp
@@ -139,7 +132,7 @@ jobs:
           # @expo/fingerprint hashes exactly the inputs that affect the *native*
           # build (dependencies, config plugins, native dirs) and deliberately
           # ignores application JS, so a JS-only change still hits the cache.
-          HASH=$(npx --yes @expo/fingerprint fingerprint:generate --platform ios \
+          HASH=$(node node_modules/@expo/fingerprint/bin/cli.js fingerprint:generate --platform ios \
             | node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(0,"utf8")).hash)')
           echo "hash=$HASH" >> "$GITHUB_OUTPUT"
           echo "native fingerprint: $HASH"
@@ -155,9 +148,10 @@ jobs:
       - name: Boot simulator
         timeout-minutes: 10
         id: sim
+        env:
+          DEVICE: ${{ inputs.device }}
         run: |
           set -euo pipefail
-          DEVICE='${{ inputs.device }}'
 
           UDID=$(xcrun simctl list devices available \
             | grep -F "$DEVICE (" \
@@ -188,6 +182,11 @@ jobs:
           TURN_USERNAME: ${{ secrets.NATIVE_SIM_TURN_USERNAME }}
           TURN_CREDENTIAL: ${{ secrets.NATIVE_SIM_TURN_CREDENTIAL }}
           STUN_URL: ${{ secrets.NATIVE_SIM_STUN_URL }}
+          MAX_DIMENSION: ${{ inputs.max_dimension }}
+          VIDEO_FPS: ${{ inputs.video_fps }}
+          VIDEO_QUALITY: ${{ inputs.video_quality }}
+          TRANSPORT: ${{ inputs.transport }}
+          CODEC: ${{ inputs.codec }}
         run: |
           set -euo pipefail
           # MJPEG re-sends a whole JPEG per frame; h264 encodes only what changed,
@@ -196,11 +195,11 @@ jobs:
           ARGS=(
             --detach --quiet
             --port "$PREVIEW_PORT"
-            --max-dimension '${{ inputs.max_dimension }}'
-            --video-fps '${{ inputs.video_fps }}'
+            --max-dimension "$MAX_DIMENSION"
+            --video-fps "$VIDEO_FPS"
           )
 
-          if [ '${{ inputs.transport }}' = 'webrtc' ] && [ -n "$TURN_KEY_ID" ]; then
+          if [ "$TRANSPORT" = 'webrtc' ] && [ -n "$TURN_KEY_ID" ]; then
             # Cloudflare Realtime mints short-lived TURN credentials, so nothing
             # long-lived is stored and a leak expires on its own.
             echo "Minting TURN credentials from Cloudflare Realtime"
@@ -242,7 +241,7 @@ jobs:
             echo "TURN ready: $(printf '%s' "$TURN_URL" | tr ',' '\n' | wc -l | tr -d ' ') relay url(s), $(printf '%s' "$STUN_URL" | tr ',' '\n' | wc -l | tr -d ' ') stun"
           fi
 
-          if [ '${{ inputs.transport }}' = 'webrtc' ]; then
+          if [ "$TRANSPORT" = 'webrtc' ]; then
             # WebRTC adapts bitrate under congestion instead of dropping frames,
             # but a quick tunnel carries no UDP, so TURN is mandatory - STUN alone
             # cannot traverse it. Credentials come from repo secrets, never from
@@ -256,13 +255,14 @@ jobs:
             # These target MJPEG explicitly: --video-fps only sets h264Fps, and the
             # h264/AVCC path emits no data on GitHub's macOS runners.
             ARGS+=(
-              --codec '${{ inputs.codec }}'
-              --mjpeg-fps '${{ inputs.video_fps }}'
-              --mjpeg-quality '${{ inputs.video_quality }}'
+              --codec "$CODEC"
+              --mjpeg-fps "$VIDEO_FPS"
+              --mjpeg-quality "$VIDEO_QUALITY"
             )
           fi
 
-          npx --yes @expo/serve-sim@latest "${ARGS[@]}" | tee serve-sim.json
+          bun add --global --exact --ignore-scripts @expo/serve-sim@0.4.0
+          serve-sim "${ARGS[@]}" | tee serve-sim.json
 
           # /readyz blocks until the simulator and the native capture session are up.
           for _ in $(seq 1 90); do
@@ -303,9 +303,10 @@ jobs:
         id: tunnel
         env:
           GATE_TOKEN: ${{ inputs.gate_token }}
+          MINUTES: ${{ inputs.minutes }}
         run: |
           set -euo pipefail
-          curl -fsSL -o cloudflared.tgz \
+          curl -fsSL --proto '=https' --tlsv1.2 -o cloudflared.tgz \
             https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-arm64.tgz
           tar -xzf cloudflared.tgz
           chmod +x cloudflared
@@ -340,7 +341,7 @@ jobs:
           {
             echo "## 📱 native-sim"
             echo
-            echo "Simulator live for ${{ inputs.minutes }} minutes at \`$TUNNEL\`."
+            echo "Simulator live for $MINUTES minutes at \`$TUNNEL\`."
             echo
             echo "The access key is deliberately not published here — use the full"
             echo "URL the CLI printed. Anyone holding it can drive the simulator."
@@ -351,16 +352,17 @@ jobs:
         if: inputs.mode == 'build' && steps.appcache.outputs.cache-hit != 'true'
         env:
           UDID: ${{ steps.sim.outputs.udid }}
+          SCHEME_INPUT: ${{ inputs.scheme }}
         run: |
           set -euo pipefail
           # Dependencies are already installed above, so skip prebuild's own install pass.
-          npx expo prebuild --platform ios --no-install
-          npx pod-install ios
+          node_modules/.bin/expo prebuild --platform ios --no-install
+          (cd ios && pod install)
 
           WORKSPACE=$(find ios -maxdepth 1 -name '*.xcworkspace' | head -1)
           [ -n "$WORKSPACE" ] || { echo "expo prebuild produced no .xcworkspace"; exit 1; }
 
-          SCHEME='${{ inputs.scheme }}'
+          SCHEME="$SCHEME_INPUT"
           [ -n "$SCHEME" ] || SCHEME=$(basename "$WORKSPACE" .xcworkspace)
           echo "Building scheme '$SCHEME' from $WORKSPACE"
 
@@ -425,7 +427,7 @@ jobs:
             # The fingerprint ignores app JS, so a reused binary carries a stale
             # bundle. Re-embed current JS rather than rebuilding natively.
             echo "Reused cached native build; refreshing the JS bundle"
-            npx expo export:embed \
+            node_modules/.bin/expo export:embed \
               --platform ios \
               --dev false \
               --bundle-output "$APP/main.jsbundle" \
@@ -464,7 +466,7 @@ jobs:
               --clobber
           else
             echo "Downloading prebuilt app"
-            curl -fsSL --retry 3 -o download.bin "$APP_URL"
+            curl -fsSL --proto '=https' --tlsv1.2 --retry 3 -o download.bin "$APP_URL"
           fi
           file download.bin
 
@@ -499,7 +501,7 @@ jobs:
           set -euo pipefail
           # `expo start --ios` targets the already-booted simulator and installs
           # Expo Go itself. Metro stays local to the runner.
-          CI=1 nohup npx expo start --ios > expo-start.log 2>&1 &
+          CI=1 nohup node_modules/.bin/expo start --ios > expo-start.log 2>&1 &
           disown
           for _ in $(seq 1 60); do
             curl -fsS http://127.0.0.1:8081/status >/dev/null 2>&1 && break
@@ -519,9 +521,12 @@ jobs:
         id: ad
         if: inputs.agent_device == 'true'
         timeout-minutes: 10
+        env:
+          AGENT_DEVICE_VERSION: ${{ inputs.agent_device_version }}
         run: |
           set -euo pipefail
-          npm install -g "agent-device@${{ inputs.agent_device_version }}"
+          # agent-device has no install scripts; the version is pinned by the input.
+          bun add --global --exact --ignore-scripts "agent-device@$AGENT_DEVICE_VERSION"
           agent-device --version
           # The runner cache key has to pin the Xcode version too: an XCTest
           # runner built against a different Xcode is not reusable.
@@ -602,9 +607,10 @@ jobs:
           AGENT_DEVICE_IOS_RUNNER_IDLE_STOP_MS: "0"
           AGENT_DEVICE_LEASE_TTL_MS: "21600000"
           AGENT_DEVICE_LEASE_MAX_TTL_MS: "21600000"
+          MINUTES_INPUT: ${{ inputs.minutes }}
         run: |
           set -uo pipefail
-          MINUTES=${{ inputs.minutes }}
+          MINUTES="$MINUTES_INPUT"
           [ "$MINUTES" -le 350 ] || MINUTES=350
           END=$(( $(date +%s) + MINUTES * 60 ))
           AGENT_LAST_RESTART=0

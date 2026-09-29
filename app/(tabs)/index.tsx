@@ -3,16 +3,17 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { memo, useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 
+import { EmptyState } from '@/components/EmptyState';
 import { FeaturedDeal } from '@/components/FeaturedDeal';
 import { GameCard } from '@/components/GameCard';
 import { HomeTopBar } from '@/components/HomeTopBar';
+import { ScreenLoading } from '@/components/ScreenLoading';
 import { Palette, Spacing, Typography } from '@/constants/DesignSystem';
 import { useScrollSafeAreaStyle } from '@/hooks/useScrollSafeAreaStyle';
 import { type Game, type HomeSection } from '@/services/gameData';
@@ -135,12 +136,7 @@ function HomeScreenLoaded({
         onRefresh={onRefresh}
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={listHeader}
-        ListEmptyComponent={
-          <View style={styles.center}>
-            <Gamepad2 size={48} color={Palette.textTertiary} />
-            <Text style={styles.emptyText}>Şu an gösterilecek indirim bulunamadı</Text>
-          </View>
-        }
+        ListEmptyComponent={<EmptyState icon={Gamepad2} message="Şu an gösterilecek indirim bulunamadı" />}
       />
     </View>
   );
@@ -165,13 +161,7 @@ export default function HomeScreen() {
   }, [push, searchQuery]);
 
   if (sections === null) {
-    return (
-      <View style={[styles.container, styles.center]}>
-        <StatusBar style="light" />
-        <ActivityIndicator size="large" color={Palette.accent} />
-        <Text style={styles.loadingText}>İndirimler yükleniyor…</Text>
-      </View>
-    );
+    return <ScreenLoading message="İndirimler yükleniyor…" />;
   }
 
   return (
@@ -190,18 +180,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'transparent',
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl + Spacing.sm,
-  },
-  loadingText: {
-    color: Palette.textSecondary,
-    marginTop: Spacing.sm + Spacing.xs,
-    fontSize: Typography.body.fontSize,
-    fontFamily: Typography.body.fontFamily,
   },
   listContent: {
     paddingBottom: Spacing.xl + Spacing.md,
@@ -226,11 +204,5 @@ const styles = StyleSheet.create({
     lineHeight: Typography.sectionLabel.lineHeight,
     letterSpacing: Typography.sectionLabel.letterSpacing,
     textTransform: 'uppercase',
-  },
-  emptyText: {
-    color: Palette.textSecondary,
-    marginTop: Spacing.sm + Spacing.xs,
-    fontSize: Typography.body.fontSize,
-    fontFamily: Typography.body.fontFamily,
   },
 });

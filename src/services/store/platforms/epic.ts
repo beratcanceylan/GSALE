@@ -1,6 +1,7 @@
 import { getEpicLocale, getStoreCountry, STORE_CONFIG } from '@/services/store/config';
 import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
 import { fetchJson, fetchPostJson, fetchText, withRetry } from '@/services/store/fetch';
+import { firstResult } from '@/services/store/sequence';
 import { isStrictMatch } from '@/services/store/match';
 import { parseEpicBrowseOffers, type EpicBrowseOffer } from '@/services/store/platforms/epic-browse';
 import { epicPriceFromMinorUnits } from '@/services/store/platforms/epic-price';
@@ -127,10 +128,11 @@ async function runEpicSearchVariants(
   count: number,
   options?: StoreRequestOptions,
 ): Promise<{ elements: EpicSearchElement[]; matchedQuery: string }> {
-  for (const variant of epicSearchQueryVariants(query)) {
+  const matched = await firstResult(epicSearchQueryVariants(query), async (variant) => {
     const elements = await runEpicSearch(variant, count, options);
-    if (pickBestEpicOffer(elements, variant)) return { elements, matchedQuery: variant };
-  }
+    return pickBestEpicOffer(elements, variant) ? { elements, matchedQuery: variant } : null;
+  });
+  if (matched) return matched;
   const localizedElements = await runEpicBrowseSearch(query, options);
   return { elements: localizedElements, matchedQuery: query };
 }
@@ -175,67 +177,75 @@ export async function fetchEpicPrice(
   return result;
 }
 
-export async function fetchEpicDetails(
-  slug: string,
-  titleHint?: string,
+/** Offer media, keeping the offer's own screenshots when the media endpoint has none. */
+function mergeEpicMedia(offer: EpicSearchElement, media: Awaited<ReturnType<typeof fetchEpicMedia>>) {
+  const offerMedia = epicOfferToGameMedia(offer);
+  const fetchedMedia = epicMediaToGameMedia(media);
+  const keepOfferScreenshots = !fetchedMedia.screenshots?.length && Boolean(offerMedia.screenshots?.length);
+  return {
+    ...offerMedia,
+    ...fetchedMedia,
+    ...(keepOfferScreenshots ? { screenshots: offerMedia.screenshots } : {}),
+  };
+}
+
+async function epicOfferDeal(offer: EpicSearchElement, storeUrl: string | undefined, signal?: AbortSignal) {
+  const priceInfo = offer.price?.price;
+  if (!priceInfo) return null;
+  const priced = await epicPriceFromMinorUnits(priceInfo, signal);
+  return platformPriceToGameDeal({
+    platform: 'Epic Games',
+    price: priced.price,
+    original_price: priced.original_price,
+    discount: priced.discount,
+    ...(storeUrl ? { store_url: storeUrl } : {}),
+    tier: 'pc',
+  });
+}
+
+async function fetchEpicOfferDetails(
+  offerId: string,
+  fallbackSlug: string,
   options?: StoreRequestOptions,
 ): Promise<LiveGame | null> {
-  const cleanSlug = slug.replace(/^epic-/, '');
-  const offerId = cleanSlug.includes('_') ? cleanSlug.split('_').at(-1) : cleanSlug;
-  if (offerId) {
-    const offer = await withRetry(
-      () =>
-        fetchJson<EpicSearchElement>(
-          `${EGDATA_API_BASE}/offers/${encodeURIComponent(offerId)}?country=${getStoreCountry()}`,
-          { signal: options?.signal },
-        ),
-      0,
-      options?.signal,
-    );
-    if (offer.title) {
-      const hit = epicOfferToSearchHit(offer);
-      const mediaPromise = fetchEpicMedia(offerId, options);
-      const pricePromise = offer.price?.price
-        ? epicPriceFromMinorUnits(offer.price.price, options?.signal)
-        : Promise.resolve(null);
-      const [media, priced] = await Promise.all([mediaPromise, pricePromise]);
-      const offerMedia = epicOfferToGameMedia(offer);
-      const fetchedMedia = epicMediaToGameMedia(media);
-      const detailMedia = {
-        ...offerMedia,
-        ...fetchedMedia,
-        ...(!fetchedMedia.screenshots?.length && offerMedia.screenshots?.length
-          ? { screenshots: offerMedia.screenshots }
-          : {}),
-      };
-      const sourceDeal = priced
-        ? platformPriceToGameDeal({
-            platform: 'Epic Games',
-            price: priced.price,
-            original_price: priced.original_price,
-            discount: priced.discount,
-            ...(hit?.store_url ? { store_url: hit.store_url } : {}),
-            tier: 'pc',
-          })
-        : null;
-      return {
-        id: getEpicRouteSlug(offer) || cleanSlug,
-        slug: getEpicRouteSlug(offer) || cleanSlug,
-        title: offer.title,
-        image_url: epicDetailImage(offer, media),
-        platform: 'Epic Games',
-        source_platform: 'Epic Games',
-        ...epicMetadataFromOffer(offer),
-        ...detailMedia,
-        rating: null,
-        store_links: { 'Epic Games': hit?.store_url || '' },
-        ...(sourceDeal ? { deals: [sourceDeal] } : {}),
-      };
-    }
-  }
+  const offer = await withRetry(
+    () =>
+      fetchJson<EpicSearchElement>(
+        `${EGDATA_API_BASE}/offers/${encodeURIComponent(offerId)}?country=${getStoreCountry()}`,
+        { signal: options?.signal },
+      ),
+    0,
+    options?.signal,
+  );
+  if (!offer.title) return null;
 
-  const searchTerm = titleHint || cleanSlug.replaceAll('_', ' ');
-  const hits = await searchEpic(searchTerm, options);
+  const storeUrl = epicOfferToSearchHit(offer)?.store_url;
+  const [media, deal] = await Promise.all([
+    fetchEpicMedia(offerId, options),
+    epicOfferDeal(offer, storeUrl, options?.signal),
+  ]);
+  const routeSlug = getEpicRouteSlug(offer) || fallbackSlug;
+  return {
+    id: routeSlug,
+    slug: routeSlug,
+    title: offer.title,
+    image_url: epicDetailImage(offer, media),
+    platform: 'Epic Games',
+    source_platform: 'Epic Games',
+    ...epicMetadataFromOffer(offer),
+    ...mergeEpicMedia(offer, media),
+    rating: null,
+    store_links: { 'Epic Games': storeUrl || '' },
+    ...(deal ? { deals: [deal] } : {}),
+  };
+}
+
+async function fetchEpicSearchDetails(
+  cleanSlug: string,
+  titleHint: string | undefined,
+  options?: StoreRequestOptions,
+): Promise<LiveGame | null> {
+  const hits = await searchEpic(titleHint || cleanSlug.replaceAll('_', ' '), options);
   const match =
     hits.find((h) => h.slug === cleanSlug || h.id === `epic-${cleanSlug}`) ||
     hits.find((h) => titleHint && isStrictMatch(h.title, titleHint));
@@ -254,6 +264,18 @@ export async function fetchEpicDetails(
   };
 }
 
+/** Details by egdata offer id (route slugs are "<namespace>_<offerId>"), else by searching the title. */
+export async function fetchEpicDetails(
+  slug: string,
+  titleHint?: string,
+  options?: StoreRequestOptions,
+): Promise<LiveGame | null> {
+  const cleanSlug = slug.replace(/^epic-/, '');
+  const offerId = cleanSlug.includes('_') ? cleanSlug.split('_').at(-1) : cleanSlug;
+  const fromOffer = offerId ? await fetchEpicOfferDetails(offerId, cleanSlug, options) : null;
+  return fromOffer ?? fetchEpicSearchDetails(cleanSlug, titleHint, options);
+}
+
 /** Discounted offers egdata features for the selected country. */
 export async function fetchEpicDeals(
   limit: number,
@@ -265,24 +287,24 @@ export async function fetchEpicDeals(
     0,
     options?.signal,
   );
-  const games: LiveGame[] = [];
-  for (const offer of Array.isArray(offers) ? offers : []) {
-    if (games.length >= limit) break;
-    const hit = epicOfferToSearchHit(offer);
-    const priceInfo = offer.price?.price;
-    if (!hit || !priceInfo) continue;
-    const priced = await epicPriceFromMinorUnits(priceInfo, options?.signal);
-    if (!priced.discount) continue;
-    games.push(liveGameWithDeal(hit, {
-      platform: 'Epic Games',
-      price: priced.price,
-      original_price: priced.original_price,
-      discount: priced.discount,
-      tier: 'pc',
-      ...(hit.store_url ? { store_url: hit.store_url } : {}),
-    }));
-  }
-  return games;
+  const games = await Promise.all(
+    (Array.isArray(offers) ? offers : []).map(async (offer) => {
+      const hit = epicOfferToSearchHit(offer);
+      const priceInfo = offer.price?.price;
+      if (!hit || !priceInfo) return null;
+      const priced = await epicPriceFromMinorUnits(priceInfo, options?.signal);
+      if (!priced.discount) return null;
+      return liveGameWithDeal(hit, {
+        platform: 'Epic Games',
+        price: priced.price,
+        original_price: priced.original_price,
+        discount: priced.discount,
+        tier: 'pc',
+        ...(hit.store_url ? { store_url: hit.store_url } : {}),
+      });
+    }),
+  );
+  return games.flatMap((game) => (game ? [game] : [])).slice(0, limit);
 }
 
 export async function fetchEpicFreeGames(options?: StoreRequestOptions): Promise<LiveGame[]> {

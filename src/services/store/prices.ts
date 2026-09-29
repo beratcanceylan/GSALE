@@ -3,6 +3,7 @@ import { CATALOG_PLATFORMS } from '@/services/catalog/schema';
 import { getStoreCountry } from '@/services/store/config';
 import { extractEdition, getPriceLookupTitles } from '@/services/store/match';
 import { throwIfAborted } from '@/services/store/fetch';
+import { firstResult } from '@/services/store/sequence';
 import { fetchEpicPrice } from '@/services/store/platforms/epic';
 import { fetchGogPrice } from '@/services/store/platforms/gog';
 import { fetchNintendoPrice } from '@/services/store/platforms/nintendo';
@@ -140,7 +141,7 @@ async function fetchFirstAvailablePrice(
   edition: string,
   options?: StoreRequestOptions,
 ): Promise<PlatformPriceResult | null> {
-  for (const lookupTitle of lookupTitles) {
+  return firstResult(lookupTitles, async (lookupTitle) => {
     const result = await fetchCachedPlatformPrice(
       provider.platform,
       lookupTitle,
@@ -149,11 +150,8 @@ async function fetchFirstAvailablePrice(
       provider.fetch,
       options,
     );
-    if (result && !isUnavailablePrice(result.price)) {
-      return result;
-    }
-  }
-  return null;
+    return result && !isUnavailablePrice(result.price) ? result : null;
+  });
 }
 
 function normalizeFetchOptions(optionsOrEdition?: PriceFetchOptions | string): PriceFetchOptions {

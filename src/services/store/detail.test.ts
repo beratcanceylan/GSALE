@@ -41,7 +41,7 @@ describe('detail navigation fallback', () => {
       expect(game?.title).toBe(title);
       expect(game?.deals?.[0]?.price).toBe('1.500,00 TL');
       expect(getDetailPreview(id, 'Steam')?.deals).toBeUndefined();
-      expect(getDetailPreview(id, 'Xbox')).toBe(null);
+      expect(getDetailPreview(id, 'Xbox')).toBeNull();
     });
   }
 

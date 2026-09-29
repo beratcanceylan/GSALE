@@ -62,6 +62,13 @@ function stringArray(value: unknown): string[] {
   });
 }
 
+/** Store-reported percentage, else derived from the regular and current price. */
+function discountPercent(reported: number | null, current: number | null, original: number | null): number {
+  if (reported !== null && reported > 0) return Math.round(reported);
+  if (current === null || original === null || original <= 0) return 0;
+  return Math.round((1 - current / original) * 100);
+}
+
 function priceParts(hit: Record<string, unknown>): {
   current: number | null;
   original: number | null;
@@ -82,12 +89,7 @@ function priceParts(hit: Record<string, unknown>): {
     numberValue(price['initialPrice']);
   const sale = numberValue(price['salePrice']) ?? numberValue(eshop['discountPrice']);
   const original = regular !== null && current !== null && regular > current ? regular : null;
-  const rawPercent = numberValue(price['percentOff']);
-  const percent = rawPercent !== null && rawPercent > 0
-    ? Math.round(rawPercent)
-    : current !== null && original !== null && original > 0
-      ? Math.round((1 - current / original) * 100)
-      : 0;
+  const percent = discountPercent(numberValue(price['percentOff']), current, original);
   return {
     current: sale !== null && regular !== null && sale < regular ? sale : current,
     original,
@@ -167,61 +169,84 @@ export function parseNintendoSearchResponse(value: unknown): ParsedNintendoProdu
   return products;
 }
 
+/** Words a store title may add without naming a different product. */
+const NINTENDO_OPTIONAL_WORDS: ReadonlySet<string> = new Set([
+  'edition',
+  'enhanced',
+  'legacy',
+  'remastered',
+  'definitive',
+  'deluxe',
+  'ultimate',
+  'complete',
+  'premium',
+  'standard',
+  'gold',
+  'goty',
+  'game',
+  'nintendo',
+  'switch',
+  'switch2',
+]);
+
+type NintendoSearchTitle = Readonly<{
+  normalized: string;
+  /** Kept as a list: repeated words weigh more in the score. */
+  words: readonly string[];
+  wordSet: ReadonlySet<string>;
+}>;
+
+function compactTitle(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function titleWords(title: string): string[] {
+  return title.toLowerCase().split(/\s+/).filter((word) => word.length >= 2);
+}
+
+function isCompatibleNintendoTitle(title: string, search: NintendoSearchTitle): boolean {
+  if (compactTitle(title) === search.normalized) return true;
+  const productWords = new Set(titleWords(title));
+  const searchInTitle = [...search.wordSet].every((word) => productWords.has(word));
+  const titleInSearch = [...productWords].every((word) => search.wordSet.has(word));
+  if (!searchInTitle && !titleInSearch) return false;
+  const [longer, shorter] = searchInTitle ? [productWords, search.wordSet] : [search.wordSet, productWords];
+  return [...longer].every(
+    (word) => shorter.has(word) || NINTENDO_OPTIONAL_WORDS.has(word.replaceAll(/[^a-z0-9]/g, '')),
+  );
+}
+
+function nintendoTitleScore(title: string, search: NintendoSearchTitle): number {
+  const normalized = compactTitle(title);
+  let score = 0;
+  if (normalized === search.normalized) score += 100;
+  else if (normalized.includes(search.normalized) || search.normalized.includes(normalized)) score += 70;
+  const lowerTitle = title.toLowerCase();
+  return score + search.words.filter((word) => lowerTitle.includes(word)).length * 10;
+}
+
 export function pickBestNintendoProduct(
   products: ParsedNintendoProduct[],
   matchTitle: string,
 ): ParsedNintendoProduct | null {
   const available = products.filter((product) => !product.is_add_on && product.price !== null);
   const candidates = available.length > 0 ? available : products.filter((product) => !product.is_add_on);
-  if (candidates.length === 0) return null;
-
-  const normalizedSearch = matchTitle.toLowerCase().replace(/[^a-z0-9]+/g, '');
-  const searchWords = matchTitle.toLowerCase().split(/\s+/).filter((word) => word.length >= 2);
-  const optionalWords = new Set([
-    'edition',
-    'enhanced',
-    'legacy',
-    'remastered',
-    'definitive',
-    'deluxe',
-    'ultimate',
-    'complete',
-    'premium',
-    'standard',
-    'gold',
-    'goty',
-    'game',
-    'nintendo',
-    'switch',
-    'switch2',
-  ]);
-  const isCompatibleTitle = (title: string): boolean => {
-    const normalizedTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, '');
-    if (normalizedTitle === normalizedSearch) return true;
-    const titleWords = title.toLowerCase().split(/\s+/).filter((word) => word.length >= 2);
-    const searchInTitle = searchWords.every((word) => titleWords.includes(word));
-    const titleInSearch = titleWords.every((word) => searchWords.includes(word));
-    if (!searchInTitle && !titleInSearch) return false;
-    const extras = (searchInTitle ? titleWords : searchWords).filter(
-      (word) => !(searchInTitle ? searchWords : titleWords).includes(word),
-    );
-    return extras.every((word) => optionalWords.has(word.replace(/[^a-z0-9]/g, '')));
+  const words = titleWords(matchTitle);
+  const search: NintendoSearchTitle = {
+    normalized: compactTitle(matchTitle),
+    words,
+    wordSet: new Set(words),
   };
 
   let best: ParsedNintendoProduct | null = null;
   let bestScore = -1;
   for (const product of candidates) {
-    const normalizedTitle = product.title.toLowerCase().replace(/[^a-z0-9]+/g, '');
-    if (!isCompatibleTitle(product.title)) continue;
-    let score = 0;
-    if (normalizedTitle === normalizedSearch) score += 100;
-    else if (normalizedTitle.includes(normalizedSearch) || normalizedSearch.includes(normalizedTitle)) score += 70;
-    const titleWords = product.title.toLowerCase();
-    score += searchWords.filter((word) => titleWords.includes(word)).length * 10;
+    if (!isCompatibleNintendoTitle(product.title, search)) continue;
+    const score = nintendoTitleScore(product.title, search);
     if (score > bestScore) {
       best = product;
       bestScore = score;
     }
   }
-  return bestScore >= 0 ? best : null;
+  return best;
 }

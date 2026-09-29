@@ -253,8 +253,8 @@ describe('PlayStation Store SSR parsing', () => {
     };
 
     const parsed = parsePlayStationChihiroResponse(payload, 'tr-tr');
-    expect(parsed[0]?.is_add_on).toBe(true);
-    expect(parsed[1]?.is_add_on).toBe(false);
+    expect(parsed[0]?.is_add_on).toBeTrue();
+    expect(parsed[1]?.is_add_on).toBeFalse();
 
     const match = pickBestAvailablePlayStationProduct(parsed, 'Cyberpunk 2077');
     expect(match?.id).toBe('paid-base-game');
@@ -355,7 +355,7 @@ describe('PlayStation Store SSR parsing', () => {
     };
 
     const parsed = parsePlayStationChihiroResponse(payload, 'tr-tr');
-    expect(parsed[0]?.is_add_on).toBe(false);
+    expect(parsed[0]?.is_add_on).toBeFalse();
     expect(parsed[0]?.price).toBe('619,00 TL');
   });
 

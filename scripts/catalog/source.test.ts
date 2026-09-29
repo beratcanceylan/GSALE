@@ -27,10 +27,10 @@ describe('catalog source records', () => {
   });
 
   test('drops delisted, non-game, non-Latin-only and malformed records', () => {
-    expect(sourceRecordToRow('steam', { name: 'Gone', uuid: '1', price: 'Unavailable' })).toBe(null);
-    expect(sourceRecordToRow('steam', { name: 'Soundtrack', uuid: '2', type: 'dlc' })).toBe(null);
-    expect(sourceRecordToRow('steam', { name: '我的朋友', uuid: '3' })).toBe(null);
-    expect(sourceRecordToRow('steam', { name: 'No id' })).toBe(null);
-    expect(sourceRecordToRow('steam', 'nope')).toBe(null);
+    expect(sourceRecordToRow('steam', { name: 'Gone', uuid: '1', price: 'Unavailable' })).toBeNull();
+    expect(sourceRecordToRow('steam', { name: 'Soundtrack', uuid: '2', type: 'dlc' })).toBeNull();
+    expect(sourceRecordToRow('steam', { name: '我的朋友', uuid: '3' })).toBeNull();
+    expect(sourceRecordToRow('steam', { name: 'No id' })).toBeNull();
+    expect(sourceRecordToRow('steam', 'nope')).toBeNull();
   });
 });

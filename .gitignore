@@ -50,3 +50,7 @@ package-lock.json
 scratch/
 eslint-src.json
 tmp-*.json
+
+# Test coverage and Sonar scanner output
+coverage/
+.scannerwork/

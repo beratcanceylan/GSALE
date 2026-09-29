@@ -10,7 +10,7 @@ export interface XboxProductImagesLike {
   LocalizedProperties?: { Images?: XboxImageLike[] }[];
 }
 
-export function normalizeXboxImageUri(uri: string): string {
+function normalizeXboxImageUri(uri: string): string {
   return normalizeProtocolRelativeUri(uri);
 }
 

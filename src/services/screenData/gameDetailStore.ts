@@ -37,6 +37,31 @@ function notifyEntry(entry: DetailEntry): void {
   }
 }
 
+type DetailResult = Pick<GameDetailFetchSnapshot, 'game' | 'error'>;
+
+async function fetchDetailResult(
+  slug: string,
+  platformHint: string | undefined,
+  signal: AbortSignal,
+): Promise<DetailResult> {
+  try {
+    return { game: await fetchGameDetail(slug, platformHint, { signal }), error: null };
+  } catch {
+    return { game: null, error: 'Oyun bilgileri yüklenemedi.' };
+  }
+}
+
+/** A newer load (retry or new platform hint) supersedes this one; drop stale results. */
+function commitIfCurrent(entry: DetailEntry, generation: number, result: DetailResult): void {
+  if (generation !== entry.generation) return;
+  entry.snapshot = {
+    ...result,
+    loading: false,
+    version: entry.snapshot.version + 1,
+  };
+  notifyEntry(entry);
+}
+
 function loadEntry(
   entry: DetailEntry,
   slug: string,
@@ -60,25 +85,8 @@ function loadEntry(
     };
     notifyEntry(entry);
 
-    try {
-      const game = await fetchGameDetail(slug, platformHint, { signal: controller.signal });
-      if (generation !== entry.generation) return;
-      entry.snapshot = {
-        game,
-        loading: false,
-        error: null,
-        version: entry.snapshot.version + 1,
-      };
-    } catch {
-      if (generation !== entry.generation) return;
-      entry.snapshot = {
-        game: null,
-        loading: false,
-        error: 'Oyun bilgileri yüklenemedi.',
-        version: entry.snapshot.version + 1,
-      };
-    }
-    notifyEntry(entry);
+    const result = await fetchDetailResult(slug, platformHint, controller.signal);
+    commitIfCurrent(entry, generation, result);
   })().finally(() => {
     if (generation === entry.generation) {
       entry.pending = null;

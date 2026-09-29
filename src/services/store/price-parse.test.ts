@@ -9,18 +9,18 @@ import {
 
 describe('store price-parse', () => {
   test('does not treat Game Pass copy as free', () => {
-    expect(isExplicitlyFreePrice('Xbox Game Pass ile oyna')).toBe(false);
-    expect(isExplicitlyFreePrice('1.299,00 TL')).toBe(false);
+    expect(isExplicitlyFreePrice('Xbox Game Pass ile oyna')).toBeFalse();
+    expect(isExplicitlyFreePrice('1.299,00 TL')).toBeFalse();
   });
 
   test('recognises explicit free labels', () => {
-    expect(isExplicitlyFreePrice('Ücretsiz')).toBe(true);
+    expect(isExplicitlyFreePrice('Ücretsiz')).toBeTrue();
   });
 
   test('unavailable prices', () => {
-    expect(isUnavailablePrice('Mevcut değil')).toBe(true);
-    expect(isUnavailablePrice('Bilinmiyor')).toBe(true);
-    expect(isUnavailablePrice('Uygun Değil')).toBe(true);
+    expect(isUnavailablePrice('Mevcut değil')).toBeTrue();
+    expect(isUnavailablePrice('Bilinmiyor')).toBeTrue();
+    expect(isUnavailablePrice('Uygun Değil')).toBeTrue();
   });
 
   test('steam uses formatted price when API provides it', () => {
@@ -51,7 +51,7 @@ describe('parseLocalizedAmount', () => {
   });
 
   test('returns null when there is no number', () => {
-    expect(parseLocalizedAmount('Ücretsiz')).toBe(null);
-    expect(parseLocalizedAmount('')).toBe(null);
+    expect(parseLocalizedAmount('Ücretsiz')).toBeNull();
+    expect(parseLocalizedAmount('')).toBeNull();
   });
 });

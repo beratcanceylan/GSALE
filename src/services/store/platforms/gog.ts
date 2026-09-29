@@ -1,6 +1,7 @@
 import { getStoreCountry } from '@/services/store/config';
 import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
 import { fetchJson, withRetry } from '@/services/store/fetch';
+import { firstResult } from '@/services/store/sequence';
 import { pickBestTitleMatch } from '@/services/store/match';
 import { isUnavailablePrice } from '@/services/store/price-parse';
 import {
@@ -110,20 +111,19 @@ async function fetchGogCatalogProductById(
   expanded: GogExpandedProduct,
   options?: StoreRequestOptions,
 ): Promise<GogProduct | null> {
-  const queries = uniqueQueries([expanded.title, expanded.slug]);
-
-  for (const query of queries) {
+  return firstResult(uniqueQueries([expanded.title, expanded.slug]), async (query) => {
     try {
-      const products = await fetchGogCatalog(query, 20, options);
-      const product = pickGogProductById(products, id);
-      if (product) return product;
+      return pickGogProductById(await fetchGogCatalog(query, 20, options), id);
     } catch (error) {
       if (options?.signal?.aborted) throw error;
       // Try the next query; expanded product data can still populate the detail page.
+      return null;
     }
-  }
+  });
+}
 
-  return null;
+function gogStoreUrl(product: GogProduct): string {
+  return product.storeLink || `https://www.gog.com/game/${product.slug}`;
 }
 
 function gogProductToHit(product: GogProduct): PlatformSearchHit {
@@ -133,7 +133,7 @@ function gogProductToHit(product: GogProduct): PlatformSearchHit {
     title: product.title,
     image_url: gogImage(product),
     platform: 'GOG',
-    store_url: product.storeLink || `https://www.gog.com/game/${product.slug}`,
+    store_url: gogStoreUrl(product),
   };
 }
 
@@ -195,7 +195,7 @@ export async function fetchGogPrice(
     price: priced.price,
     original_price: priced.original_price,
     discount: priced.discount,
-    store_url: match.storeLink || `https://www.gog.com/game/${match.slug}`,
+    store_url: gogStoreUrl(match),
     tier: 'pc',
   };
 }
@@ -228,7 +228,7 @@ export async function fetchGogDetails(
     ...metadata,
     rating: null,
     store_links: {
-      GOG: product.storeLink || `https://www.gog.com/game/${product.slug}`,
+      GOG: gogStoreUrl(product),
     },
   };
   if (priced.original_price) game.original_price = priced.original_price;
@@ -239,7 +239,7 @@ export async function fetchGogDetails(
         price: priced.price,
         original_price: priced.original_price,
         discount: priced.discount,
-        store_url: product.storeLink || `https://www.gog.com/game/${product.slug}`,
+        store_url: gogStoreUrl(product),
         tier: 'pc',
       }),
     ];

@@ -2,6 +2,7 @@ import { STORE_CONFIG, getPsLocale, getStoreCountry, getStoreCountryConfig } fro
 import { formatPriceAsTry } from '@/services/store/currency';
 import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
 import { fetchJson, fetchText, withRetry } from '@/services/store/fetch';
+import { firstResult } from '@/services/store/sequence';
 import {
   isExplicitlyFreePrice,
   isUnavailablePrice,
@@ -123,37 +124,57 @@ async function fetchPsHtml(url: string, options?: StoreRequestOptions): Promise<
   );
 }
 
+function hasLinksArray(payload: unknown): boolean {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    Array.isArray((payload as { links?: unknown }).links)
+  );
+}
+
+type PsCandidateSearch<R> = Readonly<{
+  result: R | null;
+  /** Products of the first term that returned any, for a looser second pick. */
+  firstProducts: ParsedPlayStationProduct[];
+  /** A valid Chihiro response without an accepted result: skip the heavy HTML fallback. */
+  sawEmptyLinks: boolean;
+}>;
+
+/** Searches Chihiro term by term until `accept` returns a result. */
+async function searchPsCandidates<R>(
+  terms: readonly string[],
+  accept: (products: ParsedPlayStationProduct[]) => R | null,
+  options?: StoreRequestOptions,
+): Promise<PsCandidateSearch<R>> {
+  let firstProducts: ParsedPlayStationProduct[] = [];
+  let sawEmptyLinks = false;
+  const result = await firstResult(terms, async (term) => {
+    try {
+      const payload = await fetchPsJson(psSearchUrl(term), options);
+      const products = parsePlayStationChihiroResponse(payload, getPsPathLocale());
+      if (products.length > 0 && firstProducts.length === 0) firstProducts = products;
+      const accepted = products.length > 0 ? accept(products) : null;
+      if (accepted === null && hasLinksArray(payload)) sawEmptyLinks = true;
+      return accepted;
+    } catch (error) {
+      if (options?.signal?.aborted) throw error;
+      return null;
+    }
+  });
+  return { result, firstProducts, sawEmptyLinks };
+}
+
 async function fetchPsSearchProducts(
   query: string,
   options?: StoreRequestOptions,
 ): Promise<ParsedPlayStationProduct[]> {
-  const candidates = getPsSearchQueryCandidates(query);
-  let sawEmptyLinks = false;
-
-  for (const term of candidates) {
-    try {
-      const payload = await fetchPsJson(psSearchUrl(term), options);
-      const products = parsePlayStationChihiroResponse(payload, getPsPathLocale());
-
-      if (products.length > 0) {
-        return products;
-      }
-
-      if (
-        typeof payload === 'object' &&
-        payload !== null &&
-        Array.isArray((payload as { links?: unknown }).links)
-      ) {
-        sawEmptyLinks = true;
-      }
-    } catch (error) {
-      if (options?.signal?.aborted) throw error;
-    }
-  }
-
-  if (sawEmptyLinks) {
-    return [];
-  }
+  const { result, sawEmptyLinks } = await searchPsCandidates(
+    getPsSearchQueryCandidates(query),
+    (products) => products,
+    options,
+  );
+  if (result) return result;
+  if (sawEmptyLinks) return [];
 
   try {
     const html = await fetchPsHtml(psLegacySearchUrl(query), options);
@@ -200,80 +221,61 @@ export async function searchPlayStation(
     .map(productToHit);
 }
 
+async function ignoreUnlessAborted<T>(request: Promise<T>, signal: AbortSignal | undefined): Promise<T | null> {
+  try {
+    return await request;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return null;
+  }
+}
+
+/** Chihiro search, then the legacy HTML search, then a looser pick among the first results. */
+async function findPlayStationMatch(
+  lookupTitle: string,
+  matchTitle: string,
+  options?: StoreRequestOptions,
+): Promise<ParsedPlayStationProduct | null> {
+  const pick = (products: ParsedPlayStationProduct[]) => pickBestAvailablePlayStationProduct(products, matchTitle);
+  const search = await searchPsCandidates(getPsSearchQueryCandidates(lookupTitle), pick, options);
+  if (search.result) return search.result;
+
+  if (!search.sawEmptyLinks) {
+    const html = await ignoreUnlessAborted(fetchPsHtml(psLegacySearchUrl(lookupTitle), options), options?.signal);
+    const legacyMatch = html === null ? null : pick(parsePlayStationSearchHtml(html, getPsPathLocale()));
+    if (legacyMatch) return legacyMatch;
+  }
+  return search.firstProducts.length > 0 ? pick(search.firstProducts) : null;
+}
+
+/** Search results can lack a price; the product page usually has it. */
+async function withKnownPrice(
+  product: ParsedPlayStationProduct,
+  options?: StoreRequestOptions,
+): Promise<ParsedPlayStationProduct> {
+  if (!isUnavailablePrice(product.price)) return product;
+  const detailed = await ignoreUnlessAborted(fetchPsDetailProduct(product.id, options), options?.signal);
+  return detailed && !isUnavailablePrice(detailed.price) ? detailed : product;
+}
+
 export async function fetchPlayStationPrice(
   lookupTitle: string,
   matchTitle: string = lookupTitle,
   options?: StoreRequestOptions,
 ): Promise<PlatformPriceResult | null> {
   if (!getPsCurrency()) return null;
-  const candidates = getPsSearchQueryCandidates(lookupTitle);
-  let allProducts: ParsedPlayStationProduct[] = [];
-  let match: ParsedPlayStationProduct | null = null;
-  let sawEmptyLinks = false;
-
-  for (const term of candidates) {
-    try {
-      const payload = await fetchPsJson(psSearchUrl(term), options);
-      const products = parsePlayStationChihiroResponse(payload, getPsPathLocale());
-
-      if (products.length > 0) {
-        if (allProducts.length === 0) allProducts = products;
-        match = pickBestAvailablePlayStationProduct(products, matchTitle);
-        if (match) break;
-      }
-
-      if (
-        typeof payload === 'object' &&
-        payload !== null &&
-        Array.isArray((payload as { links?: unknown }).links)
-      ) {
-        sawEmptyLinks = true;
-      }
-    } catch (error) {
-      if (options?.signal?.aborted) throw error;
-    }
-  }
-
-  if (!match && !sawEmptyLinks) {
-    try {
-      const html = await fetchPsHtml(psLegacySearchUrl(lookupTitle), options);
-      const legacyProducts = parsePlayStationSearchHtml(html, getPsPathLocale());
-      match = pickBestAvailablePlayStationProduct(legacyProducts, matchTitle);
-    } catch (error) {
-      if (options?.signal?.aborted) throw error;
-    }
-  }
-
-  if (!match && allProducts.length > 0) {
-    match = pickBestAvailablePlayStationProduct(allProducts, matchTitle);
-  }
-
+  const match = await findPlayStationMatch(lookupTitle, matchTitle, options);
   if (!match) return null;
 
-  let finalProduct = match;
-  if (isUnavailablePrice(match.price)) {
-    try {
-      const detailed = await fetchPsDetailProduct(match.id, options);
-      if (detailed && !isUnavailablePrice(detailed.price)) {
-        finalProduct = detailed;
-      }
-    } catch (error) {
-      if (options?.signal?.aborted) throw error;
-    }
-  }
-
-  finalProduct = await localizePsProduct(finalProduct, options?.signal);
-  if (isUnavailablePrice(finalProduct.price)) {
-    return null;
-  }
-
+  const product = await localizePsProduct(await withKnownPrice(match, options), options?.signal);
+  if (isUnavailablePrice(product.price)) return null;
   return {
     platform: 'PlayStation',
-    price: finalProduct.price,
-    original_price: finalProduct.original_price,
-    discount: finalProduct.discount,
+    price: product.price,
+    original_price: product.original_price,
+    discount: product.discount,
     tier: 'console',
-    store_url: finalProduct.store_url,
+    store_url: product.store_url,
   };
 }
 
@@ -307,11 +309,13 @@ function psDealsUrl(limit: number): string {
 }
 
 function psDealImage(product: PsGridProduct): string {
-  for (const role of PS_DEAL_IMAGE_ROLES) {
-    const image = product.media?.find((media) => media.type === 'IMAGE' && media.role === role);
-    if (image?.url) return image.url;
+  const imagesByRole = new Map<string, string>();
+  for (const media of product.media ?? []) {
+    if (media.type === 'IMAGE' && media.role && media.url && !imagesByRole.has(media.role)) {
+      imagesByRole.set(media.role, media.url);
+    }
   }
-  return '';
+  return PS_DEAL_IMAGE_ROLES.map((role) => imagesByRole.get(role)).find(Boolean) ?? '';
 }
 
 /** Games in the PlayStation Store's "All Deals" category for the selected country. */

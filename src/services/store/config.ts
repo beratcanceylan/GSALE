@@ -29,10 +29,6 @@ export function getEpicLocale(): string {
   return getAppLocale() === 'tr' ? 'tr-TR' : 'en-US';
 }
 
-export function getGogLocale(): string {
-  return getAppLocale() === 'tr' ? 'tr-TR' : 'en-US';
-}
-
 /** Chihiro API locale segment (not BCP-47). */
 export function getPsLocale(): string {
   return getAppLocale() === 'tr' ? 'tr' : 'en';
