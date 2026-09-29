@@ -139,6 +139,7 @@ mock.module('react-native-svg', () => ({
   LinearGradient: host('LinearGradient'),
   Rect: host('Rect'),
   Stop: host('Stop'),
+  Path: host('Path'),
 }));
 mock.module('react-native-reanimated', () => ({
   default: { View: host('AnimatedView') },
