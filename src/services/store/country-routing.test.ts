@@ -6,6 +6,7 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { setAppCountry } = await import('@/services/country');
+const { setLanguage } = await import('@/i18n/languageStore');
 const { resetCurrencyCacheForTests, setFxRatesForTests } = await import('@/services/store/currency');
 const { searchEpic } = await import('@/services/store/platforms/epic');
 const { fetchGogEditionOffers } = await import('@/services/store/platforms/gog');
@@ -29,6 +30,29 @@ afterEach(async () => {
   globalThis.fetch = originalFetch;
   resetCurrencyCacheForTests();
   await setAppCountry('TR');
+  await setLanguage('tr');
+});
+
+describe('store requests follow the app language within the country', () => {
+  test('Steam and PlayStation read German in Türkiye where the store allows it', async () => {
+    const urls = recordFetch({ items: [], links: [] });
+    await setLanguage('de');
+    await searchSteam('Hades');
+    await searchPlayStation('Hades');
+    expect(urls.some((url) => url.includes('l=german') && url.includes('cc=TR'))).toBeTrue();
+    // The Turkish PlayStation Store offers Turkish and English only.
+    expect(urls.some((url) => url.includes('/tumbler/TR/tr/'))).toBeTrue();
+  });
+
+  test('the price cache is per language', async () => {
+    const urls = recordFetch({ items: [{ id: 991005, name: 'GSALE Language Cache', price: { currency: 'TRY', final: 1000, initial: 1000 } }] });
+    await setLanguage('en');
+    await fetchEditionTable('GSALE Language Cache');
+    await setLanguage('fr');
+    await fetchEditionTable('GSALE Language Cache');
+    expect(urls.some((url) => url.includes('l=english'))).toBeTrue();
+    expect(urls.some((url) => url.includes('l=french'))).toBeTrue();
+  });
 });
 
 describe('store requests follow the selected country', () => {

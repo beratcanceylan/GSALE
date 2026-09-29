@@ -1,11 +1,18 @@
 import { describe, expect, mock, test } from 'bun:test';
 
+mock.module('expo-secure-store', () => ({
+  getItemAsync: async () => null,
+  setItemAsync: async () => undefined,
+}));
+
 const searchSignals: AbortSignal[] = [];
 const detailSignals: AbortSignal[] = [];
 let searchOutcome: 'pending' | 'success' | 'failure' = 'pending';
 let detailOutcome: 'pending' | 'success' | 'failure' = 'pending';
 
 mock.module('@/services/gameData', () => ({
+  fetchHomeSections: async () => [],
+  fetchFreeGames: async () => [],
   fetchSearchResults: async (_query: string, options?: { signal?: AbortSignal }) => {
     if (options?.signal) searchSignals.push(options.signal);
     if (searchOutcome === 'success') return [{ id: 'found' }];
@@ -52,6 +59,9 @@ mock.module('@/services/gameData', () => ({
 
 const { searchStore } = await import('@/services/screenData/searchStore');
 const { gameDetailStore } = await import('@/services/screenData/gameDetailStore');
+const { watchRegionChanges } = await import('@/services/screenData/regionReload');
+const { setLanguage } = await import('@/i18n/languageStore');
+const { setAppCountry } = await import('@/services/country');
 
 async function flush(): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -156,5 +166,27 @@ describe('screen request cancellation', () => {
     // The aborted request's failure belongs to an old generation and is dropped.
     expect(gameDetailStore.getSnapshot(slug, 'Steam').error).toBeNull();
     unsubscribe();
+  });
+
+  test('a language or country change cancels an open detail and loads it again', async () => {
+    const stop = watchRegionChanges();
+    detailSignals.length = 0;
+    const slug = `region-detail-${Date.now()}`;
+    const unsubscribe = gameDetailStore.subscribe(slug, 'Steam', () => undefined);
+    await flush();
+    await setLanguage('de');
+    await flush();
+    expect(detailSignals).toHaveLength(2);
+    expect(detailSignals[0]?.aborted).toBeTrue();
+    await setAppCountry('DE');
+    await flush();
+    expect(detailSignals).toHaveLength(3);
+    expect(detailSignals[1]?.aborted).toBeTrue();
+    unsubscribe();
+    await setAppCountry('TR');
+    await setLanguage('tr');
+    await flush();
+    expect(detailSignals).toHaveLength(3);
+    stop();
   });
 });

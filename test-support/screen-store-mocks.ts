@@ -66,4 +66,5 @@ mock.module('@/services/screenData', () => ({
   favoritesStore: favoritesStoreMock,
   searchStore: searchStoreMock,
   gameDetailStore: gameDetailStoreMock,
+  watchRegionChanges: () => () => undefined,
 }));

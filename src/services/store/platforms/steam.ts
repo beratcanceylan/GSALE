@@ -1,4 +1,5 @@
-import { STORE_CONFIG, getSteamLang, getStoreCountry } from '@/services/store/config';
+import { STORE_CONFIG, getStoreCountry } from '@/services/store/config';
+import { storeLanguage } from '@/services/store/languages';
 import { fetchJson, throwIfAborted, withRetry } from '@/services/store/fetch';
 import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } from '@/services/store/edition-table';
 import { baseTitle } from '@/services/store/editions';
@@ -206,7 +207,7 @@ async function searchSteamProducts(
   query: string,
   options?: StoreRequestOptions,
 ): Promise<SteamSearchProduct[]> {
-  const url = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(query)}&l=${getSteamLang()}&cc=${getStoreCountry()}`;
+  const url = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(query)}&l=${storeLanguage('steam')}&cc=${getStoreCountry()}`;
   const data = await withRetry(
     () => fetchJson<SteamSearchResponse>(url, { signal: options?.signal }),
     0,
@@ -232,7 +233,7 @@ export async function fetchSteamDeals(
   limit: number,
   options?: StoreRequestOptions,
 ): Promise<LiveGame[]> {
-  const url = `https://store.steampowered.com/api/featuredcategories/?cc=${getStoreCountry()}&l=${getSteamLang()}`;
+  const url = `https://store.steampowered.com/api/featuredcategories/?cc=${getStoreCountry()}&l=${storeLanguage('steam')}`;
   const data = await withRetry(
     () => fetchJson<SteamFeaturedResponse>(url, { signal: options?.signal }, STORE_CONFIG.timeout.long),
     0,
@@ -272,7 +273,7 @@ async function fetchSteamAppData(
   options?: StoreRequestOptions,
 ): Promise<SteamAppData | null> {
   if (!/^\d+$/.test(appId)) return null;
-  const url = `https://store.steampowered.com/api/appdetails?appids=${encodeURIComponent(appId)}&cc=${getStoreCountry()}&l=${getSteamLang()}`;
+  const url = `https://store.steampowered.com/api/appdetails?appids=${encodeURIComponent(appId)}&cc=${getStoreCountry()}&l=${storeLanguage('steam')}`;
   const res = await withRetry(
     () => fetchJson<SteamAppDetailsResponse>(url, { signal: options?.signal }),
     0,
@@ -305,7 +306,7 @@ export async function fetchSteamDetails(
 }
 
 export async function fetchSteamFreeGames(options?: StoreRequestOptions): Promise<LiveGame[]> {
-  const url = `https://store.steampowered.com/api/featuredcategories/?cc=${getStoreCountry()}&l=${getSteamLang()}`;
+  const url = `https://store.steampowered.com/api/featuredcategories/?cc=${getStoreCountry()}&l=${storeLanguage('steam')}`;
   const data = await withRetry(
     () => fetchJson<SteamFeaturedResponse>(url, { signal: options?.signal }, STORE_CONFIG.timeout.long),
     0,

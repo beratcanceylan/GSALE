@@ -46,4 +46,26 @@ describe('createListStore refresh coordination', () => {
     expect(calls).toBe(1);
     expect(store.getSnapshot()).toEqual({ data: ['loaded'], refreshing: false });
   });
+
+  test('invalidate drops a pending load and loads again', async () => {
+    const resolvers: ((value: string[]) => void)[] = [];
+    const store = createListStore(() => new Promise<string[]>((resolve) => { resolvers.push(resolve); }));
+    const unsubscribe = store.subscribe(() => undefined);
+    store.invalidate();
+    expect(resolvers).toHaveLength(2);
+    resolvers[0]?.(['old language']);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(store.getSnapshot().data).toBeNull();
+    resolvers[1]?.(['new language']);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(store.getSnapshot().data).toEqual(['new language']);
+    unsubscribe();
+  });
+
+  test('invalidate before anything loaded waits for the first subscriber', () => {
+    let calls = 0;
+    const store = createListStore(async () => { calls += 1; return []; });
+    store.invalidate();
+    expect(calls).toBe(0);
+  });
 });

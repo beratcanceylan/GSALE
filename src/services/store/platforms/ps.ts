@@ -1,4 +1,5 @@
-import { STORE_CONFIG, getPsLocale, getStoreCountry, getStoreCountryConfig } from '@/services/store/config';
+import { STORE_CONFIG, getStoreCountry, getStoreCountryConfig } from '@/services/store/config';
+import { regionalLocale, storeLanguage } from '@/services/store/languages';
 import { formatPriceAsTry } from '@/services/store/currency';
 import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
 import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } from '@/services/store/edition-table';
@@ -28,13 +29,12 @@ import type {
 export { getPsSearchQueryCandidates } from '@/services/store/platforms/ps-parse';
 
 function getPsPathLocale(): string {
-  return getStoreCountryConfig().storeLocale;
+  return regionalLocale();
 }
 
-/** Chihiro language segment; Türkiye keeps the app-language choice. */
+/** Chihiro language segment of the regional store. */
 function getPsLanguage(): string {
-  const { code, storeLocale } = getStoreCountryConfig();
-  return code === 'TR' ? getPsLocale() : storeLocale.slice(0, 2);
+  return storeLanguage('ps');
 }
 
 /** Null where the selected country has no PlayStation Store. */

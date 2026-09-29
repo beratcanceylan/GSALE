@@ -1,5 +1,6 @@
 import { catalogPlatforms } from '@/services/catalog/state';
 import { CATALOG_PLATFORMS } from '@/services/catalog/schema';
+import { getLanguage } from '@/i18n/languageStore';
 import { getStoreCountry } from '@/services/store/config';
 import { buildEditionTable, type EditionOffer, type EditionOffersFetcher, type EditionOption } from '@/services/store/edition-table';
 import { baseTitle } from '@/services/store/editions';
@@ -38,7 +39,7 @@ const inflightOffers = new Map<string, InflightOffers>();
 
 /** Every edition shares one entry: the adapters search by base title. */
 function offersCacheKey(platform: string, title: string): string {
-  return `${getStoreCountry()}|${platform}|${baseTitle(title).toLowerCase()}`;
+  return `${getStoreCountry()}|${getLanguage()}|${platform}|${baseTitle(title).toLowerCase()}`;
 }
 
 async function fetchCachedOffers(

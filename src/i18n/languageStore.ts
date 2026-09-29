@@ -4,8 +4,10 @@ import { isLanguageCode, matchLanguage, type LanguageCode } from '@/i18n/languag
 
 const LANGUAGE_KEY = 'gsale_locale';
 const FALLBACK_LANGUAGE: LanguageCode = 'en';
+/** Before loadLanguage runs: the app's original language, matching the default country (Türkiye). */
+const INITIAL_LANGUAGE: LanguageCode = 'tr';
 
-let current: LanguageCode = FALLBACK_LANGUAGE;
+let current: LanguageCode = INITIAL_LANGUAGE;
 const listeners = new Set<() => void>();
 
 function notify(): void {

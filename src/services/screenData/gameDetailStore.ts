@@ -12,6 +12,8 @@ export type GameDetailFetchSnapshot = Readonly<{
 }>;
 
 type DetailEntry = {
+  slug: string;
+  platformHint: string | undefined;
   snapshot: GameDetailFetchSnapshot;
   listeners: Set<() => void>;
   pending: Promise<void> | null;
@@ -25,8 +27,10 @@ function detailKey(slug: string, platformHint?: string): string {
   return `${slug}|${platformHint ?? ''}`;
 }
 
-function createEntry(): DetailEntry {
+function createEntry(slug: string, platformHint: string | undefined): DetailEntry {
   return {
+    slug,
+    platformHint,
     snapshot: { game: null, selectedEdition: null, loading: true, error: null, version: 0 },
     listeners: new Set(),
     pending: null,
@@ -104,30 +108,43 @@ function loadEntry(
   });
 }
 
-function getEntry(key: string): DetailEntry {
+function getEntry(key: string, slug = '', platformHint?: string): DetailEntry {
   let entry = entries.get(key);
   if (!entry) {
-    entry = createEntry();
+    entry = createEntry(slug, platformHint);
     entries.set(key, entry);
   }
   return entry;
 }
 
+function restartEntry(entry: DetailEntry, slug: string, platformHint: string | undefined): void {
+  entry.generation += 1;
+  entry.controller?.abort();
+  entry.controller = null;
+  entry.pending = null;
+  loadEntry(entry, slug, platformHint);
+}
+
 export const gameDetailStore = {
   getSnapshot: (slug: string, platformHint?: string): GameDetailFetchSnapshot => {
-    return getEntry(detailKey(slug, platformHint)).snapshot;
+    return getEntry(detailKey(slug, platformHint), slug, platformHint).snapshot;
   },
   reload: (slug: string, platformHint?: string): void => {
-    const entry = getEntry(detailKey(slug, platformHint));
-    entry.generation += 1;
-    entry.controller?.abort();
-    entry.controller = null;
-    entry.pending = null;
-    loadEntry(entry, slug, platformHint);
+    restartEntry(getEntry(detailKey(slug, platformHint), slug, platformHint), slug, platformHint);
+  },
+  /** Reloads every detail on screen (language or country changed); the others reload when shown again. */
+  reloadActive: (): void => {
+    for (const [key, entry] of entries) {
+      if (entry.listeners.size === 0) {
+        entries.delete(key);
+        continue;
+      }
+      restartEntry(entry, entry.slug, entry.platformHint);
+    }
   },
   /** Shows another edition's prices; every edition is already loaded, so no request is made. */
   selectEdition: (slug: string, platformHint: string | undefined, key: EditionKey): void => {
-    const entry = getEntry(detailKey(slug, platformHint));
+    const entry = getEntry(detailKey(slug, platformHint), slug, platformHint);
     const { snapshot } = entry;
     const known = snapshot.game?.editions?.some((option) => option.key === key) ?? false;
     if (!known || snapshot.selectedEdition === key) return;
@@ -140,7 +157,7 @@ export const gameDetailStore = {
     listener: () => void,
   ): (() => void) => {
     const key = detailKey(slug, platformHint);
-    const entry = getEntry(key);
+    const entry = getEntry(key, slug, platformHint);
     entry.listeners.add(listener);
     if (!entry.pending && (entry.snapshot.game === null || entry.snapshot.error !== null)) {
       loadEntry(entry, slug, platformHint);

@@ -1,4 +1,5 @@
 import { STORE_CONFIG, getStoreCountryConfig } from '@/services/store/config';
+import { regionalLocale, storeLanguage } from '@/services/store/languages';
 import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
 import { formatPriceAsTry } from '@/services/store/currency';
 import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } from '@/services/store/edition-table';
@@ -49,12 +50,11 @@ type XboxSearchProduct = Readonly<{
 }>;
 
 function xboxMarket(): Readonly<{ market: string; language: string }> {
-  const { code, storeLocale } = getStoreCountryConfig();
-  return { market: code, language: `${storeLocale.slice(0, 2)}-${code}` };
+  return { market: getStoreCountryConfig().code, language: storeLanguage('xbox') };
 }
 
 function xboxStoreUrl(productId: string): string {
-  return `https://www.xbox.com/${getStoreCountryConfig().storeLocale}/games/store/${productId}`;
+  return `https://www.xbox.com/${regionalLocale()}/games/store/${productId}`;
 }
 
 function xboxCatalogUrl(bigIds: string, fieldsTemplate = 'details'): string {
@@ -127,7 +127,7 @@ async function searchXboxProductIds(
   // the HTML parser as a resilience fallback when the catalog endpoint fails.
   if (autosuggest.succeeded) return [];
 
-  const url = `https://www.xbox.com/${getStoreCountryConfig().storeLocale}/search?q=${encodeURIComponent(query)}`;
+  const url = `https://www.xbox.com/${regionalLocale()}/search?q=${encodeURIComponent(query)}`;
   const html = await withRetry(
     () => fetchText(url, { headers: { Referer: 'https://www.xbox.com/' }, signal: options?.signal }, STORE_CONFIG.timeout.long),
     0,

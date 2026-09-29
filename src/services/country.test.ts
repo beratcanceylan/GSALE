@@ -15,6 +15,7 @@ mock.module('expo-secure-store', () => ({
 
 const {
   SUPPORTED_COUNTRIES,
+  countryStore,
   getAppCountry,
   getCountryConfig,
   loadAppCountry,
@@ -43,16 +44,32 @@ describe('store country setting', () => {
 
   test('loads a stored country and ignores unsupported values', async () => {
     stored.set('gsale_country', 'us');
-    expect(await loadAppCountry()).toBe('US');
+    expect(await loadAppCountry('xx')).toBe('US');
 
     stored.set('gsale_country', 'ZZ');
-    expect(await loadAppCountry()).toBe('TR');
+    expect(await loadAppCountry('xx')).toBe('TR');
+  });
+
+  test('without a saved country, uses the device region when supported', async () => {
+    expect(await loadAppCountry('de-DE')).toBe('DE');
+    expect(await loadAppCountry('pt-BR')).toBe('BR');
+    expect(await loadAppCountry('fr-BE')).toBe('TR');
+  });
+
+  test('notifies subscribers when the country changes', async () => {
+    let notified = 0;
+    const unsubscribe = countryStore.subscribe(() => { notified += 1; });
+    await setAppCountry('JP');
+    expect(countryStore.getSnapshot()).toBe('JP');
+    await setAppCountry('JP');
+    expect(notified).toBe(1);
+    unsubscribe();
   });
 
   test('uses the default country when secure storage fails', async () => {
     await setAppCountry('DE');
     failRead = true;
-    expect(await loadAppCountry()).toBe('TR');
+    expect(await loadAppCountry('xx')).toBe('TR');
   });
 
   test('country codes and store locales are well formed and unique', () => {

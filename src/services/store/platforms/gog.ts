@@ -1,4 +1,5 @@
 import { getStoreCountry } from '@/services/store/config';
+import { storeLanguage } from '@/services/store/languages';
 import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
 import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } from '@/services/store/edition-table';
 import { baseTitle } from '@/services/store/editions';
@@ -19,7 +20,6 @@ import type {
 } from '@/services/store/types';
 
 /** GOG catalog search works with en-US; tr-TR returns zero products. */
-const GOG_CATALOG_LOCALE = 'en-US';
 
 interface GogCatalogResponse {
   products?: GogProduct[];
@@ -31,7 +31,7 @@ function gogCatalogUrl(query: string, limit: number): string {
     order: 'desc:score',
     limit: String(limit),
     countryCode: getStoreCountry(),
-    locale: GOG_CATALOG_LOCALE,
+    locale: storeLanguage('gog'),
   });
   return `https://catalog.gog.com/v1/catalog?${params.toString()}`;
 }
@@ -155,7 +155,7 @@ export async function fetchGogDeals(
     productType: 'in:game,pack',
     limit: String(limit),
     countryCode: getStoreCountry(),
-    locale: GOG_CATALOG_LOCALE,
+    locale: storeLanguage('gog'),
   });
   const data = await withRetry(
     () => fetchJson<GogCatalogResponse>(`https://catalog.gog.com/v1/catalog?${params.toString()}`, { signal: options?.signal }),

@@ -1,4 +1,5 @@
-import { getEpicLocale, getStoreCountry, STORE_CONFIG } from '@/services/store/config';
+import { getStoreCountry, STORE_CONFIG } from '@/services/store/config';
+import { storeLanguage } from '@/services/store/languages';
 import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
 import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } from '@/services/store/edition-table';
 import { baseTitle } from '@/services/store/editions';
@@ -47,7 +48,7 @@ const EPIC_BROWSE_HEADERS = {
 };
 
 function epicBrowseLocale(): string {
-  return getEpicLocale().toLowerCase().startsWith('tr') ? 'tr' : 'en-US';
+  return storeLanguage('epic');
 }
 
 function epicBrowseUrl(query: string): string {
@@ -88,7 +89,7 @@ async function runEpicSearch(
   count: number,
   options?: StoreRequestOptions,
 ): Promise<EpicSearchElement[]> {
-  const url = `${EGDATA_API_BASE}/search/v2/search?country=${getStoreCountry()}&locale=${getEpicLocale()}`;
+  const url = `${EGDATA_API_BASE}/search/v2/search?country=${getStoreCountry()}&locale=${storeLanguage('epic')}`;
   const variables = {
     title: query,
     limit: count,
@@ -277,7 +278,7 @@ export async function fetchEpicDeals(
 }
 
 export async function fetchEpicFreeGames(options?: StoreRequestOptions): Promise<LiveGame[]> {
-  const url = `https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=${getEpicLocale()}&country=${getStoreCountry()}&allowCountries=${getStoreCountry()}`;
+  const url = `https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=${storeLanguage('epic')}&country=${getStoreCountry()}&allowCountries=${getStoreCountry()}`;
   const data = await withRetry(
     () =>
       fetchJson<{ data?: { Catalog?: { searchStore?: { elements?: EpicFreePromotion[] } } } }>(url, {

@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 
 import { loadCatalog } from '@/services/catalog/loader';
 import { loadAppCountry } from '@/services/country';
+import { watchRegionChanges } from '@/services/screenData';
 import { loadLanguage } from '@/i18n/languageStore';
 import { applyLayoutDirection } from '@/i18n/rtl';
 
@@ -18,4 +19,5 @@ reportBootstrapFailure('SplashScreen.preventAutoHideAsync', SplashScreen.prevent
 reportBootstrapFailure('loadLanguage', loadLanguage().then(applyLayoutDirection));
 reportBootstrapFailure('loadAppCountry', loadAppCountry());
 
+watchRegionChanges();
 void loadCatalog();

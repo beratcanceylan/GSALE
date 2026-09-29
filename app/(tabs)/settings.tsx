@@ -7,11 +7,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Font, Palette, Radius, Spacing, Typography } from '@/constants/DesignSystem';
 import { SUPPORTED_COUNTRIES, getAppCountry, setAppCountry, type CountryCode } from '@/services/country';
+import { t } from '@/i18n';
 import { LANGUAGES, isLanguageCode } from '@/i18n/languages';
 import { getLanguage, setLanguage } from '@/i18n/languageStore';
 import { applyLayoutDirection } from '@/i18n/rtl';
 
 const LANGUAGE_ITEMS = LANGUAGES.map((language) => ({ code: language.code, name: language.nativeName }));
+const COUNTRY_ITEMS = SUPPORTED_COUNTRIES.map((country) => ({ code: country.code, name: t(`country.${country.code}`) }));
 
 type PickerItem = Readonly<{ code: string; name: string }>;
 type PickerKind = 'language' | 'country';
@@ -33,10 +35,10 @@ export default function SettingsScreen() {
 
   const currentLangName = LANGUAGE_ITEMS.find((l) => l.code === selectedLang)?.name || 'Türkçe';
   const currentCountryName =
-    SUPPORTED_COUNTRIES.find((c) => c.code === selectedCountry)?.name ?? 'Türkiye';
+    COUNTRY_ITEMS.find((c) => c.code === selectedCountry)?.name ?? 'Türkiye';
 
   const pickerItems: readonly PickerItem[] =
-    picker === 'country' ? SUPPORTED_COUNTRIES : LANGUAGE_ITEMS;
+    picker === 'country' ? COUNTRY_ITEMS : LANGUAGE_ITEMS;
   const pickerSelectedCode = picker === 'country' ? selectedCountry : selectedLang;
 
   const handlePickerPress = useCallback(
