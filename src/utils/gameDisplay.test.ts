@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { Game } from '@/services/gameData';
+import { uiDeal } from '../../test-support/deals';
 import {
   getDealPlatforms,
   getGameImageSources,
@@ -26,13 +27,11 @@ function game(overrides: Partial<Game> = {}): Game {
   };
 }
 
-const deal = (platform: string, price: string, extra: Partial<Game['deals'][number]> = {}) => ({
-  platform,
-  price,
-  discount: '',
-  url: '',
-  ...extra,
-});
+const deal = (
+  platform: string,
+  price: string,
+  extra: Partial<Pick<Game['deals'][number], 'discount' | 'originalPrice' | 'url' | 'subscriptionNote'>> = {},
+) => uiDeal({ platform, price, ...extra });
 
 describe('getTitleInitial', () => {
   test('uses the first letter, including Turkish letters', () => {

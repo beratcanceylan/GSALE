@@ -76,11 +76,11 @@ describe('store search API', () => {
 
   test('reports a missing game detail', async () => {
     globalThis.fetch = async () => Response.json({ '987654321': { success: false } });
-    await expect(getGameDetail('987654321', 'Steam')).rejects.toThrow('Oyun bulunamadı.');
+    await expect(getGameDetail('987654321', 'Steam')).rejects.toThrow('not-found');
   });
 
   test('uses the default detail adapter and reports a missing unprefixed game', async () => {
     globalThis.fetch = async () => Response.json({ 'gsale-unknown': { success: false } });
-    await expect(getGameDetail('gsale-unknown')).rejects.toThrow('Oyun bulunamadı.');
+    await expect(getGameDetail('gsale-unknown')).rejects.toThrow('not-found');
   });
 });

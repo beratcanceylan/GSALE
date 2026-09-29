@@ -64,6 +64,25 @@ describe('game data mapping', () => {
     expect((await fetchGameDetail('2')).deals).toEqual([]);
   });
 
+  test('deals carry language-neutral amounts for the UI', async () => {
+    detailResult = { game: { id: '4', title: 'Amounts', image_url: '', rating: null, edition: 'base' }, editions: [{
+      key: 'base',
+      deals: [
+        { platform: 'Steam', price: '1.500,00 TL', original_price: '2.000,00 TL', discount: '-25%' },
+        { platform: 'Epic Games', price: 'Ücretsiz', discount: '' },
+        { platform: 'GOG', price: 'Bilinmiyor', discount: '' },
+        { platform: 'Xbox', price: 'Game Pass', discount: '', subscription_note: 'Game Pass' },
+      ],
+    }] };
+    const deals = (await fetchGameDetail('4')).editions?.[0]?.deals ?? [];
+    expect(deals.map(({ amount, originalAmount, discountPercent, isFree, gamePass }) => ({ amount, originalAmount, discountPercent, isFree, gamePass }))).toEqual([
+      { amount: 1500, originalAmount: 2000, discountPercent: 25, isFree: false, gamePass: false },
+      { amount: 0, originalAmount: null, discountPercent: 0, isFree: true, gamePass: false },
+      { amount: null, originalAmount: null, discountPercent: 0, isFree: false, gamePass: false },
+      { amount: null, originalAmount: null, discountPercent: 0, isFree: false, gamePass: true },
+    ]);
+  });
+
   test('uses platform fallbacks when a summary has no primary platform', async () => {
     searchResults = [{ id: '3', title: 'Console', image_url: '', platforms: ['Xbox'], rating: null }];
     const [game] = await fetchSearchResults('Console');

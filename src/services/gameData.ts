@@ -12,16 +12,11 @@ import {
   type GameDetailResponse,
   type StoreRequestOptions,
 } from './api';
+import { mapDeal, type Deal } from '@/services/deal';
 import { resolveCardPrice } from '@/utils/gameDisplay';
 
-export interface Deal {
-  platform: string;
-  price: string;
-  originalPrice?: string | undefined;
-  discount: string;
-  url: string;
-  subscriptionNote?: string | undefined;
-}
+export { mapDeal, type Deal } from '@/services/deal';
+
 
 export interface EditionOptionView {
   key: EditionKey;
@@ -82,17 +77,6 @@ function applyResolvedSummaryPrice(game: Game): Game {
     price: card.price,
     originalPrice: card.originalPrice ?? game.originalPrice,
     discount: card.discount,
-  };
-}
-
-function mapDeal(deal: NonNullable<GameSummary['deals']>[number]): Deal {
-  return {
-    platform: deal.platform,
-    price: deal.price,
-    originalPrice: deal.original_price,
-    discount: deal.discount,
-    url: deal.store_url || '',
-    subscriptionNote: deal.subscription_note,
   };
 }
 

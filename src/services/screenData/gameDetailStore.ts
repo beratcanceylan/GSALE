@@ -6,7 +6,8 @@ export type GameDetailFetchSnapshot = Readonly<{
   /** Edition whose prices are shown; starts on the opened product's edition. */
   selectedEdition: EditionKey | null;
   loading: boolean;
-  error: string | null;
+  /** Error code; screens translate it. */
+  error: 'load-failed' | null;
   version: number;
 }>;
 
@@ -50,7 +51,7 @@ async function fetchDetailResult(
   try {
     return { game: await fetchGameDetail(slug, platformHint, { signal }), error: null };
   } catch {
-    return { game: null, error: 'Oyun bilgileri yüklenemedi.' };
+    return { game: null, error: 'load-failed' };
   }
 }
 

@@ -5,12 +5,13 @@ import { gameDetailStoreMock } from '../test-support/screen-store-mocks';
 import { allOfType, byLabel, fire, render, updateExternalStore } from '../test-support/render';
 import { sqliteMock } from '../test-support/sqlite-mock';
 import type { Game } from '@/services/gameData';
+import { uiDeal } from '../test-support/deals';
 
 const GameDetailScreen = (await import('../app/game/[id]')).default;
 
-const steam = { platform: 'Steam', price: '50,00 TL', originalPrice: '100,00 TL', discount: '-50%', url: 'https://store.steampowered.com/app/1/' };
-const xbox = { platform: 'Xbox', price: '60,00 TL', discount: '', url: 'https://www.xbox.com/games/store/1', subscriptionNote: 'Game Pass' };
-const steamDeluxe = { platform: 'Steam', price: '90,00 TL', discount: '', url: 'https://store.steampowered.com/app/2/' };
+const steam = uiDeal({ platform: 'Steam', price: '50,00 TL', originalPrice: '100,00 TL', discount: '-50%', url: 'https://store.steampowered.com/app/1/' });
+const xbox = uiDeal({ platform: 'Xbox', price: '60,00 TL', url: 'https://www.xbox.com/games/store/1', subscriptionNote: 'Game Pass' });
+const steamDeluxe = uiDeal({ platform: 'Steam', price: '90,00 TL', url: 'https://store.steampowered.com/app/2/' });
 
 const game: Game = {
   id: 'detail-screen-test', title: 'Hades', imageUrl: 'https://example.com/hero.jpg',

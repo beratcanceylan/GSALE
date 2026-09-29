@@ -73,7 +73,7 @@ describe('screen request cancellation', () => {
     const failedSlug = `detail-failure-${Date.now()}`;
     const unsubscribeFailure = gameDetailStore.subscribe(failedSlug, undefined, () => undefined);
     await flush();
-    expect(gameDetailStore.getSnapshot(failedSlug).error).toBe('Oyun bilgileri yüklenemedi.');
+    expect(gameDetailStore.getSnapshot(failedSlug).error).toBe('load-failed');
     unsubscribeFailure();
     detailOutcome = 'pending';
   });

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { nativeState, resetNativeState } from '../../test-support/native-mocks';
 import { allOfType, byLabel, fire, render } from '../../test-support/render';
 import type { Game } from '@/services/gameData';
+import { uiDeal } from '../../test-support/deals';
 
 const { AppBackground } = await import('@/components/AppBackground');
 const { CardFooter } = await import('@/components/CardFooter');
@@ -24,7 +25,7 @@ const { Gamepad2 } = await import('lucide-react-native');
 const game: Game = {
   id: 'steam-10', title: 'Hades', platform: 'Steam', source_platform: 'Steam', imageUrl: 'https://example.com/hades.jpg',
   discount: '-50%', price: '50,00 TL', originalPrice: '100,00 TL', url: 'https://store.steampowered.com/app/10/',
-  deals: [{ platform: 'Steam', price: '50,00 TL', originalPrice: '100,00 TL', discount: '-50%', url: 'https://store.steampowered.com/app/10/' }],
+  deals: [uiDeal({ platform: 'Steam', price: '50,00 TL', originalPrice: '100,00 TL', discount: '-50%', url: 'https://store.steampowered.com/app/10/' })],
   platforms: ['Steam'], rating: null,
 };
 
