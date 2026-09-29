@@ -1,8 +1,9 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet, type ColorValue } from 'react-native';
-import { Home, Heart, Gift, Settings } from 'lucide-react-native';
+import { Gift, Heart, Home, Search, Settings } from 'lucide-react-native';
 
-import { Palette, Spacing, Typography } from '@/constants/DesignSystem';
+import { Palette, Size, Spacing, useType } from '@/constants/DesignSystem';
+import { useT } from '@/i18n';
 import { favoritesStore } from '@/services/screenData/favoritesStore';
 import { freeGamesStore } from '@/services/screenData/freeGamesStore';
 import { homeStore } from '@/services/screenData/homeStore';
@@ -11,6 +12,10 @@ type TabIconProps = Readonly<{ color: ColorValue; size: number }>;
 
 function HomeTabIcon({ color, size }: TabIconProps) {
   return <Home size={size} color={color} />;
+}
+
+function SearchTabIcon({ color, size }: TabIconProps) {
+  return <Search size={size} color={color} />;
 }
 
 function FavoritesTabIcon({ color, size }: TabIconProps) {
@@ -44,73 +49,53 @@ const tabScreenListeners = {
 } as const;
 
 export default function TabLayout() {
+  const t = useT();
+  const type = useType();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: Palette.accent,
-        tabBarInactiveTintColor: Palette.textTertiary,
-        tabBarLabelStyle: styles.tabLabel,
+        tabBarActiveTintColor: Palette.text,
+        tabBarInactiveTintColor: Palette.textFaint,
+        tabBarLabelStyle: type('caption'),
         tabBarItemStyle: styles.tabItem,
+        sceneStyle: styles.scene,
         animation: 'shift',
       }}
     >
       <Tabs.Screen
         name="index"
-        options={{
-          title: 'Anasayfa',
-          tabBarIcon: HomeTabIcon,
-        }}
+        options={{ title: t('tabs.home'), tabBarIcon: HomeTabIcon }}
         listeners={tabScreenListeners.index}
       />
-      <Tabs.Screen
-        name="search"
-        options={{
-          href: null,
-        }}
-      />
+      <Tabs.Screen name="search" options={{ title: t('tabs.search'), tabBarIcon: SearchTabIcon }} />
       <Tabs.Screen
         name="favorites"
-        options={{
-          title: 'Favoriler',
-          tabBarIcon: FavoritesTabIcon,
-        }}
+        options={{ title: t('tabs.favorites'), tabBarIcon: FavoritesTabIcon }}
         listeners={tabScreenListeners.favorites}
       />
       <Tabs.Screen
         name="free"
-        options={{
-          title: 'Bedava',
-          tabBarIcon: FreeTabIcon,
-        }}
+        options={{ title: t('tabs.free'), tabBarIcon: FreeTabIcon }}
         listeners={tabScreenListeners.free}
       />
-      <Tabs.Screen name="settings"
-        options={{
-          title: 'Ayarlar',
-          tabBarIcon: SettingsTabIcon,
-        }}
-      />
+      <Tabs.Screen name="settings" options={{ title: t('tabs.settings'), tabBarIcon: SettingsTabIcon }} />
     </Tabs>
   );
 }
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: Palette.backgroundElevated,
-    borderTopWidth: 1,
-    borderTopColor: Palette.border,
-    paddingTop: Spacing.xs,
-    paddingBottom: Spacing.xs,
-    height: 64,
-  },
-  tabLabel: {
-    fontSize: Typography.micro.fontSize,
-    fontFamily: Typography.micro.fontFamily,
-    marginTop: 2,
+    backgroundColor: Palette.background,
+    borderTopWidth: Size.hairline,
+    borderTopColor: Palette.line,
+    height: Size.tabBar,
   },
   tabItem: {
     paddingVertical: Spacing.xs,
+  },
+  scene: {
+    backgroundColor: Palette.background,
   },
 });

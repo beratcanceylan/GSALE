@@ -29,6 +29,9 @@ describe('tab navigation', () => {
       expect(screens.map((screen) => String(screen.props['name']))).toEqual([
         'index', 'search', 'favorites', 'free', 'settings',
       ]);
+      const titles = screens.map((screen) => (screen.props['options'] as { title?: string; href?: null }));
+      expect(titles.map((options) => options.title)).toEqual(['Anasayfa', 'Ara', 'Favoriler', 'Bedava', 'Ayarlar']);
+      expect(titles.some((options) => options.href === null)).toBeFalse();
       for (const name of ['index', 'favorites', 'free']) {
         const screen = screens.find((item) => item.props['name'] === name);
         if (!screen) throw new Error(`Missing ${name} tab`);

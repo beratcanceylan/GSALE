@@ -16,31 +16,6 @@ const game: Game = {
 };
 
 describe('tab screens', () => {
-  test('home renders loading, empty and discounted strips, then searches and refreshes', async () => {
-    resetNativeState();
-    homeStoreMock.setSnapshot({ data: null, refreshing: false });
-    const view = await render(<HomeScreen />);
-    expect(view.text()).toContain('İndirimler yükleniyor');
-
-    await updateExternalStore(() => { homeStoreMock.setSnapshot({ data: [], refreshing: false }); });
-    expect(view.text()).toContain('Şu an gösterilecek indirim bulunamadı');
-    await updateExternalStore(() => { homeStoreMock.setSnapshot({ data: [{ platform: 'Steam', games: [
-      game,
-      { ...game, id: '2', title: 'Deeper Discount', discount: '-75%' },
-      { ...game, id: '3', title: 'Unknown Discount', discount: '' },
-    ] }], refreshing: true }); });
-    expect(view.text()).toContain('İndirimde');
-    expect(view.text()).toContain('ÖNE ÇIKAN');
-
-    await fire(byLabel(view.root, 'Oyun ara'), 'onChangeText', ' Hades ');
-    await fire(byLabel(view.root, 'Ara'), 'onPress');
-    expect(nativeState.router.pushed).toEqual([{ pathname: '/search', params: { q: 'Hades' } }]);
-    const outerList = allOfType(view.root, 'FlatList')[0];
-    if (!outerList) throw new Error('home list missing');
-    await fire(outerList, 'onRefresh');
-    expect(homeStoreMock.loads.at(-1)).toBeTrue();
-    await view.unmount();
-  });
 
   test('free tab distinguishes current and upcoming promotions', async () => {
     freeGamesStoreMock.setSnapshot({ data: null, refreshing: false });

@@ -132,6 +132,15 @@ const ICONS = [
 mock.module('lucide-react-native', () => Object.fromEntries(ICONS.map((name) => [name, host(name)])));
 
 mock.module('expo-image', () => ({ Image: host('Image') }));
+/** In-memory secure store; tests that need to inspect writes mock it again after this import. */
+const secureStoreValues = new Map<string, string>();
+mock.module('expo-secure-store', () => ({
+  getItemAsync: (key: string) => Promise.resolve(secureStoreValues.get(key) ?? null),
+  setItemAsync: (key: string, value: string) => {
+    secureStoreValues.set(key, value);
+    return Promise.resolve();
+  },
+}));
 mock.module('expo-status-bar', () => ({ StatusBar: host('StatusBar') }));
 mock.module('react-native-svg', () => ({
   default: host('Svg'),
@@ -168,7 +177,7 @@ function navigator(name: string) {
       const icon = options['tabBarIcon'];
       return React.createElement(
         `${name}.Screen`,
-        { key: screen.props.name, name: screen.props.name, listeners: screen.props.listeners },
+        { key: screen.props.name, name: screen.props.name, options, listeners: screen.props.listeners },
         typeof icon === 'function' ? (icon as (p: object) => ReactNode)({ color: '#fff', size: 24, focused: true }) : null,
       );
     });
