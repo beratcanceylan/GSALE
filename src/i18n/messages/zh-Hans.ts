@@ -13,10 +13,9 @@ export const zhHans = {
   'common.clear': '清除',
   'common.loading': '加载中…',
 
-  'home.onSale': '促销中',
-  'home.biggestDiscount': '当前最大折扣',
-  'home.empty': '目前没有可显示的优惠。',
-  'home.loading': '正在加载优惠…',
+  'home.popular': '热门',
+  'home.empty': '目前没有可显示的游戏。',
+  'home.loading': '正在加载热门游戏…',
 
   'search.placeholder': '搜索游戏',
   'search.hint': '请至少输入 2 个字。',

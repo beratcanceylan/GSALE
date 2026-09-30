@@ -13,10 +13,9 @@ export const nl = {
   'common.clear': 'Wissen',
   'common.loading': 'Laden…',
 
-  'home.onSale': 'In de aanbieding',
-  'home.biggestDiscount': 'Grootste korting nu',
-  'home.empty': 'Nu geen aanbiedingen om te tonen.',
-  'home.loading': 'Aanbiedingen laden…',
+  'home.popular': 'Populair',
+  'home.empty': 'Nu geen games om te tonen.',
+  'home.loading': 'Populaire games laden…',
 
   'search.placeholder': 'Games zoeken',
   'search.hint': 'Typ minstens 2 letters.',

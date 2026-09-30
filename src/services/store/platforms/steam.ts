@@ -228,8 +228,8 @@ export async function searchSteam(
   return products.map((product) => product.hit);
 }
 
-/** Discounted titles from Steam's "specials" list for the selected country. */
-export async function fetchSteamDeals(
+/** Steam's current top sellers for the selected country, each with its price. */
+export async function fetchSteamTopSellers(
   limit: number,
   options?: StoreRequestOptions,
 ): Promise<LiveGame[]> {
@@ -241,8 +241,8 @@ export async function fetchSteamDeals(
   );
 
   const seen = new Set<number>();
-  const items = (data.specials?.items ?? []).filter((item) => {
-    if (!item.id || !item.name || !item.discount_percent || seen.has(item.id)) return false;
+  const items = (data.top_sellers?.items ?? []).filter((item) => {
+    if (!item.id || !item.name || seen.has(item.id)) return false;
     seen.add(item.id);
     return true;
   }).slice(0, limit);

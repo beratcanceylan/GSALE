@@ -13,10 +13,9 @@ export const sv = {
   'common.clear': 'Rensa',
   'common.loading': 'Läser in…',
 
-  'home.onSale': 'På rea',
-  'home.biggestDiscount': 'Största rabatten just nu',
-  'home.empty': 'Inga erbjudanden att visa just nu.',
-  'home.loading': 'Läser in erbjudanden…',
+  'home.popular': 'Populära',
+  'home.empty': 'Inga spel att visa just nu.',
+  'home.loading': 'Läser in populära spel…',
 
   'search.placeholder': 'Sök spel',
   'search.hint': 'Skriv minst 2 bokstäver.',

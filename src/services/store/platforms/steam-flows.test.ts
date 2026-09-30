@@ -6,7 +6,7 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { resetCurrencyCacheForTests, setFxRatesForTests } = await import('@/services/store/currency');
-const { fetchSteamDeals, fetchSteamDetails, fetchSteamEditionOffers, fetchSteamFreeGames, resetSteamAppDataCacheForTests, searchSteam } = await import(
+const { fetchSteamDetails, fetchSteamEditionOffers, fetchSteamFreeGames, fetchSteamTopSellers, resetSteamAppDataCacheForTests, searchSteam } = await import(
   '@/services/store/platforms/steam'
 );
 
@@ -146,7 +146,7 @@ describe('fetchSteamDetails', () => {
   });
 });
 
-describe('fetchSteamFreeGames and fetchSteamDeals', () => {
+describe('fetchSteamFreeGames and fetchSteamTopSellers', () => {
   test('lists free-to-play games', async () => {
     routeFetch(() => ({
       free_to_play: {
@@ -169,22 +169,26 @@ describe('fetchSteamFreeGames and fetchSteamDeals', () => {
     expect(await fetchSteamFreeGames()).toEqual([]);
   });
 
-  test('skips specials without a usable price or duplicates', async () => {
-    routeFetch(() => ({
-      specials: {
+  test('top sellers keep full-price games and skip items without a usable price or duplicates', async () => {
+    const urls = routeFetch(() => ({
+      top_sellers: {
         items: [
-          { id: 1, name: 'Priced', discount_percent: 50, currency: 'TRY', original_price: 2000, final_price: 1000 },
-          { id: 1, name: 'Priced', discount_percent: 50, currency: 'TRY', original_price: 2000, final_price: 1000 },
-          { id: 2, name: 'No price', discount_percent: 50 },
-          { id: 3, name: 'Negative', discount_percent: 50, final_price: -1 },
-          { id: 4, name: 'Defaults', discount_percent: 25, final_price: 750 },
+          { id: 1, name: 'Priced', discount_percent: 0, currency: 'TRY', original_price: 2000, final_price: 2000 },
+          { id: 1, name: 'Priced', discount_percent: 0, currency: 'TRY', original_price: 2000, final_price: 2000 },
+          { id: 2, name: 'No price' },
+          { id: 3, name: 'Negative', final_price: -1 },
+          { id: 4, name: 'On sale', discount_percent: 25, final_price: 750 },
         ],
       },
     }));
-    const games = await fetchSteamDeals(10);
-    expect(games.map((game) => game.id)).toEqual(['1', '4']);
-    expect(games[1]?.deals?.[0]).toMatchObject({ price: '300,00 TL' });
+    const games = await fetchSteamTopSellers(10);
+    expect(games.map((game) => [game.id, game.deals?.[0]?.price])).toEqual([
+      ['1', '20,00 TL'],
+      ['4', '300,00 TL'],
+    ]);
+    expect(urls[0]).toContain('featuredcategories');
   });
+
 });
 
 describe('fetchSteamEditionOffers', () => {

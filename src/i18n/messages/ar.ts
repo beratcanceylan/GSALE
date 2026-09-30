@@ -13,10 +13,9 @@ export const ar = {
   'common.clear': 'مسح',
   'common.loading': 'جارٍ التحميل…',
 
-  'home.onSale': 'بخصم',
-  'home.biggestDiscount': 'أكبر خصم الآن',
-  'home.empty': 'لا توجد عروض لعرضها الآن.',
-  'home.loading': 'جارٍ تحميل العروض…',
+  'home.popular': 'الأكثر رواجًا',
+  'home.empty': 'لا توجد ألعاب لعرضها الآن.',
+  'home.loading': 'جارٍ تحميل الألعاب الرائجة…',
 
   'search.placeholder': 'ابحث عن الألعاب',
   'search.hint': 'اكتب حرفين على الأقل.',

@@ -5,7 +5,7 @@ import '../../../test-support/sqlite-mock';
 import { allOfType, render } from '../../../test-support/render';
 
 mock.module('@/services/gameData', () => ({
-  fetchHomeSections: () => Promise.resolve([]),
+  fetchPopularGames: () => Promise.resolve([]),
   fetchFreeGames: () => Promise.resolve([]),
 }));
 

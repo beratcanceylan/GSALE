@@ -8,35 +8,40 @@ import type { Game } from '@/services/gameData';
 
 const HomeScreen = (await import('../../../app/(tabs)/index')).default;
 
-const game = (id: string, title: string, platform: string, discount: string): Game => ({
-  id, title, imageUrl: '', platform, source_platform: platform, price: '50,00 TL', discount, url: '', rating: null,
-  deals: [uiDeal({ platform, price: '50,00 TL', originalPrice: '100,00 TL', discount })],
+const game = (id: string, title: string, platforms: string[]): Game => ({
+  id, title, imageUrl: '', platform: platforms[0] ?? '', source_platform: platforms[0] ?? '', price: '50,00 TL', discount: '',
+  url: '', rating: null, platforms, deals: [uiDeal({ platform: platforms[0] ?? '', price: '50,00 TL' })],
 });
 
+const labelled = (view: Awaited<ReturnType<typeof render>>, label: string) =>
+  view.root.findAll((node) => typeof node.type === 'string' && node.props['accessibilityLabel'] === label);
+
 describe('home screen', () => {
-  test('loading, empty, then the deepest discount first and one strip per store', async () => {
+  test('one mixed popular list: the first game leads, every card shows all its stores', async () => {
     resetNativeState();
     homeStoreMock.setSnapshot({ data: null, refreshing: false });
     const view = await render(<HomeScreen />);
-    expect(view.text()).toContain('İndirimler yükleniyor');
+    expect(view.text()).toContain('Popüler oyunlar yükleniyor');
 
     await updateExternalStore(() => { homeStoreMock.setSnapshot({ data: [], refreshing: false }); });
-    expect(view.text()).toContain('Şu an gösterilecek indirim bulunamadı');
+    expect(view.text()).toContain('Şu an gösterilecek oyun yok');
 
     await updateExternalStore(() => {
       homeStoreMock.setSnapshot({ data: [
-        { platform: 'Steam', games: [game('1', 'Hades', 'Steam', '-50%'), game('2', 'Celeste', 'Steam', '-75%')] },
-        { platform: 'Xbox', games: [game('xbox-3', 'Halo', 'Xbox', '-20%')] },
+        game('1', 'Hades', ['Steam', 'Epic Games', 'PlayStation']),
+        game('e-2', 'Celeste', ['Epic Games']),
+        game('xbox-3', 'Halo', ['Xbox']),
       ], refreshing: false });
     });
-    expect(view.text()).toContain('Şu anki en büyük indirim');
-    expect(view.text()).toContain('İndirimde');
-    expect(view.root.findAll((node) => typeof node.type === 'string' && node.props['accessibilityLabel'] === 'Xbox').length).toBeGreaterThan(0);
+    expect(view.text()).toContain('Popüler');
+    expect(view.text()).not.toContain('İndirimde');
+    expect(labelled(view, 'PlayStation').length).toBeGreaterThan(0);
+    expect(labelled(view, 'Xbox').length).toBeGreaterThan(0);
 
-    const featured = view.root.findAll((node) => node.props['accessibilityLabel'] === 'Celeste' && node.props['accessibilityRole'] === 'link')[0];
-    if (!featured) throw new Error('featured deal missing');
-    await fire(featured, 'onPress');
-    expect(nativeState.router.pushed).toContainEqual({ pathname: '/game/[id]', params: { id: '2', platform: 'Steam' } });
+    const lead = labelled(view, 'Hades')[0];
+    if (!lead) throw new Error('lead game missing');
+    await fire(lead, 'onPress');
+    expect(nativeState.router.pushed).toContainEqual({ pathname: '/game/[id]', params: { id: '1', platform: 'Steam' } });
 
     const list = allOfType(view.root, 'FlatList')[0];
     if (!list) throw new Error('home list missing');

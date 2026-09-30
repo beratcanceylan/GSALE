@@ -13,10 +13,9 @@ export const it = {
   'common.clear': 'Cancella',
   'common.loading': 'Caricamento…',
 
-  'home.onSale': 'In offerta',
-  'home.biggestDiscount': 'Sconto più alto ora',
-  'home.empty': 'Nessuna offerta da mostrare ora.',
-  'home.loading': 'Caricamento offerte…',
+  'home.popular': 'Popolari',
+  'home.empty': 'Nessun gioco da mostrare ora.',
+  'home.loading': 'Caricamento giochi popolari…',
 
   'search.placeholder': 'Cerca giochi',
   'search.hint': 'Scrivi almeno 2 lettere.',

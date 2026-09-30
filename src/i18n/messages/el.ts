@@ -13,10 +13,9 @@ export const el = {
   'common.clear': 'Εκκαθάριση',
   'common.loading': 'Φόρτωση…',
 
-  'home.onSale': 'Σε προσφορά',
-  'home.biggestDiscount': 'Η μεγαλύτερη έκπτωση τώρα',
-  'home.empty': 'Δεν υπάρχουν προσφορές αυτή τη στιγμή.',
-  'home.loading': 'Φόρτωση προσφορών…',
+  'home.popular': 'Δημοφιλή',
+  'home.empty': 'Δεν υπάρχουν παιχνίδια για εμφάνιση τώρα.',
+  'home.loading': 'Φόρτωση δημοφιλών παιχνιδιών…',
 
   'search.placeholder': 'Αναζήτηση παιχνιδιών',
   'search.hint': 'Πληκτρολογήστε τουλάχιστον 2 γράμματα.',

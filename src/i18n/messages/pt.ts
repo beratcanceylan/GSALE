@@ -13,10 +13,9 @@ export const pt = {
   'common.clear': 'Limpar',
   'common.loading': 'A carregar…',
 
-  'home.onSale': 'Em promoção',
-  'home.biggestDiscount': 'Maior desconto agora',
-  'home.empty': 'Não há promoções para mostrar agora.',
-  'home.loading': 'A carregar promoções…',
+  'home.popular': 'Populares',
+  'home.empty': 'Não há jogos para mostrar agora.',
+  'home.loading': 'A carregar jogos populares…',
 
   'search.placeholder': 'Pesquisar jogos',
   'search.hint': 'Escreva pelo menos 2 letras.',

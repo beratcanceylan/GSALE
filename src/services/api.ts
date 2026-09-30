@@ -4,12 +4,11 @@
 export {
   getFreeGames,
   getGameDetail,
-  getHomeSections,
+  getPopularGames,
   searchGames,
   type EditionKey,
   type EditionOption,
   type GameDetailResponse,
   type GameSummary,
-  type HomeSection,
   type StoreRequestOptions,
 } from '@/services/store';

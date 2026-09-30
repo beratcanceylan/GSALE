@@ -13,10 +13,9 @@ export const ru = {
   'common.clear': 'Очистить',
   'common.loading': 'Загрузка…',
 
-  'home.onSale': 'Со скидкой',
-  'home.biggestDiscount': 'Самая большая скидка сейчас',
-  'home.empty': 'Сейчас нет скидок.',
-  'home.loading': 'Загружаем скидки…',
+  'home.popular': 'Популярное',
+  'home.empty': 'Сейчас нечего показать.',
+  'home.loading': 'Загружаем популярные игры…',
 
   'search.placeholder': 'Поиск игр',
   'search.hint': 'Введите хотя бы 2 буквы.',

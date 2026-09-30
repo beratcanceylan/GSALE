@@ -6,7 +6,7 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { resetCurrencyCacheForTests, setFxRatesForTests } = await import('@/services/store/currency');
-const { fetchGogDeals, fetchGogDetails, fetchGogEditionOffers, searchGog } = await import(
+const { fetchGogDetails, fetchGogEditionOffers, searchGog } = await import(
   '@/services/store/platforms/gog'
 );
 const { gogPriceFromProduct } = await import('@/services/store/platforms/gog-price');
@@ -135,17 +135,6 @@ describe('fetchGogDetails', () => {
       throw catalogAbort.signal.reason;
     });
     await expect(fetchGogDetails('gog-1', { signal: catalogAbort.signal })).rejects.toMatchObject({ name: 'AbortError' });
-  });
-});
-
-describe('fetchGogDeals', () => {
-  test('keeps discounted products only', async () => {
-    const fullPrice = { ...WITCHER, id: 5, price: { discount: null, finalMoney: { amount: '5.00', currency: 'USD' } } };
-    routeFetch(() => ({ products: [WITCHER, fullPrice] }));
-    expect((await fetchGogDeals(10)).map((game) => game.id)).toEqual([`gog-${WITCHER.id}`]);
-
-    routeFetch(() => ({}));
-    expect(await fetchGogDeals(10)).toEqual([]);
   });
 });
 

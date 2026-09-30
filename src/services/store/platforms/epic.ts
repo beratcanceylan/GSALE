@@ -1,6 +1,7 @@
 import { getStoreCountry, STORE_CONFIG } from '@/services/store/config';
 import { storeLanguage } from '@/services/store/languages';
-import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
+import { platformPriceToGameDeal } from '@/services/store/deals';
+import { hitToLiveGame } from '@/services/store/merge';
 import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } from '@/services/store/edition-table';
 import { baseTitle } from '@/services/store/editions';
 import { fetchJson, fetchPostJson, fetchText, throwIfAborted, withRetry } from '@/services/store/fetch';
@@ -246,35 +247,24 @@ export async function fetchEpicDetails(
   return fromOffer ?? fetchEpicSearchDetails(cleanSlug, titleHint, options);
 }
 
-/** Discounted offers egdata features for the selected country. */
-export async function fetchEpicDeals(
+/** Epic's current top sellers for the selected country (egdata lists them without prices). */
+export async function fetchEpicTopSellers(
   limit: number,
   options?: StoreRequestOptions,
 ): Promise<LiveGame[]> {
-  const url = `${EGDATA_API_BASE}/offers/featured-discounts?country=${getStoreCountry()}`;
-  const offers = await withRetry(
-    () => fetchJson<EpicSearchElement[]>(url, { signal: options?.signal }, STORE_CONFIG.timeout.long),
+  const url = `${EGDATA_API_BASE}/offers/top-sellers?country=${getStoreCountry()}&limit=${limit}`;
+  const data = await withRetry(
+    () => fetchJson<{ elements?: EpicSearchElement[] }>(url, { signal: options?.signal }, STORE_CONFIG.timeout.long),
     0,
     options?.signal,
   );
-  const games = await Promise.all(
-    (Array.isArray(offers) ? offers : []).map(async (offer) => {
+  const offers = Array.isArray(data.elements) ? data.elements : [];
+  return offers
+    .flatMap((offer) => {
       const hit = epicOfferToSearchHit(offer);
-      const priceInfo = offer.price?.price;
-      if (!hit || !priceInfo) return null;
-      const priced = await epicPriceFromMinorUnits(priceInfo, options?.signal);
-      if (!priced.discount) return null;
-      return liveGameWithDeal(hit, {
-        platform: 'Epic Games',
-        price: priced.price,
-        original_price: priced.original_price,
-        discount: priced.discount,
-        tier: 'pc',
-        ...(hit.store_url ? { store_url: hit.store_url } : {}),
-      });
-    }),
-  );
-  return games.flatMap((game) => (game ? [game] : [])).slice(0, limit);
+      return hit ? [hitToLiveGame(hit)] : [];
+    })
+    .slice(0, limit);
 }
 
 export async function fetchEpicFreeGames(options?: StoreRequestOptions): Promise<LiveGame[]> {

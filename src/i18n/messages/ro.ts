@@ -13,10 +13,9 @@ export const ro = {
   'common.clear': 'Șterge',
   'common.loading': 'Se încarcă…',
 
-  'home.onSale': 'La reducere',
-  'home.biggestDiscount': 'Cea mai mare reducere acum',
-  'home.empty': 'Nu există reduceri de afișat acum.',
-  'home.loading': 'Se încarcă reducerile…',
+  'home.popular': 'Populare',
+  'home.empty': 'Nu există jocuri de afișat acum.',
+  'home.loading': 'Se încarcă jocurile populare…',
 
   'search.placeholder': 'Caută jocuri',
   'search.hint': 'Scrie cel puțin 2 litere.',

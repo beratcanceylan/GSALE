@@ -23,11 +23,11 @@ let detailResult: GameDetailResponse = {
 mock.module('./api', () => ({
   searchGames: async () => searchResults,
   getGameDetail: async () => detailResult,
-  getHomeSections: async () => [{ platform: 'Steam', games: searchResults }],
+  getPopularGames: async () => searchResults,
   getFreeGames: async () => searchResults,
 }));
 
-const { fetchFreeGames, fetchGameDetail, fetchHomeSections, fetchSearchResults } = await import('@/services/gameData');
+const { fetchFreeGames, fetchGameDetail, fetchPopularGames, fetchSearchResults } = await import('@/services/gameData');
 
 describe('game data mapping', () => {
   test('maps complete summaries for search, home and free games', async () => {
@@ -39,7 +39,7 @@ describe('game data mapping', () => {
       upcoming: false, upcoming_date_str: 'soon',
     });
     expect(search?.deals[0]).toMatchObject({ platform: 'Steam', url: summary.deals?.[0]?.store_url });
-    expect((await fetchHomeSections())[0]?.games[0]).toEqual(search);
+    expect((await fetchPopularGames())[0]).toEqual(search);
     expect((await fetchFreeGames())[0]).toEqual(search);
   });
 

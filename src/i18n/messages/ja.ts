@@ -13,10 +13,9 @@ export const ja = {
   'common.clear': 'クリア',
   'common.loading': '読み込み中…',
 
-  'home.onSale': 'セール中',
-  'home.biggestDiscount': '現在の最大割引',
-  'home.empty': '表示できるセールはありません。',
-  'home.loading': 'セールを読み込み中…',
+  'home.popular': '人気',
+  'home.empty': '表示できるゲームはありません。',
+  'home.loading': '人気のゲームを読み込み中…',
 
   'search.placeholder': 'ゲームを検索',
   'search.hint': '2文字以上入力してください。',

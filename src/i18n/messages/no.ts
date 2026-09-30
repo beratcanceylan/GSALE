@@ -13,10 +13,9 @@ export const no = {
   'common.clear': 'Tøm',
   'common.loading': 'Laster inn…',
 
-  'home.onSale': 'På tilbud',
-  'home.biggestDiscount': 'Største rabatt nå',
-  'home.empty': 'Ingen tilbud å vise nå.',
-  'home.loading': 'Laster inn tilbud…',
+  'home.popular': 'Populære',
+  'home.empty': 'Ingen spill å vise nå.',
+  'home.loading': 'Laster inn populære spill…',
 
   'search.placeholder': 'Søk etter spill',
   'search.hint': 'Skriv minst 2 bokstaver.',

@@ -6,7 +6,7 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { resetCurrencyCacheForTests, setFxRatesForTests } = await import('@/services/store/currency');
-const { fetchEpicDeals, fetchEpicDetails, fetchEpicEditionOffers, fetchEpicFreeGames, searchEpic } = await import(
+const { fetchEpicDetails, fetchEpicEditionOffers, fetchEpicFreeGames, fetchEpicTopSellers, searchEpic } = await import(
   '@/services/store/platforms/epic'
 );
 
@@ -176,18 +176,17 @@ describe('fetchEpicDetails', () => {
   });
 });
 
-describe('fetchEpicDeals', () => {
-  test('keeps only discounted, linkable offers up to the limit', async () => {
-    const fullPrice = { ...HADES, id: 'full', price: { price: { currencyCode: 'TRY', originalPrice: 100, discountPrice: 100 } } };
-    const { price: _price, ...unpriced } = { ...HADES, id: 'unpriced' };
-    routeFetch(() => Response.json([HADES, fullPrice, unpriced, { title: '' }, { ...HADES, id: 'second' }]));
-    const games = await fetchEpicDeals(1);
+describe('fetchEpicTopSellers', () => {
+  test('lists top sellers for the store country, up to the limit', async () => {
+    const urls = routeFetch(() => Response.json({ elements: [HADES, { ...HADES, id: 'second', title: 'Second' }, { title: '' }] }));
+    const games = await fetchEpicTopSellers(1);
     expect(games.map((game) => game.id)).toEqual(['ns-hades_offer-hades']);
+    expect(urls[0]).toContain('/offers/top-sellers?country=TR');
   });
 
-  test('treats a non-array response as no deals', async () => {
+  test('an unexpected response is an empty list', async () => {
     routeFetch(() => Response.json({ unexpected: true }));
-    expect(await fetchEpicDeals(5)).toEqual([]);
+    expect(await fetchEpicTopSellers(5)).toEqual([]);
   });
 });
 

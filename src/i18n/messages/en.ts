@@ -12,10 +12,9 @@ export const en = {
   'common.clear': 'Clear',
   'common.loading': 'Loading…',
 
-  'home.onSale': 'On sale',
-  'home.biggestDiscount': 'Biggest discount right now',
-  'home.empty': 'No deals to show right now.',
-  'home.loading': 'Loading deals…',
+  'home.popular': 'Popular',
+  'home.empty': 'No games to show right now.',
+  'home.loading': 'Loading popular games…',
 
   'search.placeholder': 'Search games',
   'search.hint': 'Type at least 2 letters.',

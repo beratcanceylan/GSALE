@@ -36,7 +36,9 @@ declare module 'bun:test' {
   export function beforeEach(fn: TestFn): void;
   export function afterEach(fn: TestFn): void;
   export function afterAll(fn: TestFn): void;
-  export function expect<T>(value: T): Expectation;
+  export const expect: (<T>(value: T) => Expectation) & {
+    arrayContaining(values: readonly unknown[]): unknown;
+  };
 
   export const mock: {
     module(id: string, factory: () => Record<string, unknown>): void;

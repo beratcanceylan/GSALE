@@ -8,7 +8,7 @@ import { fetchSteamFreeGames } from '@/services/store/platforms/steam';
 import { searchLiveGames } from '@/services/store/search';
 import type { GameDetailResponse, GameSummary, LiveGame, StoreRequestOptions } from '@/services/store/types';
 
-export { getHomeSections, type HomeSection } from '@/services/store/home';
+export { getPopularGames } from '@/services/store/popular';
 export type { EditionOption } from '@/services/store/edition-table';
 export type { EditionKey } from '@/services/store/editions';
 export type { GameDetailResponse, GameSummary, StoreRequestOptions } from '@/services/store/types';

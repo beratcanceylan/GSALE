@@ -13,10 +13,9 @@ export const da = {
   'common.clear': 'Ryd',
   'common.loading': 'Indlæser…',
 
-  'home.onSale': 'På tilbud',
-  'home.biggestDiscount': 'Største rabat lige nu',
-  'home.empty': 'Ingen tilbud at vise lige nu.',
-  'home.loading': 'Indlæser tilbud…',
+  'home.popular': 'Populære',
+  'home.empty': 'Ingen spil at vise lige nu.',
+  'home.loading': 'Indlæser populære spil…',
 
   'search.placeholder': 'Søg efter spil',
   'search.hint': 'Skriv mindst 2 bogstaver.',

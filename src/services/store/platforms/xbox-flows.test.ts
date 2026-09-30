@@ -6,7 +6,7 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { resetCurrencyCacheForTests, setFxRatesForTests } = await import('@/services/store/currency');
-const { fetchXboxDeals, fetchXboxDetails, fetchXboxEditionOffers, searchXbox } = await import(
+const { fetchXboxDetails, fetchXboxEditionOffers, fetchXboxTopPaid, searchXbox } = await import(
   '@/services/store/platforms/xbox'
 );
 
@@ -122,31 +122,37 @@ describe('fetchXboxDetails', () => {
   });
 });
 
-describe('fetchXboxDeals', () => {
-  test('keeps discounted, paid products from the deals channel', async () => {
-    globalThis.fetch = async (input) => {
+describe('fetchXboxTopPaid', () => {
+  test('lists the top-paid channel with prices, in channel order', async () => {
+    const bodies: string[] = [];
+    globalThis.fetch = async (input, init) => {
       const url = String(input);
       if (url.includes('emerald')) {
-        return Response.json({ channels: { GameDeals: { products: [{ productId: 'D' }, { productId: 'F' }, { productId: 'N' }, {}] } } });
+        bodies.push(String(init?.body ?? ''));
+        return Response.json({ channels: { TopPaid: { products: [{ productId: 'B' }, { productId: 'A' }, {}] } } });
       }
       return Response.json({
         Products: [
-          product('D', 'Discounted', [{ CurrencyCode: 'TRY', ListPrice: 50, MSRP: 100 }]),
-          product('F', 'Free', [{ CurrencyCode: 'TRY', ListPrice: 0, MSRP: 0 }]),
-          product('N', 'Full price', [{ CurrencyCode: 'TRY', ListPrice: 100, MSRP: 100 }]),
+          product('A', 'Alpha', [{ CurrencyCode: 'TRY', ListPrice: 100, MSRP: 100 }]),
+          product('B', 'Beta', [{ CurrencyCode: 'TRY', ListPrice: 50, MSRP: 100 }]),
         ],
       });
     };
-    expect((await fetchXboxDeals(10)).map((game) => game.id)).toEqual(['xbox-D']);
+    const games = await fetchXboxTopPaid(10);
+    expect(games.map((game) => [game.id, game.deals?.[0]?.price])).toEqual([
+      ['xbox-B', '50,00 TL'],
+      ['xbox-A', '100,00 TL'],
+    ]);
+    expect(JSON.parse(bodies[0] ?? '{}')).toMatchObject({ ChannelId: 'DynamicChannel.TopPaidGames' });
   });
 
-  test('an empty channel yields no deals and no catalog request', async () => {
+  test('an empty channel makes no catalog request', async () => {
     const urls: string[] = [];
     globalThis.fetch = async (input) => {
       urls.push(String(input));
       return Response.json({});
     };
-    expect(await fetchXboxDeals(10)).toEqual([]);
+    expect(await fetchXboxTopPaid(10)).toEqual([]);
     expect(urls).toHaveLength(1);
   });
 });

@@ -13,10 +13,9 @@ export const hu = {
   'common.clear': 'Törlés',
   'common.loading': 'Betöltés…',
 
-  'home.onSale': 'Akciós',
-  'home.biggestDiscount': 'Most a legnagyobb kedvezmény',
-  'home.empty': 'Most nincs megjeleníthető akció.',
-  'home.loading': 'Akciók betöltése…',
+  'home.popular': 'Népszerű',
+  'home.empty': 'Most nincs megjeleníthető játék.',
+  'home.loading': 'Népszerű játékok betöltése…',
 
   'search.placeholder': 'Játékok keresése',
   'search.hint': 'Írj be legalább 2 betűt.',

@@ -5,7 +5,7 @@
 import {
   searchGames,
   getGameDetail,
-  getHomeSections,
+  getPopularGames,
   getFreeGames,
   type GameSummary,
   type EditionKey,
@@ -112,17 +112,10 @@ function mapDetailToGame(detail: GameDetailResponse): Game {
 
 // --- Public API ---
 
-export interface HomeSection {
-  platform: string;
-  games: Game[];
-}
-
-export async function fetchHomeSections(options?: StoreRequestOptions): Promise<HomeSection[]> {
-  const sections = await getHomeSections(options);
-  return sections.map((section) => ({
-    platform: section.platform,
-    games: section.games.map(mapSummaryToGame),
-  }));
+/** Best sellers of several stores, mixed into one list. */
+export async function fetchPopularGames(options?: StoreRequestOptions): Promise<Game[]> {
+  const summaries = await getPopularGames(options);
+  return summaries.map(mapSummaryToGame);
 }
 
 export async function fetchSearchResults(

@@ -13,10 +13,9 @@ export const th = {
   'common.clear': 'ล้าง',
   'common.loading': 'กำลังโหลด…',
 
-  'home.onSale': 'ลดราคา',
-  'home.biggestDiscount': 'ส่วนลดมากที่สุดตอนนี้',
-  'home.empty': 'ยังไม่มีดีลให้แสดงในตอนนี้',
-  'home.loading': 'กำลังโหลดดีล…',
+  'home.popular': 'ยอดนิยม',
+  'home.empty': 'ตอนนี้ยังไม่มีเกมให้แสดง',
+  'home.loading': 'กำลังโหลดเกมยอดนิยม…',
 
   'search.placeholder': 'ค้นหาเกม',
   'search.hint': 'พิมพ์อย่างน้อย 2 ตัวอักษร',

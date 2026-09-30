@@ -6,7 +6,7 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { resetCurrencyCacheForTests, setFxRatesForTests } = await import('@/services/store/currency');
-const { fetchNintendoDeals, fetchNintendoDetails, fetchNintendoEditionOffers, searchNintendo } = await import(
+const { fetchNintendoDetails, fetchNintendoEditionOffers, searchNintendo } = await import(
   '@/services/store/platforms/nintendo'
 );
 const { parseNintendoProduct } = await import('@/services/store/platforms/nintendo-parse');
@@ -124,16 +124,6 @@ describe('Nintendo store adapter', () => {
     expect(await fetchNintendoDetails('nothing')).toBeNull();
   });
 
-  test('deals skip add-ons and full-price games', async () => {
-    respond({
-      hits: [
-        MARIO,
-        { ...MARIO, objectID: 'dlc', dlcType: 'Individual' },
-        { ...MARIO, objectID: 'full', price: { finalPrice: 20 } },
-      ],
-    });
-    expect((await fetchNintendoDeals(10)).map((game) => game.id)).toEqual(['nintendo-mario-wonder']);
-  });
 });
 
 describe('fetchNintendoEditionOffers', () => {

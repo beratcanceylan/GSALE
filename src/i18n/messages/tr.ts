@@ -13,10 +13,9 @@ export const tr = {
   'common.clear': 'Temizle',
   'common.loading': 'Yükleniyor…',
 
-  'home.onSale': 'İndirimde',
-  'home.biggestDiscount': 'Şu anki en büyük indirim',
-  'home.empty': 'Şu an gösterilecek indirim bulunamadı.',
-  'home.loading': 'İndirimler yükleniyor…',
+  'home.popular': 'Popüler',
+  'home.empty': 'Şu an gösterilecek oyun yok.',
+  'home.loading': 'Popüler oyunlar yükleniyor…',
 
   'search.placeholder': 'Oyun ara',
   'search.hint': 'En az 2 harf yazın.',

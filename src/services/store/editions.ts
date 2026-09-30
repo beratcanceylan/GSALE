@@ -215,7 +215,7 @@ const DLC_PHRASES = [
 const DLC_WORDS = new Set([
   'dlc', 'pack', 'paket', 'paketi', 'season', 'cash', 'shark', 'karti', 'addon', 'expansion', 'starter',
   'soundtrack', 'artbook', 'skin', 'skins', 'coin', 'coins', 'credit', 'credits', 'points', 'membership',
-  'subscription', 'upgrade', 'yukseltme', 'genisleme', 'bundle', 'pass',
+  'subscription', 'upgrade', 'yukseltme', 'yukseltmesi', 'genisleme', 'bundle', 'pass',
 ]);
 /** Words that make an edition-named product an add-on ("Premium Edition Upgrade"). */
 const EDITION_DLC_WORDS = normalizedSet(['dlc', 'expansion', 'season', 'upgrade', 'yükseltme', 'addon', 'soundtrack']);

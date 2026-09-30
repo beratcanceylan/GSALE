@@ -1,6 +1,6 @@
 import { STORE_CONFIG } from '@/services/store/config';
 import { formatPriceAsTry } from '@/services/store/currency';
-import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
+import { platformPriceToGameDeal } from '@/services/store/deals';
 import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } from '@/services/store/edition-table';
 import { baseTitle } from '@/services/store/editions';
 import { fetchJson, fetchPostJson, throwIfAborted, withRetry } from '@/services/store/fetch';
@@ -131,26 +131,6 @@ export async function searchNintendo(
   const products = await searchNintendoProducts(query, options);
   return products.flatMap((product) => (product.title && product.image_url ? [productToHit(product)] : []));
 }
-
-/** Discounted games from the US eShop "Deals" filter. */
-export async function fetchNintendoDeals(
-  limit: number,
-  options?: StoreRequestOptions,
-): Promise<LiveGame[]> {
-  const products = await queryNintendoProducts(
-    { query: '', page: 0, hitsPerPage: limit, filters: 'topLevelFilters:"Deals"' },
-    options,
-  );
-  const games = await Promise.all(
-    products.map(async (product) => {
-      if (product.is_add_on) return null;
-      const price = await productToPriceResult(product, options?.signal);
-      return price?.discount ? liveGameWithDeal(productToHit(product), price) : null;
-    }),
-  );
-  return games.flatMap((game) => (game ? [game] : []));
-}
-
 
 /** Every edition of `title`'s game on the US eShop, from one search with the base title. */
 export async function fetchNintendoEditionOffers(

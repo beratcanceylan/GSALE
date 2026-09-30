@@ -13,10 +13,9 @@ export const vi = {
   'common.clear': 'Xóa',
   'common.loading': 'Đang tải…',
 
-  'home.onSale': 'Đang giảm giá',
-  'home.biggestDiscount': 'Giảm giá sâu nhất hiện nay',
-  'home.empty': 'Hiện chưa có ưu đãi nào.',
-  'home.loading': 'Đang tải ưu đãi…',
+  'home.popular': 'Phổ biến',
+  'home.empty': 'Hiện chưa có game để hiển thị.',
+  'home.loading': 'Đang tải game phổ biến…',
 
   'search.placeholder': 'Tìm game',
   'search.hint': 'Nhập ít nhất 2 chữ cái.',

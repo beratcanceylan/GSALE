@@ -1,6 +1,7 @@
 import { STORE_CONFIG, getStoreCountryConfig } from '@/services/store/config';
 import { regionalLocale, storeLanguage } from '@/services/store/languages';
 import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
+import { hitToLiveGame } from '@/services/store/merge';
 import { formatPriceAsTry } from '@/services/store/currency';
 import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } from '@/services/store/edition-table';
 import { baseTitle, type EditionKey } from '@/services/store/editions';
@@ -248,14 +249,15 @@ export async function fetchXboxEditionOffers(
 }
 
 const XBOX_BROWSE_URL = 'https://emerald.xboxservices.com/xboxcomfd/browse';
-const XBOX_DEALS_CHANNEL = 'DynamicChannel.GameDeals';
+const XBOX_TOP_PAID_CHANNEL = 'DynamicChannel.TopPaidGames';
+const CHANNEL_KEY = 'TopPaid';
 
 interface XboxBrowseResponse {
   channels?: Record<string, { products?: { productId?: string }[] }>;
 }
 
-/** Product ids of xbox.com's "Game Deals" channel for the selected market. */
-async function fetchXboxDealIds(options?: StoreRequestOptions): Promise<string[]> {
+/** Product ids of an xbox.com browse channel for the selected market. */
+async function fetchXboxChannelIds(channelId: string, options?: StoreRequestOptions): Promise<string[]> {
   const { language } = xboxMarket();
   const data = await withRetry(
     () =>
@@ -264,8 +266,8 @@ async function fetchXboxDealIds(options?: StoreRequestOptions): Promise<string[]
         {
           Filters: 'e30=',
           ReturnFilters: false,
-          ChannelKeyToBeUsedInResponse: 'GameDeals',
-          ChannelId: XBOX_DEALS_CHANNEL,
+          ChannelKeyToBeUsedInResponse: CHANNEL_KEY,
+          ChannelId: channelId,
         },
         {
           'x-ms-api-version': '1.1',
@@ -278,23 +280,25 @@ async function fetchXboxDealIds(options?: StoreRequestOptions): Promise<string[]
     0,
     options?.signal,
   );
-  return (data.channels?.['GameDeals']?.products ?? []).flatMap((product) =>
+  return (data.channels?.[CHANNEL_KEY]?.products ?? []).flatMap((product) =>
     product.productId ? [product.productId] : [],
   );
 }
 
-export async function fetchXboxDeals(
+/** xbox.com's top-paid games for the selected market, each with its price. */
+export async function fetchXboxTopPaid(
   limit: number,
   options?: StoreRequestOptions,
 ): Promise<LiveGame[]> {
-  const ids = (await fetchXboxDealIds(options)).slice(0, limit);
+  const ids = (await fetchXboxChannelIds(XBOX_TOP_PAID_CHANNEL, options)).slice(0, limit);
+  if (ids.length === 0) return [];
   const products = await fetchXboxCatalogProducts(ids, options);
   const games = await Promise.all(products.map(async (product) => {
     const hit = xboxProductToHit(product);
     const selected = getXboxListPrice(product);
-    if (!hit || !selected || selected.isFree) return null;
-    const price = await xboxPriceFromSelected(selected, hit.store_url, options?.signal);
-    return price.discount ? liveGameWithDeal(hit, price) : null;
+    if (!hit) return null;
+    if (!selected) return hitToLiveGame(hit);
+    return liveGameWithDeal(hit, await xboxPriceFromSelected(selected, hit.store_url, options?.signal));
   }));
   return games.flatMap((game) => (game ? [game] : []));
 }

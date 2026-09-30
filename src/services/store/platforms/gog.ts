@@ -1,6 +1,6 @@
 import { getStoreCountry } from '@/services/store/config';
 import { storeLanguage } from '@/services/store/languages';
-import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
+import { platformPriceToGameDeal } from '@/services/store/deals';
 import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } from '@/services/store/edition-table';
 import { baseTitle } from '@/services/store/editions';
 import { fetchJson, throwIfAborted, withRetry } from '@/services/store/fetch';
@@ -143,41 +143,6 @@ export async function searchGog(
   const products = await fetchGogCatalog(query, 12, options);
   return products.map(gogProductToHit);
 }
-
-/** Trending discounted games from the GOG catalog for the selected country. */
-export async function fetchGogDeals(
-  limit: number,
-  options?: StoreRequestOptions,
-): Promise<LiveGame[]> {
-  const params = new URLSearchParams({
-    order: 'desc:trending',
-    discounted: 'eq:true',
-    productType: 'in:game,pack',
-    limit: String(limit),
-    countryCode: getStoreCountry(),
-    locale: storeLanguage('gog'),
-  });
-  const data = await withRetry(
-    () => fetchJson<GogCatalogResponse>(`https://catalog.gog.com/v1/catalog?${params.toString()}`, { signal: options?.signal }),
-    0,
-    options?.signal,
-  );
-  const games = await Promise.all((data.products ?? []).map(async (product) => {
-    const hit = gogProductToHit(product);
-    const priced = await gogPriceFromProduct(product, options?.signal);
-    if (!priced.discount) return null;
-    return liveGameWithDeal(hit, {
-      platform: 'GOG',
-      price: priced.price,
-      original_price: priced.original_price,
-      discount: priced.discount,
-      tier: 'pc',
-      ...(hit.store_url ? { store_url: hit.store_url } : {}),
-    });
-  }));
-  return games.flatMap((game) => (game ? [game] : []));
-}
-
 
 /** Every edition of `title`'s game on GOG, from one catalog search with the base title. */
 export async function fetchGogEditionOffers(

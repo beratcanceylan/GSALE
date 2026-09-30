@@ -13,10 +13,9 @@ export const de = {
   'common.clear': 'Löschen',
   'common.loading': 'Wird geladen …',
 
-  'home.onSale': 'Im Angebot',
-  'home.biggestDiscount': 'Größter Rabatt gerade',
-  'home.empty': 'Gerade keine Angebote.',
-  'home.loading': 'Angebote werden geladen …',
+  'home.popular': 'Beliebt',
+  'home.empty': 'Gerade keine Spiele zum Anzeigen.',
+  'home.loading': 'Beliebte Spiele werden geladen …',
 
   'search.placeholder': 'Spiele suchen',
   'search.hint': 'Gib mindestens 2 Buchstaben ein.',

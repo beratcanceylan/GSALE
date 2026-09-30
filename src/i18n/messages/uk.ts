@@ -13,10 +13,9 @@ export const uk = {
   'common.clear': 'Очистити',
   'common.loading': 'Завантаження…',
 
-  'home.onSale': 'Зі знижкою',
-  'home.biggestDiscount': 'Найбільша знижка зараз',
-  'home.empty': 'Зараз немає знижок.',
-  'home.loading': 'Завантажуємо знижки…',
+  'home.popular': 'Популярне',
+  'home.empty': 'Зараз нічого показати.',
+  'home.loading': 'Завантажуємо популярні ігри…',
 
   'search.placeholder': 'Пошук ігор',
   'search.hint': 'Введіть щонайменше 2 літери.',

@@ -13,10 +13,9 @@ export const fi = {
   'common.clear': 'Tyhjennä',
   'common.loading': 'Ladataan…',
 
-  'home.onSale': 'Alennuksessa',
-  'home.biggestDiscount': 'Suurin alennus nyt',
-  'home.empty': 'Ei näytettäviä tarjouksia juuri nyt.',
-  'home.loading': 'Ladataan tarjouksia…',
+  'home.popular': 'Suositut',
+  'home.empty': 'Ei näytettäviä pelejä juuri nyt.',
+  'home.loading': 'Ladataan suosittuja pelejä…',
 
   'search.placeholder': 'Hae pelejä',
   'search.hint': 'Kirjoita vähintään 2 kirjainta.',

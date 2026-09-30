@@ -13,10 +13,9 @@ export const es419 = {
   'common.clear': 'Borrar',
   'common.loading': 'Cargando…',
 
-  'home.onSale': 'En oferta',
-  'home.biggestDiscount': 'Mayor descuento ahora',
-  'home.empty': 'No hay ofertas que mostrar ahora.',
-  'home.loading': 'Cargando ofertas…',
+  'home.popular': 'Populares',
+  'home.empty': 'No hay juegos para mostrar ahora.',
+  'home.loading': 'Cargando juegos populares…',
 
   'search.placeholder': 'Buscar juegos',
   'search.hint': 'Escribe al menos 2 letras.',

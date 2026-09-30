@@ -13,10 +13,9 @@ export const ptBR = {
   'common.clear': 'Limpar',
   'common.loading': 'Carregando…',
 
-  'home.onSale': 'Em promoção',
-  'home.biggestDiscount': 'Maior desconto agora',
-  'home.empty': 'Nenhuma promoção para mostrar agora.',
-  'home.loading': 'Carregando promoções…',
+  'home.popular': 'Populares',
+  'home.empty': 'Nenhum jogo para mostrar agora.',
+  'home.loading': 'Carregando jogos populares…',
 
   'search.placeholder': 'Buscar jogos',
   'search.hint': 'Digite pelo menos 2 letras.',

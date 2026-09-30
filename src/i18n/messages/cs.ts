@@ -13,10 +13,9 @@ export const cs = {
   'common.clear': 'Vymazat',
   'common.loading': 'Načítání…',
 
-  'home.onSale': 'Ve slevě',
-  'home.biggestDiscount': 'Největší sleva teď',
-  'home.empty': 'Teď nejsou žádné slevy.',
-  'home.loading': 'Načítání slev…',
+  'home.popular': 'Oblíbené',
+  'home.empty': 'Teď není co zobrazit.',
+  'home.loading': 'Načítání oblíbených her…',
 
   'search.placeholder': 'Hledat hry',
   'search.hint': 'Napište aspoň 2 písmena.',

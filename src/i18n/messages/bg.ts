@@ -13,10 +13,9 @@ export const bg = {
   'common.clear': 'Изчисти',
   'common.loading': 'Зареждане…',
 
-  'home.onSale': 'В промоция',
-  'home.biggestDiscount': 'Най-голямата отстъпка сега',
-  'home.empty': 'В момента няма промоции.',
-  'home.loading': 'Зареждане на промоциите…',
+  'home.popular': 'Популярни',
+  'home.empty': 'В момента няма игри за показване.',
+  'home.loading': 'Зареждане на популярните игри…',
 
   'search.placeholder': 'Търси игри',
   'search.hint': 'Въведи поне 2 букви.',

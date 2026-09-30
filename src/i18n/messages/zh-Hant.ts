@@ -13,10 +13,9 @@ export const zhHant = {
   'common.clear': '清除',
   'common.loading': '載入中…',
 
-  'home.onSale': '特價中',
-  'home.biggestDiscount': '目前最大折扣',
-  'home.empty': '目前沒有可顯示的優惠。',
-  'home.loading': '正在載入優惠…',
+  'home.popular': '熱門',
+  'home.empty': '目前沒有可顯示的遊戲。',
+  'home.loading': '正在載入熱門遊戲…',
 
   'search.placeholder': '搜尋遊戲',
   'search.hint': '請至少輸入 2 個字。',

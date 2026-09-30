@@ -13,10 +13,9 @@ export const id = {
   'common.clear': 'Hapus',
   'common.loading': 'Memuat…',
 
-  'home.onSale': 'Sedang diskon',
-  'home.biggestDiscount': 'Diskon terbesar saat ini',
-  'home.empty': 'Belum ada diskon untuk ditampilkan.',
-  'home.loading': 'Memuat diskon…',
+  'home.popular': 'Populer',
+  'home.empty': 'Belum ada game untuk ditampilkan.',
+  'home.loading': 'Memuat game populer…',
 
   'search.placeholder': 'Cari game',
   'search.hint': 'Ketik minimal 2 huruf.',

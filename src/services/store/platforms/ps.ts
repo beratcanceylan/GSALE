@@ -1,7 +1,7 @@
 import { STORE_CONFIG, getStoreCountry, getStoreCountryConfig } from '@/services/store/config';
 import { regionalLocale, storeLanguage } from '@/services/store/languages';
 import { formatPriceAsTry } from '@/services/store/currency';
-import { liveGameWithDeal, platformPriceToGameDeal } from '@/services/store/deals';
+import { platformPriceToGameDeal } from '@/services/store/deals';
 import { acceptEditionCandidate, MAX_EDITION_CANDIDATES, type EditionOffer } from '@/services/store/edition-table';
 import { baseTitle } from '@/services/store/editions';
 import { fetchJson, fetchText, throwIfAborted, withRetry } from '@/services/store/fetch';
@@ -277,104 +277,6 @@ export async function fetchPlayStationEditionOffers(
   }));
   throwIfAborted(options?.signal);
   return offers.flatMap((offer) => (offer ? [offer] : []));
-}
-
-const PS_GRAPHQL_URL = 'https://web.np.playstation.com/api/graphql/v1/op';
-/** The store's own "All Deals" category; the id is shared by every region. */
-const PS_ALL_DEALS_CATEGORY_ID = '3f772501-f6f8-49b7-abac-874a88ca4897';
-const PS_CATEGORY_GRID_QUERY_HASH = '4ce7d410a4db2c8b635a48c1dcec375906ff63b19dadd87e073f8fd0c0481d35';
-const PS_DEAL_IMAGE_ROLES = ['MASTER', 'GAMEHUB_COVER_ART', 'EDITION_KEY_ART'];
-
-interface PsGridProduct {
-  id?: string;
-  name?: string;
-  media?: { role?: string; type?: string; url?: string }[];
-  price?: { basePrice?: string; discountedPrice?: string; discountText?: string; isFree?: boolean };
-}
-
-interface PsCategoryGridResponse {
-  data?: { categoryGridRetrieve?: { products?: PsGridProduct[] } | null };
-}
-
-function psDealsUrl(limit: number): string {
-  const variables = {
-    id: PS_ALL_DEALS_CATEGORY_ID,
-    pageArgs: { size: limit, offset: 0 },
-    sortBy: null,
-    filterBy: [],
-    facetOptions: [],
-  };
-  const extensions = { persistedQuery: { version: 1, sha256Hash: PS_CATEGORY_GRID_QUERY_HASH } };
-  return `${PS_GRAPHQL_URL}?operationName=categoryGridRetrieve&variables=${encodeURIComponent(JSON.stringify(variables))}&extensions=${encodeURIComponent(JSON.stringify(extensions))}`;
-}
-
-function psDealImage(product: PsGridProduct): string {
-  const imagesByRole = new Map<string, string>();
-  for (const media of product.media ?? []) {
-    if (media.type === 'IMAGE' && media.role && media.url && !imagesByRole.has(media.role)) {
-      imagesByRole.set(media.role, media.url);
-    }
-  }
-  return PS_DEAL_IMAGE_ROLES.map((role) => imagesByRole.get(role)).find(Boolean) ?? '';
-}
-
-/** Games in the PlayStation Store's "All Deals" category for the selected country. */
-export async function fetchPlayStationDeals(
-  limit: number,
-  options?: StoreRequestOptions,
-): Promise<LiveGame[]> {
-  const currency = getPsCurrency();
-  if (!currency) return [];
-  const pathLocale = getPsPathLocale();
-  const [language = 'en', country = 'us'] = pathLocale.split('-');
-  const data = await withRetry(
-    () =>
-      fetchJson<PsCategoryGridResponse>(
-        psDealsUrl(limit),
-        {
-          headers: {
-            Accept: 'application/json',
-            Referer: 'https://store.playstation.com/',
-            'Content-Type': 'application/json',
-            'x-psn-store-locale-override': `${language}-${country.toUpperCase()}`,
-          },
-          signal: options?.signal,
-        },
-        STORE_CONFIG.timeout.long,
-      ),
-    0,
-    options?.signal,
-  );
-
-  const games = await Promise.all(
-    (data.data?.categoryGridRetrieve?.products ?? []).map(async (product) => {
-      const discounted = product.price?.discountedPrice?.replaceAll('\u00a0', ' ');
-      const base = product.price?.basePrice?.replaceAll('\u00a0', ' ');
-      const percent = product.price?.discountText?.replaceAll(/\D/g, '');
-      if (!product.id || !product.name || !discounted || !percent || product.price?.isFree) return null;
-      const storeUrl = getPlayStationStoreUrl(product.id, pathLocale);
-      return liveGameWithDeal(
-        {
-          id: `ps-${product.id}`,
-          slug: `ps-${product.id}`,
-          title: product.name,
-          image_url: psDealImage(product),
-          platform: 'PlayStation',
-          store_url: storeUrl,
-        },
-        {
-          platform: 'PlayStation',
-          price: currency === 'TRY' ? discounted : await psPriceToTry(discounted, currency, options?.signal),
-          original_price:
-            base && currency !== 'TRY' ? await psPriceToTry(base, currency, options?.signal) : base ?? null,
-          discount: `-${percent}%`,
-          store_url: storeUrl,
-          tier: 'console',
-        },
-      );
-    }),
-  );
-  return games.flatMap((game) => (game && !isUnavailablePrice(game.price) ? [game] : []));
 }
 
 export async function fetchPlayStationDetails(

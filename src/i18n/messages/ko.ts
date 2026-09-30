@@ -13,10 +13,9 @@ export const ko = {
   'common.clear': '지우기',
   'common.loading': '불러오는 중…',
 
-  'home.onSale': '할인 중',
-  'home.biggestDiscount': '지금 가장 큰 할인',
-  'home.empty': '지금 표시할 할인이 없습니다.',
-  'home.loading': '할인 정보를 불러오는 중…',
+  'home.popular': '인기',
+  'home.empty': '지금 표시할 게임이 없습니다.',
+  'home.loading': '인기 게임을 불러오는 중…',
 
   'search.placeholder': '게임 검색',
   'search.hint': '2글자 이상 입력하세요.',

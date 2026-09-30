@@ -11,7 +11,7 @@ let searchOutcome: 'pending' | 'success' | 'failure' = 'pending';
 let detailOutcome: 'pending' | 'success' | 'failure' = 'pending';
 
 mock.module('@/services/gameData', () => ({
-  fetchHomeSections: async () => [],
+  fetchPopularGames: async () => [],
   fetchFreeGames: async () => [],
   fetchSearchResults: async (_query: string, options?: { signal?: AbortSignal }) => {
     if (options?.signal) searchSignals.push(options.signal);
