@@ -64,7 +64,6 @@ export const vi = {
   'edition.legendary': 'Huyền thoại',
   'edition.champion': 'Champion',
   'edition.vault': 'Vault',
-  'edition.cross-gen': 'Cross-Gen',
 
   'price.free': 'Miễn phí',
   'price.unknown': 'Không có giá',

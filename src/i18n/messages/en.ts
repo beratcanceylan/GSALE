@@ -63,7 +63,6 @@ export const en = {
   'edition.legendary': 'Legendary',
   'edition.champion': 'Champion',
   'edition.vault': 'Vault',
-  'edition.cross-gen': 'Cross-Gen',
 
   'price.free': 'Free',
   'price.unknown': 'Price unavailable',

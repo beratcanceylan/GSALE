@@ -64,7 +64,6 @@ export const ru = {
   'edition.legendary': 'Легендарное',
   'edition.champion': 'Чемпионское',
   'edition.vault': 'Vault',
-  'edition.cross-gen': 'Cross-Gen',
 
   'price.free': 'Бесплатно',
   'price.unknown': 'Цена недоступна',

@@ -64,7 +64,6 @@ export const el = {
   'edition.legendary': 'Θρυλική',
   'edition.champion': 'Πρωταθλητή',
   'edition.vault': 'Vault',
-  'edition.cross-gen': 'Cross-Gen',
 
   'price.free': 'Δωρεάν',
   'price.unknown': 'Μη διαθέσιμη τιμή',

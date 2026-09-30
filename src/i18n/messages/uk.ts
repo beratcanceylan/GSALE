@@ -64,7 +64,6 @@ export const uk = {
   'edition.legendary': 'Легендарне',
   'edition.champion': 'Чемпіонське',
   'edition.vault': 'Vault',
-  'edition.cross-gen': 'Cross-Gen',
 
   'price.free': 'Безкоштовно',
   'price.unknown': 'Ціна недоступна',

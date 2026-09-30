@@ -64,7 +64,6 @@ export const cs = {
   'edition.legendary': 'Legendární',
   'edition.champion': 'Šampionská',
   'edition.vault': 'Vault',
-  'edition.cross-gen': 'Cross-Gen',
 
   'price.free': 'Zdarma',
   'price.unknown': 'Cena není k dispozici',

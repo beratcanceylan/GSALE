@@ -64,7 +64,6 @@ export const es419 = {
   'edition.legendary': 'Legendaria',
   'edition.champion': 'Campeón',
   'edition.vault': 'Vault',
-  'edition.cross-gen': 'Cross-Gen',
 
   'price.free': 'Gratis',
   'price.unknown': 'Precio no disponible',

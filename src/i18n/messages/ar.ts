@@ -64,7 +64,6 @@ export const ar = {
   'edition.legendary': 'الأسطوري',
   'edition.champion': 'Champion',
   'edition.vault': 'Vault',
-  'edition.cross-gen': 'Cross-Gen',
 
   'price.free': 'مجاني',
   'price.unknown': 'السعر غير متوفر',

@@ -64,7 +64,6 @@ export const th = {
   'edition.legendary': 'Legendary',
   'edition.champion': 'Champion',
   'edition.vault': 'Vault',
-  'edition.cross-gen': 'Cross-Gen',
 
   'price.free': 'ฟรี',
   'price.unknown': 'ไม่มีข้อมูลราคา',

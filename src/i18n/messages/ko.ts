@@ -64,7 +64,6 @@ export const ko = {
   'edition.legendary': '레전더리',
   'edition.champion': '챔피언',
   'edition.vault': 'Vault',
-  'edition.cross-gen': '크로스젠',
 
   'price.free': '무료',
   'price.unknown': '가격 정보 없음',

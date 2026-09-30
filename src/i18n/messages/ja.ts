@@ -64,7 +64,6 @@ export const ja = {
   'edition.legendary': 'レジェンダリー',
   'edition.champion': 'チャンピオン',
   'edition.vault': 'Vault',
-  'edition.cross-gen': 'クロスジェン',
 
   'price.free': '無料',
   'price.unknown': '価格情報なし',

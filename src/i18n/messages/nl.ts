@@ -64,7 +64,6 @@ export const nl = {
   'edition.legendary': 'Legendarisch',
   'edition.champion': 'Champion',
   'edition.vault': 'Vault',
-  'edition.cross-gen': 'Cross-Gen',
 
   'price.free': 'Gratis',
   'price.unknown': 'Prijs niet beschikbaar',

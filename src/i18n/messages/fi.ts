@@ -64,7 +64,6 @@ export const fi = {
   'edition.legendary': 'Legendaarinen',
   'edition.champion': 'Mestari',
   'edition.vault': 'Vault',
-  'edition.cross-gen': 'Cross-Gen',
 
   'price.free': 'Ilmainen',
   'price.unknown': 'Hinta ei saatavilla',

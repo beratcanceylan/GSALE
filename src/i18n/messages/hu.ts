@@ -64,7 +64,6 @@ export const hu = {
   'edition.legendary': 'Legendás',
   'edition.champion': 'Bajnoki',
   'edition.vault': 'Vault',
-  'edition.cross-gen': 'Cross-Gen',
 
   'price.free': 'Ingyenes',
   'price.unknown': 'Nincs elérhető ár',

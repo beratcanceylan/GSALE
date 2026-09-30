@@ -64,7 +64,6 @@ export const tr = {
   'edition.legendary': 'Efsanevi',
   'edition.champion': 'Şampiyon',
   'edition.vault': 'Kasa',
-  'edition.cross-gen': 'Nesiller Arası',
 
   'price.free': 'Ücretsiz',
   'price.unknown': 'Fiyat yok',

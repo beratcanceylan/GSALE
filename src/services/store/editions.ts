@@ -16,12 +16,11 @@ export type EditionKey =
   | 'enhanced'
   | 'legendary'
   | 'champion'
-  | 'vault'
-  | 'cross-gen';
+  | 'vault';
 
 const EDITION_ORDER: readonly EditionKey[] = [
   'base', 'enhanced', 'deluxe', 'gold', 'premium', 'ultimate', 'champion', 'vault', 'legendary',
-  'complete', 'definitive', 'goty', 'directors-cut', 'anniversary', 'special', 'collector', 'cross-gen',
+  'complete', 'definitive', 'goty', 'directors-cut', 'anniversary', 'special', 'collector',
 ];
 
 type Token = Readonly<{ word: string; start: number }>;
@@ -46,7 +45,8 @@ const EDITION_WORDS = normalizedSet([
 const EDITION_NAMES: readonly Readonly<{ key: EditionKey; paired: boolean; names: readonly string[] }>[] = [
   { key: 'directors-cut', paired: false, names: ['directors cut', 'director cut', 'yonetmenin surumu', 'yonetmenin'] },
   { key: 'goty', paired: false, names: ['game of the year', 'goty', 'yilin oyunu'] },
-  { key: 'cross-gen', paired: false, names: ['cross gen'] },
+  // A cross-gen bundle is the standard product on PlayStation, not an edition of its own.
+  { key: 'base', paired: false, names: ['cross gen'] },
   { key: 'enhanced', paired: false, names: ['enhanced'] },
   { key: 'ultimate', paired: true, names: ['ultimate', 'ultime', 'nihai', 'ostateczna', 'アルティメット', '얼티밋', '终极'] },
   { key: 'deluxe', paired: true, names: ['deluxe', 'lüks', 'делюкс', 'デラックス', '디럭스', '豪华'] },

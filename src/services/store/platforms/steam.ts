@@ -268,18 +268,31 @@ export async function fetchSteamDeals(
   });
 }
 
+const APP_DATA_TTL_MS = 60_000;
+const appDataCache = new Map<string, { data: SteamAppData | null; expiresAt: number }>();
+
+/** App details, reused for 60 seconds: the detail and its edition packages read the same app. */
 async function fetchSteamAppData(
   appId: string,
   options?: StoreRequestOptions,
 ): Promise<SteamAppData | null> {
   if (!/^\d+$/.test(appId)) return null;
   const url = `https://store.steampowered.com/api/appdetails?appids=${encodeURIComponent(appId)}&cc=${getStoreCountry()}&l=${storeLanguage('steam')}`;
+  const cached = appDataCache.get(url);
+  if (cached && cached.expiresAt > Date.now()) return cached.data;
   const res = await withRetry(
     () => fetchJson<SteamAppDetailsResponse>(url, { signal: options?.signal }),
     0,
     options?.signal,
   );
-  return res[appId]?.data ?? null;
+  const data = res[appId]?.data ?? null;
+  appDataCache.set(url, { data, expiresAt: Date.now() + APP_DATA_TTL_MS });
+  return data;
+}
+
+/** Tests only: forget cached app details. */
+export function resetSteamAppDataCacheForTests(): void {
+  appDataCache.clear();
 }
 
 export async function fetchSteamDetails(
@@ -339,15 +352,15 @@ function steamPackageTitle(optionText: string): string {
 
 function steamPackageOverview(sub: SteamPackageSub, currency: string | undefined): Partial<SteamPriceOverview> | null {
   const final = sub.price_in_cents_with_discount;
-  if (!isFiniteNumber(final)) return null;
+  if (!isFiniteNumber(final) || !currency) return null;
   const savings = isFiniteNumber(sub.percent_savings) ? sub.percent_savings : 0;
   const initial = savings > 0 && savings < 100 ? Math.round(final / (1 - savings / 100)) : final;
-  return { final, initial, discount_percent: savings, ...(currency ? { currency } : {}) };
+  return { final, initial, discount_percent: savings, currency };
 }
 
 /** Editions Steam sells as packages of one app ("Deluxe Edition" subs of the base game). */
 async function steamPackageOffers(
-  base: Readonly<{ appId: string; title: string; hasSearchPrice: boolean }>,
+  base: Readonly<{ appId: string; title: string; hasSearchPrice: boolean; searchCurrency: string | undefined }>,
   title: string,
   options?: StoreRequestOptions,
 ): Promise<EditionOffer[]> {
@@ -360,7 +373,8 @@ async function steamPackageOffers(
     if (options?.signal?.aborted) throw error;
     return [];
   }
-  const currency = data?.price_overview?.currency;
+  // Package prices carry no currency; take the app's, else the store's from search. Never guess.
+  const currency = data?.price_overview?.currency ?? base.searchCurrency;
   const subs = (data?.package_groups ?? []).flatMap((group) => group.subs ?? []);
   const offers = await Promise.all(subs.map(async (sub): Promise<EditionOffer | null> => {
     const packageTitle = steamPackageTitle(sub.option_text ?? '');
@@ -409,7 +423,12 @@ export async function fetchSteamEditionOffers(
   const baseProduct = accepted.find(({ edition }) => edition === 'base')?.product;
   const packages = baseProduct
     ? await steamPackageOffers(
-        { appId: baseProduct.hit.id, title: baseProduct.hit.title, hasSearchPrice: Boolean(baseProduct.price) },
+        {
+          appId: baseProduct.hit.id,
+          title: baseProduct.hit.title,
+          hasSearchPrice: Boolean(baseProduct.price),
+          searchCurrency: products.find((product) => product.price?.currency)?.price?.currency,
+        },
         title,
         options,
       )

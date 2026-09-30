@@ -64,7 +64,6 @@ export const bg = {
   'edition.legendary': 'Легендарно',
   'edition.champion': 'Шампионско',
   'edition.vault': 'Vault',
-  'edition.cross-gen': 'Cross-Gen',
 
   'price.free': 'Безплатно',
   'price.unknown': 'Няма цена',

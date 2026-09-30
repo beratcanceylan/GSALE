@@ -64,7 +64,6 @@ export const ro = {
   'edition.legendary': 'Legendară',
   'edition.champion': 'Campion',
   'edition.vault': 'Vault',
-  'edition.cross-gen': 'Cross-Gen',
 
   'price.free': 'Gratuit',
   'price.unknown': 'Preț indisponibil',

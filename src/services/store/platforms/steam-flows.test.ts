@@ -6,7 +6,7 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { resetCurrencyCacheForTests, setFxRatesForTests } = await import('@/services/store/currency');
-const { fetchSteamDeals, fetchSteamDetails, fetchSteamEditionOffers, fetchSteamFreeGames, searchSteam } = await import(
+const { fetchSteamDeals, fetchSteamDetails, fetchSteamEditionOffers, fetchSteamFreeGames, resetSteamAppDataCacheForTests, searchSteam } = await import(
   '@/services/store/platforms/steam'
 );
 
@@ -32,6 +32,7 @@ beforeEach(() => {
 afterEach(() => {
   globalThis.fetch = originalFetch;
   resetCurrencyCacheForTests();
+  resetSteamAppDataCacheForTests();
 });
 
 describe('searchSteam', () => {
@@ -85,8 +86,10 @@ describe('Steam edition prices', () => {
   });
 
   test('a base game without a search price is priced from its app details', async () => {
-    const withDetails = (details: unknown) =>
-      routeFetch((url) => (url.includes('/storesearch/') ? search({ id: 13, name: 'Hades' }) : details));
+    const withDetails = (details: unknown) => {
+      resetSteamAppDataCacheForTests();
+      return routeFetch((url) => (url.includes('/storesearch/') ? search({ id: 13, name: 'Hades' }) : details));
+    };
 
     withDetails({ 13: { success: true, data: { name: 'Hades', is_free: true } } });
     expect((await priceOf('Hades'))?.price).toBe('Ücretsiz');
@@ -242,5 +245,28 @@ describe('fetchSteamEditionOffers', () => {
       store_url: 'https://store.steampowered.com/sub/101/',
     });
     expect(offers.filter((offer) => offer.edition === 'base')).toHaveLength(2);
+  });
+
+  test('package prices use the store currency from search when the base app has no price', async () => {
+    setFxRatesForTests({ USD: 1, TRY: 40, EUR: 0.8 });
+    const packages = [{ subs: [{ packageid: 300, option_text: 'GSALE Currency Deluxe Edition', price_in_cents_with_discount: 2000 }] }];
+    routeFetch((url) =>
+      url.includes('storesearch')
+        ? search({ id: 30, name: 'GSALE Currency', price: { currency: 'EUR', final: 1000, initial: 1000 } })
+        : { 30: { success: true, data: { name: 'GSALE Currency', package_groups: packages } } },
+    );
+    const deluxe = (await fetchSteamEditionOffers('GSALE Currency')).find((offer) => offer.edition === 'deluxe');
+    expect(deluxe?.price.price).toBe('1.000,00 TL');
+  });
+
+  test('without any known currency, packages are skipped rather than guessed', async () => {
+    const packages = [{ subs: [{ packageid: 301, option_text: 'GSALE Guess Deluxe Edition', price_in_cents_with_discount: 2000 }] }];
+    routeFetch((url) =>
+      url.includes('storesearch')
+        ? search({ id: 31, name: 'GSALE Guess' })
+        : { 31: { success: true, data: { name: 'GSALE Guess', is_free: true, package_groups: packages } } },
+    );
+    const offers = await fetchSteamEditionOffers('GSALE Guess');
+    expect(offers.some((offer) => offer.edition === 'deluxe')).toBeFalse();
   });
 });

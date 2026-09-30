@@ -130,6 +130,7 @@ describe('game detail screen', () => {
     expect(textOf(byLabel(view.root, 'Standart'))).toContain('Ücretsiz');
     await fire(byLabel(view.root, 'Favorilere ekle'), 'onPress');
     expect(sqliteMock.favoriteRows.get('free-edition')).toMatchObject({ price: '90,00 TL' });
+    await fire(byLabel(view.root, 'Favorilerden çıkar'), 'onPress');
     await view.unmount();
   });
 });

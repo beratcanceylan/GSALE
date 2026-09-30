@@ -152,4 +152,13 @@ describe('detail editions', () => {
     expect(detail.game.edition).toBe('deluxe');
     expect(detail.editions.map((option) => [option.key, option.deals.length])).toEqual([['base', 1], ['deluxe', 0]]);
   });
+
+  test('opening the Steam base app reads its app details once', async () => {
+    const urls = routeStores({
+      appdetails: { '76000': { success: true, data: { name: 'GSALE Once Game', price_overview: tryPrice(1000) } } },
+      steamSearch: [{ id: 76000, name: 'GSALE Once Game', price: tryPrice(1000) }],
+    });
+    await getGameDetail('76000', 'Steam');
+    expect(urls.filter((url) => url.includes('/api/appdetails'))).toHaveLength(1);
+  });
 });

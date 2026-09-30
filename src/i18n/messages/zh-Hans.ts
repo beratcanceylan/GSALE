@@ -64,7 +64,6 @@ export const zhHans = {
   'edition.legendary': '传奇版',
   'edition.champion': '冠军版',
   'edition.vault': 'Vault 版',
-  'edition.cross-gen': '跨世代版',
 
   'price.free': '免费',
   'price.unknown': '暂无价格',

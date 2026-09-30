@@ -64,7 +64,6 @@ export const id = {
   'edition.legendary': 'Legendaris',
   'edition.champion': 'Champion',
   'edition.vault': 'Vault',
-  'edition.cross-gen': 'Cross-Gen',
 
   'price.free': 'Gratis',
   'price.unknown': 'Harga tidak tersedia',

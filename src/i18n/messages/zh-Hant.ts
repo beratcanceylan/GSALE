@@ -64,7 +64,6 @@ export const zhHant = {
   'edition.legendary': '傳奇版',
   'edition.champion': '冠軍版',
   'edition.vault': 'Vault 版',
-  'edition.cross-gen': '跨世代版',
 
   'price.free': '免費',
   'price.unknown': '暫無價格',

@@ -35,7 +35,8 @@ describe('editionKey', () => {
     ['Hades II Edizione Deluxe', 'deluxe'],
     ['Hades II Wydanie Deluxe', 'deluxe'],
     ['Hades II Издание Deluxe', 'deluxe'],
-    ['Horizon Forbidden West Cross-Gen Bundle', 'cross-gen'],
+    ['Horizon Forbidden West Cross-Gen Bundle', 'base'],
+    ['Call of Duty®: Black Ops 6 - Cross-Gen Paketi', 'base'],
     ["Mortal Kombat 1 Collector's Edition", 'collector'],
     ["Assassin's Creed Shadows Anniversary Edition", 'anniversary'],
     ['Ultimate Chicken Horse', 'base'],
@@ -70,6 +71,7 @@ describe('baseTitle', () => {
     ['Grand Theft Auto V (PS4™ ve PS5™)', 'Grand Theft Auto V'],
     ['Ghost of Tsushima YÖNETMENİN SÜRÜMÜ', 'Ghost of Tsushima'],
     ['Call of Duty®: Black Ops 6 - Kasa Sürümü', 'Call of Duty: Black Ops 6'],
+    ['Call of Duty®: Black Ops 6 - Cross-Gen Paketi', 'Call of Duty: Black Ops 6'],
   ])('%s → %s', (title, base) => {
     expect(baseTitle(title)).toBe(base);
   });

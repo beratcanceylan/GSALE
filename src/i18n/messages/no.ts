@@ -64,7 +64,6 @@ export const no = {
   'edition.legendary': 'Legendarisk',
   'edition.champion': 'Champion',
   'edition.vault': 'Vault',
-  'edition.cross-gen': 'Cross-Gen',
 
   'price.free': 'Gratis',
   'price.unknown': 'Pris ikke tilgjengelig',
