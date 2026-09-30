@@ -28,6 +28,7 @@ export const pt = {
   'free.empty': 'Não há jogos grátis agora.',
   'free.loading': 'A carregar jogos grátis…',
   'free.upcoming': 'Grátis em breve',
+  'free.poweredBy': 'Ofertas de {source}',
 
   'favorites.title': 'Favoritos',
   'favorites.empty': 'Os jogos que marcar como favoritos aparecem aqui.',

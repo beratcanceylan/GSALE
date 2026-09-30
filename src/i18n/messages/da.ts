@@ -28,6 +28,7 @@ export const da = {
   'free.empty': 'Ingen gratis spil lige nu.',
   'free.loading': 'Indlæser gratis spil…',
   'free.upcoming': 'Snart gratis',
+  'free.poweredBy': 'Gaver fra {source}',
 
   'favorites.title': 'Favoritter',
   'favorites.empty': 'Spil, du markerer som favoritter, vises her.',

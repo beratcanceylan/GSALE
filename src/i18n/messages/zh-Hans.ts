@@ -28,6 +28,7 @@ export const zhHans = {
   'free.empty': '目前没有免费游戏。',
   'free.loading': '正在加载免费游戏…',
   'free.upcoming': '即将免费',
+  'free.poweredBy': '免费领取信息来自 {source}',
 
   'favorites.title': '收藏',
   'favorites.empty': '你收藏的游戏会显示在这里。',

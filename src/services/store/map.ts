@@ -15,6 +15,7 @@ export function liveGameToSummary(game: LiveGame): GameSummary {
   };
 
   if (withDeals.store_links) summary.store_links = withDeals.store_links;
+  if (withDeals.external_url) summary.external_url = withDeals.external_url;
   if (withDeals.platforms) summary.platforms = withDeals.platforms;
   if (withDeals.price) summary.price = withDeals.price;
   if (withDeals.discount) summary.discount = withDeals.discount;

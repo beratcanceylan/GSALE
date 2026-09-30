@@ -28,6 +28,7 @@ export const uk = {
   'free.empty': 'Зараз немає безкоштовних ігор.',
   'free.loading': 'Завантажуємо безкоштовні ігри…',
   'free.upcoming': 'Скоро безкоштовно',
+  'free.poweredBy': 'Роздачі від {source}',
 
   'favorites.title': 'Обране',
   'favorites.empty': 'Тут з’являться ігри, додані в обране.',

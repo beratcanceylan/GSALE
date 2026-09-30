@@ -27,6 +27,7 @@ export const en = {
   'free.empty': 'No free games right now.',
   'free.loading': 'Loading free games…',
   'free.upcoming': 'Free next',
+  'free.poweredBy': 'Giveaways by {source}',
 
   'favorites.title': 'Favorites',
   'favorites.empty': 'Games you favorite appear here.',

@@ -28,6 +28,7 @@ export const th = {
   'free.empty': 'ตอนนี้ไม่มีเกมฟรี',
   'free.loading': 'กำลังโหลดเกมฟรี…',
   'free.upcoming': 'เร็ว ๆ นี้ฟรี',
+  'free.poweredBy': 'แจกฟรีจาก {source}',
 
   'favorites.title': 'รายการโปรด',
   'favorites.empty': 'เกมที่คุณเพิ่มในรายการโปรดจะแสดงที่นี่',

@@ -28,6 +28,7 @@ export const ru = {
   'free.empty': 'Сейчас нет бесплатных игр.',
   'free.loading': 'Загружаем бесплатные игры…',
   'free.upcoming': 'Скоро бесплатно',
+  'free.poweredBy': 'Раздачи от {source}',
 
   'favorites.title': 'Избранное',
   'favorites.empty': 'Здесь появятся игры, добавленные в избранное.',

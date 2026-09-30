@@ -28,6 +28,7 @@ export const pl = {
   'free.empty': 'Teraz nie ma darmowych gier.',
   'free.loading': 'Wczytywanie darmowych gier…',
   'free.upcoming': 'Wkrótce za darmo',
+  'free.poweredBy': 'Rozdawnictwa od {source}',
 
   'favorites.title': 'Ulubione',
   'favorites.empty': 'Tu pojawią się gry dodane do ulubionych.',

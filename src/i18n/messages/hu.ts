@@ -28,6 +28,7 @@ export const hu = {
   'free.empty': 'Most nincs ingyenes játék.',
   'free.loading': 'Ingyenes játékok betöltése…',
   'free.upcoming': 'Hamarosan ingyenes',
+  'free.poweredBy': 'Ajándékok forrása: {source}',
 
   'favorites.title': 'Kedvencek',
   'favorites.empty': 'A kedvencnek jelölt játékok itt jelennek meg.',

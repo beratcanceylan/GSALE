@@ -1,12 +1,12 @@
 import { StatusBar } from 'expo-status-bar';
-import { useSyncExternalStore } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useSyncExternalStore } from 'react';
+import { FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CoverCard } from '@/components/CoverCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { ScreenLoading } from '@/components/ScreenLoading';
-import { Palette, Spacing, useType } from '@/constants/DesignSystem';
+import { Palette, Size, Spacing, useType } from '@/constants/DesignSystem';
 import { useScrollSafeAreaStyle } from '@/hooks/useScrollSafeAreaStyle';
 import { useT } from '@/i18n';
 import { freeDeal } from '@/services/deal';
@@ -44,6 +44,24 @@ function FreeSection({ section }: Readonly<{ section: FreeRow }>) {
 
 const renderSection = ({ item }: { item: FreeRow }) => <FreeSection section={item} />;
 
+const GAMERPOWER_URL = 'https://www.gamerpower.com';
+
+/** GamerPower's terms ask for a visible link back to gamerpower.com. */
+function Attribution() {
+  const t = useT();
+  const type = useType();
+  return (
+    <Pressable
+      onPress={() => { void Linking.openURL(GAMERPOWER_URL); }}
+      style={styles.attribution}
+      accessibilityRole="link"
+      accessibilityLabel="GamerPower"
+    >
+      <Text style={[type('caption'), styles.attributionText]}>{t('free.poweredBy', { source: 'GamerPower' })}</Text>
+    </Pressable>
+  );
+}
+
 function FreeGamesLoaded({ games, refreshing }: Readonly<{ games: Game[]; refreshing: boolean }>) {
   const t = useT();
   const containerStyle = useScrollSafeAreaStyle();
@@ -57,6 +75,8 @@ function FreeGamesLoaded({ games, refreshing }: Readonly<{ games: Game[]; refres
     ...(now.length > 0 ? [{ key: 'now', title: t('free.title'), games: now }] : []),
     ...(next.length > 0 ? [{ key: 'next', title: t('free.upcoming'), games: next }] : []),
   ];
+
+  const footer = useMemo(() => <Attribution />, []);
 
   return (
     <View style={[styles.container, containerStyle]}>
@@ -72,6 +92,7 @@ function FreeGamesLoaded({ games, refreshing }: Readonly<{ games: Game[]; refres
         onRefresh={() => { freeGamesStore.load(true); }}
         ListHeaderComponent={<ScreenHeader title={t('tabs.free')} />}
         ListEmptyComponent={<EmptyState message={t('free.empty')} />}
+        ListFooterComponent={footer}
       />
     </View>
   );
@@ -106,5 +127,14 @@ const styles = StyleSheet.create({
   },
   spacer: {
     flex: 1,
+  },
+  attribution: {
+    minHeight: Size.touch,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.lg,
+  },
+  attributionText: {
+    color: Palette.textMuted,
+    textDecorationLine: 'underline',
   },
 });

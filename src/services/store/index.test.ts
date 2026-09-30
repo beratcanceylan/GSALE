@@ -60,6 +60,21 @@ describe('store search API', () => {
     expect(getDetailPreview('102', 'Steam')?.title).toBe('Steam Only');
   });
 
+  test('adds GamerPower giveaways after the store feeds, without repeating a game', async () => {
+    globalThis.fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('gamerpower')) {
+        return Response.json([
+          { id: 7, title: 'Steam Only (Steam) Giveaway', platforms: 'PC, Steam', open_giveaway_url: 'https://www.gamerpower.com/open/7' },
+          { id: 8, title: 'GSALE Giveaway Only (GOG) Giveaway', platforms: 'PC, GOG', open_giveaway_url: 'https://www.gamerpower.com/open/8' },
+        ]);
+      }
+      if (url.includes('freeGamesPromotions')) return new Response('', { status: 404 });
+      return Response.json({ free_to_play: { items: [{ id: 104, name: 'Steam Only' }] } });
+    };
+    expect((await getFreeGames()).map((game) => game.title)).toEqual(['Steam Only', 'GSALE Giveaway Only']);
+  });
+
   test('retains the available provider when the other free feed fails', async () => {
     globalThis.fetch = async (input) => String(input).includes('freeGamesPromotions')
       ? new Response('', { status: 404 })

@@ -28,6 +28,7 @@ export const ptBR = {
   'free.empty': 'Nenhum jogo grátis agora.',
   'free.loading': 'Carregando jogos grátis…',
   'free.upcoming': 'Grátis em breve',
+  'free.poweredBy': 'Ofertas de {source}',
 
   'favorites.title': 'Favoritos',
   'favorites.empty': 'Os jogos que você favoritar aparecem aqui.',

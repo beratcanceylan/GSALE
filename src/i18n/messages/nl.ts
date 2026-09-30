@@ -28,6 +28,7 @@ export const nl = {
   'free.empty': 'Nu geen gratis games.',
   'free.loading': 'Gratis games laden…',
   'free.upcoming': 'Binnenkort gratis',
+  'free.poweredBy': 'Weggeefacties van {source}',
 
   'favorites.title': 'Favorieten',
   'favorites.empty': 'Games die je favoriet maakt, verschijnen hier.',

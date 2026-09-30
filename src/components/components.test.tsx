@@ -43,6 +43,16 @@ describe('CoverCard', () => {
     await view.unmount();
   });
 
+  test('a third-party giveaway opens its HTTPS link instead of a detail screen', async () => {
+    const giveaway = { ...game, id: 'gamerpower-1', externalUrl: 'https://www.gamerpower.com/open/1', platforms: ['IndieGala'] };
+    const view = await render(<CoverCard game={giveaway} />);
+    expect(view.text()).toContain('IndieGala');
+    await fire(byLabel(view.root, 'Hades'), 'onPress');
+    expect(nativeState.openedUrls).toContain('https://www.gamerpower.com/open/1');
+    expect(nativeState.router.pushed).toHaveLength(0);
+    await view.unmount();
+  });
+
   test('a game without a price shows no price tag but keeps the store marks', async () => {
     const view = await render(<CoverCard game={{ ...game, price: '', discount: '', originalPrice: undefined, deals: [] }} />);
     expect(view.text()).not.toContain(formatMoney(50));

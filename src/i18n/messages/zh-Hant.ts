@@ -28,6 +28,7 @@ export const zhHant = {
   'free.empty': '目前沒有免費遊戲。',
   'free.loading': '正在載入免費遊戲…',
   'free.upcoming': '即將免費',
+  'free.poweredBy': '免費領取資訊來自 {source}',
 
   'favorites.title': '收藏',
   'favorites.empty': '你收藏的遊戲會顯示在這裡。',

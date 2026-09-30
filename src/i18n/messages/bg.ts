@@ -28,6 +28,7 @@ export const bg = {
   'free.empty': 'В момента няма безплатни игри.',
   'free.loading': 'Зареждане на безплатните игри…',
   'free.upcoming': 'Скоро безплатни',
+  'free.poweredBy': 'Раздавания от {source}',
 
   'favorites.title': 'Любими',
   'favorites.empty': 'Игрите, които добавиш в любими, ще се появят тук.',

@@ -28,6 +28,7 @@ export const ro = {
   'free.empty': 'Nu există jocuri gratuite acum.',
   'free.loading': 'Se încarcă jocurile gratuite…',
   'free.upcoming': 'În curând gratuit',
+  'free.poweredBy': 'Oferte de la {source}',
 
   'favorites.title': 'Favorite',
   'favorites.empty': 'Jocurile adăugate la favorite apar aici.',

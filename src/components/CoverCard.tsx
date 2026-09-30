@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { CoverImage } from '@/components/CoverImage';
@@ -9,7 +9,7 @@ import { Palette, Spacing, useType } from '@/constants/DesignSystem';
 import { useT } from '@/i18n';
 import type { Game } from '@/services/gameData';
 import { rememberDetailPreviews } from '@/services/store/detail-preview';
-import { getDealPlatforms, getGameImageSources } from '@/utils/gameDisplay';
+import { getDealPlatforms, getGameImageSources, isSafeExternalUrl } from '@/utils/gameDisplay';
 import { cheapestDeal, priceView } from '@/utils/price';
 
 type CoverCardProps = Readonly<{
@@ -38,6 +38,10 @@ function CoverCardView({ game, width }: CoverCardProps) {
   const price = priceView(cheapestDeal(game.deals));
 
   const open = () => {
+    if (game.externalUrl) {
+      if (isSafeExternalUrl(game.externalUrl)) void Linking.openURL(game.externalUrl);
+      return;
+    }
     const platform = game.source_platform || game.platform;
     rememberCardPreview(game);
     push({ pathname: '/game/[id]', params: platform ? { id: game.id, platform } : { id: game.id } });

@@ -28,6 +28,7 @@ export const id = {
   'free.empty': 'Tidak ada game gratis saat ini.',
   'free.loading': 'Memuat game gratis…',
   'free.upcoming': 'Segera gratis',
+  'free.poweredBy': 'Giveaway dari {source}',
 
   'favorites.title': 'Favorit',
   'favorites.empty': 'Game yang Anda favoritkan akan muncul di sini.',

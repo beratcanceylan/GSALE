@@ -59,6 +59,8 @@ describe('free tab', () => {
     expect(view.text()).toContain('Şu an bedava');
     expect(view.text()).toContain('Yakında bedava');
     expect(view.text()).toContain('Ücretsiz');
+    await fire(byLabel(view.root, 'GamerPower'), 'onPress');
+    expect(nativeState.openedUrls).toContain('https://www.gamerpower.com');
     const list = allOfType(view.root, 'FlatList')[0];
     if (!list) throw new Error('free list missing');
     await fire(list, 'onRefresh');

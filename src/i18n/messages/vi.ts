@@ -28,6 +28,7 @@ export const vi = {
   'free.empty': 'Hiện không có game miễn phí.',
   'free.loading': 'Đang tải game miễn phí…',
   'free.upcoming': 'Sắp miễn phí',
+  'free.poweredBy': 'Quà tặng từ {source}',
 
   'favorites.title': 'Yêu thích',
   'favorites.empty': 'Game bạn đánh dấu yêu thích sẽ hiện ở đây.',

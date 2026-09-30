@@ -26,6 +26,8 @@ export interface LiveGame {
   source_platform?: string;
   slug?: string;
   edition?: EditionKey;
+  /** Opens outside the app instead of a detail screen (third-party giveaways). */
+  external_url?: string;
   store_links?: Record<string, string>;
   platforms?: string[];
   price?: string;
@@ -60,6 +62,7 @@ export interface GameSummary {
   id: string;
   title: string;
   image_url: string;
+  external_url?: string;
   store_links?: Record<string, string>;
   platforms?: string[];
   platform?: string;

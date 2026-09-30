@@ -28,6 +28,7 @@ export const ja = {
   'free.empty': '現在無料のゲームはありません。',
   'free.loading': '無料ゲームを読み込み中…',
   'free.upcoming': 'まもなく無料',
+  'free.poweredBy': '無料配布情報: {source}',
 
   'favorites.title': 'お気に入り',
   'favorites.empty': 'お気に入りに追加したゲームがここに表示されます。',

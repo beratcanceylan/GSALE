@@ -28,6 +28,7 @@ export const sv = {
   'free.empty': 'Inga gratisspel just nu.',
   'free.loading': 'Läser in gratisspel…',
   'free.upcoming': 'Snart gratis',
+  'free.poweredBy': 'Gratiserbjudanden från {source}',
 
   'favorites.title': 'Favoriter',
   'favorites.empty': 'Spel du favoritmarkerar visas här.',

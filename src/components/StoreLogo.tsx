@@ -6,7 +6,6 @@ import { Palette, Size, Spacing, useType } from '@/constants/DesignSystem';
 
 /** Display order everywhere stores are listed together. */
 const STORE_ORDER = ['Steam', 'Epic Games', 'GOG', 'Xbox', 'PlayStation', 'Nintendo'] as const;
-const NAME_ONLY_STORES = new Set<string>(['Xbox', 'Nintendo']);
 
 type StoreLogoProps = Readonly<{
   platform: string;
@@ -14,7 +13,7 @@ type StoreLogoProps = Readonly<{
   color?: string;
 }>;
 
-/** A store's mark (or its name where no licensed mark exists); nothing for an unknown store. */
+/** A store's mark, or its name where no licensed mark exists. */
 export function StoreLogo({ platform, size = Size.logo, color = Palette.textMuted }: StoreLogoProps) {
   const type = useType();
   const path = STORE_LOGO_PATHS[platform];
@@ -25,7 +24,8 @@ export function StoreLogo({ platform, size = Size.logo, color = Palette.textMute
       </Svg>
     );
   }
-  if (!NAME_ONLY_STORES.has(platform)) return null;
+  // No licensed mark (Xbox, Nintendo, itch.io, IndieGala…): the store's name stands in.
+  if (!platform.trim()) return null;
   return (
     <Text
       style={[type('label'), styles.name, { color, lineHeight: size }]}
@@ -37,10 +37,11 @@ export function StoreLogo({ platform, size = Size.logo, color = Palette.textMute
   );
 }
 
-/** Known stores in a fixed order, each once. */
+/** Stores in a fixed order (known stores first), each once. */
 export function StoreLogoRow({ platforms, size, color }: Readonly<{ platforms: readonly string[]; size?: number; color?: string }>) {
-  const present = new Set(platforms);
-  const stores = STORE_ORDER.filter((store) => present.has(store));
+  const present = new Set(platforms.map((platform) => platform.trim()).filter(Boolean));
+  const known: readonly string[] = STORE_ORDER;
+  const stores = [...STORE_ORDER.filter((store) => present.has(store)), ...[...present].filter((store) => !known.includes(store))];
   if (stores.length === 0) return null;
   return (
     <View style={styles.row}>

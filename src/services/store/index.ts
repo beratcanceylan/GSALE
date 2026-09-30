@@ -3,7 +3,9 @@ import { fetchGameDetailLive } from '@/services/store/detail';
 import { rememberDetailPreviews } from '@/services/store/detail-preview';
 import { liveGameToDetailResponse, liveGameToSummary } from '@/services/store/map';
 import { prepareLiveGame } from '@/services/store/merge';
+import { gameKey } from '@/services/store/editions';
 import { fetchEpicFreeGames } from '@/services/store/platforms/epic';
+import { fetchGamerPowerGiveaways } from '@/services/store/platforms/gamerpower';
 import { fetchSteamFreeGames } from '@/services/store/platforms/steam';
 import { searchLiveGames } from '@/services/store/search';
 import type { GameDetailResponse, GameSummary, LiveGame, StoreRequestOptions } from '@/services/store/types';
@@ -33,22 +35,20 @@ export async function getGameDetail(
 }
 
 export async function getFreeGames(options?: StoreRequestOptions): Promise<GameSummary[]> {
-  const [epic, steam] = await Promise.allSettled([
+  const results = await Promise.allSettled([
     fetchEpicFreeGames(options),
     fetchSteamFreeGames(options),
+    fetchGamerPowerGiveaways(options),
   ]);
-  const games = [
-    ...(epic.status === 'fulfilled' ? epic.value : []),
-    ...(steam.status === 'fulfilled' ? steam.value : []),
-  ];
+  const games = results.flatMap((result) => (result.status === 'fulfilled' ? result.value : []));
 
   throwIfAborted(options?.signal);
 
-  // Epic and Steam can both give away the same game; keep the first listing.
+  // Stores and GamerPower can list the same giveaway; the store's own listing comes first and wins.
   const seen = new Set<string>();
   const unique: LiveGame[] = [];
   for (const game of games) {
-    const key = game.title.toLowerCase().trim();
+    const key = gameKey(game.title) || game.title.toLowerCase().trim();
     if (seen.has(key)) continue;
     seen.add(key);
     unique.push(prepareLiveGame(game));

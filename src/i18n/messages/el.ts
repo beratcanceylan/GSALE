@@ -28,6 +28,7 @@ export const el = {
   'free.empty': 'Δεν υπάρχουν δωρεάν παιχνίδια τώρα.',
   'free.loading': 'Φόρτωση δωρεάν παιχνιδιών…',
   'free.upcoming': 'Σύντομα δωρεάν',
+  'free.poweredBy': 'Δωρεάν προσφορές από {source}',
 
   'favorites.title': 'Αγαπημένα',
   'favorites.empty': 'Τα παιχνίδια που προσθέτετε στα αγαπημένα εμφανίζονται εδώ.',

@@ -21,18 +21,20 @@ describe('StoreLogo', () => {
     await view.unmount();
   });
 
-  test('an unknown store renders nothing', async () => {
-    const view = await render(<StoreLogo platform="Unknown" />);
+  test('a store without a mark shows its name, an empty one nothing', async () => {
+    const view = await render(<StoreLogo platform="itch.io" />);
+    expect(view.text()).toContain('itch.io');
+    await view.update(<StoreLogo platform="" />);
     expect(view.renderer.toJSON()).toBeNull();
     await view.unmount();
   });
 
   test('a row lists stores in a fixed order and drops duplicates', async () => {
-    const view = await render(<StoreLogoRow platforms={['PlayStation', 'Steam', 'Steam', 'Unknown', 'GOG']} />);
+    const view = await render(<StoreLogoRow platforms={['PlayStation', 'itch.io', 'Steam', 'Steam', 'GOG']} />);
     const labels = view.root
       .findAll((node) => typeof node.type === 'string' && typeof node.props['accessibilityLabel'] === 'string')
       .map((node) => String(node.props['accessibilityLabel']));
-    expect(labels).toEqual(['Steam', 'GOG', 'PlayStation']);
+    expect(labels).toEqual(['Steam', 'GOG', 'PlayStation', 'itch.io']);
     await view.unmount();
   });
 });

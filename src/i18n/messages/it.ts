@@ -28,6 +28,7 @@ export const it = {
   'free.empty': 'Nessun gioco gratis ora.',
   'free.loading': 'Caricamento giochi gratis…',
   'free.upcoming': 'Presto gratis',
+  'free.poweredBy': 'Omaggi da {source}',
 
   'favorites.title': 'Preferiti',
   'favorites.empty': 'I giochi che aggiungi ai preferiti compaiono qui.',

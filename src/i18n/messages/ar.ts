@@ -28,6 +28,7 @@ export const ar = {
   'free.empty': 'لا توجد ألعاب مجانية الآن.',
   'free.loading': 'جارٍ تحميل الألعاب المجانية…',
   'free.upcoming': 'مجانًا قريبًا',
+  'free.poweredBy': 'العروض المجانية من {source}',
 
   'favorites.title': 'المفضلة',
   'favorites.empty': 'تظهر هنا الألعاب التي تضيفها إلى المفضلة.',

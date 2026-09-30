@@ -28,6 +28,7 @@ export const ko = {
   'free.empty': '지금 무료 게임이 없습니다.',
   'free.loading': '무료 게임을 불러오는 중…',
   'free.upcoming': '곧 무료',
+  'free.poweredBy': '무료 배포 정보: {source}',
 
   'favorites.title': '즐겨찾기',
   'favorites.empty': '즐겨찾기한 게임이 여기에 표시됩니다.',

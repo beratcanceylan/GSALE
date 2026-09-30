@@ -28,6 +28,7 @@ export const tr = {
   'free.empty': 'Şu an bedava oyun yok.',
   'free.loading': 'Bedava oyunlar yükleniyor…',
   'free.upcoming': 'Yakında bedava',
+  'free.poweredBy': 'Kampanya listesi: {source}',
 
   'favorites.title': 'Favoriler',
   'favorites.empty': 'Favorilere eklediğiniz oyunlar burada görünür.',

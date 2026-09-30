@@ -34,6 +34,8 @@ export interface Game {
   originalPrice?: string | undefined;
   imageUrl: string;
   url: string;
+  /** Set for third-party giveaways: the card opens this link instead of a detail screen. */
+  externalUrl?: string | undefined;
   deals: Deal[];
   /** Edition of the opened product (detail only). */
   edition?: EditionKey | undefined;
@@ -64,6 +66,7 @@ function mapSummaryToGame(summary: GameSummary): Game {
   if (summary.platforms) game.platforms = summary.platforms;
   if (summary.original_price !== undefined) game.originalPrice = summary.original_price;
   if (summary.store_links) game.store_links = summary.store_links;
+  if (summary.external_url) game.externalUrl = summary.external_url;
   if (summary.upcoming !== undefined) game.upcoming = summary.upcoming;
   if (summary.upcoming_date_str) game.upcoming_date_str = summary.upcoming_date_str;
   return applyResolvedSummaryPrice(game);

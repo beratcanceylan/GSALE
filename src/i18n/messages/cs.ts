@@ -28,6 +28,7 @@ export const cs = {
   'free.empty': 'Teď nejsou žádné hry zdarma.',
   'free.loading': 'Načítání her zdarma…',
   'free.upcoming': 'Brzy zdarma',
+  'free.poweredBy': 'Rozdávání od {source}',
 
   'favorites.title': 'Oblíbené',
   'favorites.empty': 'Hry, které si oblíbíte, se zobrazí tady.',

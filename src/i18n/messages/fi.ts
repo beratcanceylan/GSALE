@@ -28,6 +28,7 @@ export const fi = {
   'free.empty': 'Ilmaisia pelejä ei ole juuri nyt.',
   'free.loading': 'Ladataan ilmaisia pelejä…',
   'free.upcoming': 'Pian ilmaiseksi',
+  'free.poweredBy': 'Lahjoitukset: {source}',
 
   'favorites.title': 'Suosikit',
   'favorites.empty': 'Suosikeiksi merkitsemäsi pelit näkyvät täällä.',
