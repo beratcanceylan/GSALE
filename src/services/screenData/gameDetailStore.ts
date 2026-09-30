@@ -59,9 +59,12 @@ async function fetchDetailResult(
   }
 }
 
-function initialEdition(game: Game | null): EditionKey | null {
+/** The user's earlier choice if this game still has it, else the opened product's edition. */
+function initialEdition(game: Game | null, previous: GameDetailFetchSnapshot): EditionKey | null {
   if (!game) return null;
   const keys = game.editions?.map((option) => option.key) ?? [];
+  const kept = previous.game?.id === game.id ? previous.selectedEdition : null;
+  if (kept && keys.includes(kept)) return kept;
   if (game.edition && keys.includes(game.edition)) return game.edition;
   return keys[0] ?? game.edition ?? null;
 }
@@ -71,7 +74,7 @@ function commitIfCurrent(entry: DetailEntry, generation: number, result: DetailR
   if (generation !== entry.generation) return;
   entry.snapshot = {
     ...result,
-    selectedEdition: initialEdition(result.game),
+    selectedEdition: initialEdition(result.game, entry.snapshot),
     loading: false,
     version: entry.snapshot.version + 1,
   };

@@ -45,6 +45,14 @@ function byAmount(a: GameDeal, b: GameDeal): number {
   return comparableAmount(a) - comparableAmount(b);
 }
 
+/** Within one store and edition: a paid listing beats a free one (usually a demo), then the cheaper. */
+function isBetterListing(deal: GameDeal, current: GameDeal): boolean {
+  const dealFree = isExplicitlyFreePrice(deal.price);
+  const currentFree = isExplicitlyFreePrice(current.price);
+  if (dealFree !== currentFree) return currentFree;
+  return comparableAmount(deal) < comparableAmount(current);
+}
+
 /** Groups offers into editions (base first), keeping each store's cheapest deal, cheapest store first. */
 export function buildEditionTable(offers: readonly EditionOffer[]): EditionOption[] {
   const byEdition = new Map<EditionKey, Map<string, GameDeal>>();
@@ -53,7 +61,7 @@ export function buildEditionTable(offers: readonly EditionOffer[]): EditionOptio
     const deal = platformPriceToGameDeal(offer.price);
     const stores = byEdition.get(offer.edition) ?? new Map<string, GameDeal>();
     const current = stores.get(offer.platform);
-    if (!current || comparableAmount(deal) < comparableAmount(current)) stores.set(offer.platform, deal);
+    if (!current || isBetterListing(deal, current)) stores.set(offer.platform, deal);
     byEdition.set(offer.edition, stores);
   }
   const keys = [...byEdition.keys()].sort(compareEditions);

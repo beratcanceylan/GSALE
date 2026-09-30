@@ -47,4 +47,14 @@ describe('gameDetailStore editions', () => {
     expect(gameDetailStore.getSnapshot('edition-slug-2', 'Steam').selectedEdition).toBe('deluxe');
     unsubscribe();
   });
+
+  test('a reload keeps the edition the user chose', async () => {
+    const unsubscribe = gameDetailStore.subscribe('edition-slug-3', 'Steam', () => undefined);
+    await flush();
+    gameDetailStore.selectEdition('edition-slug-3', 'Steam', 'base');
+    gameDetailStore.reload('edition-slug-3', 'Steam');
+    await flush();
+    expect(gameDetailStore.getSnapshot('edition-slug-3', 'Steam').selectedEdition).toBe('base');
+    unsubscribe();
+  });
 });

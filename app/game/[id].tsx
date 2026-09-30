@@ -35,12 +35,16 @@ function editionView(game: Game, selected: EditionKey | null): EditionView {
   const selling = new Set(deals.map((deal) => deal.platform));
   const everyStore = new Set(editions.flatMap((option) => option.deals.map((deal) => deal.platform)));
   const missingStores = [...everyStore].filter((platform) => !selling.has(platform));
-  const choices = editions.map((option) => ({ key: option.key, lowest: cheapestDeal(option.deals)?.amount ?? null }));
+  const choices = editions.map((option) => {
+    const lowest = cheapestDeal(option.deals);
+    return { key: option.key, lowest: lowest?.amount ?? null, free: lowest?.isFree ?? false };
+  });
   return { deals, missingStores, choices };
 }
 
-function favoritePayload(game: Game): Parameters<typeof toggleFavorite>[0] {
-  const deal = cheapestDeal(game.deals);
+/** The favorite remembers the price of the edition on screen. */
+function favoritePayload(game: Game, deals: readonly Deal[]): Parameters<typeof toggleFavorite>[0] {
+  const deal = cheapestDeal(deals);
   const payload: Parameters<typeof toggleFavorite>[0] = {
     id: game.id,
     title: game.title,
@@ -135,7 +139,7 @@ function GameDetailLoaded({ game, selectedEdition, onSelectEdition, onBack }: Ga
       </ScrollView>
       <TopBar
         onBack={onBack}
-        favorite={{ active: isFav, onToggle: () => { setIsFav(toggleFavorite(favoritePayload(game))); } }}
+        favorite={{ active: isFav, onToggle: () => { setIsFav(toggleFavorite(favoritePayload(game, deals))); } }}
       />
     </View>
   );

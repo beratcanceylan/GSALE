@@ -5,13 +5,18 @@ import { Palette, Size, Spacing, useType } from '@/constants/DesignSystem';
 import { formatMoney, useT } from '@/i18n';
 import type { EditionKey } from '@/services/api';
 
-export type EditionChoice = Readonly<{ key: EditionKey; lowest: number | null }>;
+export type EditionChoice = Readonly<{ key: EditionKey; lowest: number | null; free: boolean }>;
 
 type EditionPickerProps = Readonly<{
   options: readonly EditionChoice[];
   selected: EditionKey | null;
   onSelect: (key: EditionKey) => void;
 }>;
+
+function choiceLabel(choice: EditionChoice, t: ReturnType<typeof useT>): string {
+  if (choice.free) return t('price.free');
+  return choice.lowest === null ? ' ' : formatMoney(choice.lowest);
+}
 
 type EditionTabProps = Readonly<{ choice: EditionChoice; active: boolean; onSelect: (key: EditionKey) => void }>;
 
@@ -28,7 +33,7 @@ const EditionTab = memo(function EditionTab({ choice, active, onSelect }: Editio
       accessibilityState={{ selected: active }}
     >
       <Text style={[type('label'), active ? styles.activeText : styles.text]}>{name}</Text>
-      <Text style={[type('caption'), styles.price]}>{choice.lowest === null ? ' ' : formatMoney(choice.lowest)}</Text>
+      <Text style={[type('caption'), styles.price]}>{choiceLabel(choice, t)}</Text>
       <View style={[styles.underline, active && styles.underlineActive]} />
     </Pressable>
   );

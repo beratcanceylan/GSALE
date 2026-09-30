@@ -45,6 +45,11 @@ describe('buildEditionTable', () => {
     expect(table.map((option) => option.key)).toEqual(['base']);
   });
 
+  test('within one store a paid listing wins over a free one (free entries are usually demos)', () => {
+    const table = buildEditionTable([offer('Steam', 'base', 'Ücretsiz', 'demo'), offer('Steam', 'base', '100,00 TL', 'game')]);
+    expect(table[0]?.deals.map((deal) => deal.price)).toEqual(['100,00 TL']);
+  });
+
   test('a free offer sorts before paid ones', () => {
     const table = buildEditionTable([offer('Steam', 'base', '100,00 TL'), offer('Epic Games', 'base', 'Ücretsiz')]);
     expect(table[0]?.deals.map((deal) => deal.platform)).toEqual(['Epic Games', 'Steam']);

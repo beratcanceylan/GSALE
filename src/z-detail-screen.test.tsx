@@ -116,4 +116,20 @@ describe('game detail screen', () => {
     expect(allOfType(view.root, 'Image').length).toBeGreaterThan(0);
     await view.unmount();
   });
+
+  test('a free edition reads "free" in the picker, and a favorite keeps the chosen edition price', async () => {
+    resetNativeState();
+    nativeState.params = { id: 'free-edition' };
+    const freeBase = uiDeal({ platform: 'Epic Games', price: 'Ücretsiz', url: 'https://store.epicgames.com/p/x' });
+    const freeGame: Game = { ...game, id: 'free-edition', edition: 'base', editions: [
+      { key: 'base', deals: [freeBase] },
+      { key: 'deluxe', deals: [steamDeluxe] },
+    ], deals: [freeBase] };
+    gameDetailStoreMock.setSnapshot({ game: freeGame, selectedEdition: 'deluxe', loading: false, error: null, version: 7 });
+    const view = await render(<GameDetailScreen />);
+    expect(textOf(byLabel(view.root, 'Standart'))).toContain('Ücretsiz');
+    await fire(byLabel(view.root, 'Favorilere ekle'), 'onPress');
+    expect(sqliteMock.favoriteRows.get('free-edition')).toMatchObject({ price: '90,00 TL' });
+    await view.unmount();
+  });
 });

@@ -139,4 +139,17 @@ describe('detail editions', () => {
     expect(urls.filter((url) => url.includes('/api/storesearch'))).toHaveLength(1);
     expect(urls.filter((url) => url.includes('catalog.gog.com'))).toHaveLength(1);
   });
+
+  test('an opened edition that no store prices still gets its own, empty tab', async () => {
+    routeStores({
+      appdetails: {
+        '74001': { success: true, data: { name: 'GSALE Unpriced Game Deluxe Edition' } },
+        '74000': { success: true, data: { name: 'GSALE Unpriced Game', price_overview: tryPrice(50000) } },
+      },
+      steamSearch: [{ id: 74000, name: 'GSALE Unpriced Game', price: tryPrice(50000) }],
+    });
+    const detail = await getGameDetail('74001', 'Steam');
+    expect(detail.game.edition).toBe('deluxe');
+    expect(detail.editions.map((option) => [option.key, option.deals.length])).toEqual([['base', 1], ['deluxe', 0]]);
+  });
 });

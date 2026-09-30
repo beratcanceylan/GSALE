@@ -1,6 +1,6 @@
 import { getDetailPreview } from '@/services/store/detail-preview';
 import { buildEditionTable, type EditionOffer, type EditionOption } from '@/services/store/edition-table';
-import { editionKey, type EditionKey } from '@/services/store/editions';
+import { compareEditions, editionKey, type EditionKey } from '@/services/store/editions';
 import { throwIfAborted } from '@/services/store/fetch';
 import { fetchEpicDetails } from '@/services/store/platforms/epic';
 import { fetchGogDetails } from '@/services/store/platforms/gog';
@@ -95,5 +95,11 @@ export async function fetchGameDetailLive(
   const offers = await fetchEditionOffers(game.title, options);
   const source = sourceOffer(game, edition);
   const withSource = source && !hasOffer(offers, source.platform, edition) ? [...offers, source] : offers;
-  return { game: { ...game, edition }, editions: buildEditionTable(withSource) };
+  const editions = buildEditionTable(withSource);
+  // The opened product's edition keeps its tab even when no store prices it right now.
+  if (!editions.some((option) => option.key === edition)) {
+    editions.push({ key: edition, deals: [] });
+    editions.sort((a, b) => compareEditions(a.key, b.key));
+  }
+  return { game: { ...game, edition }, editions };
 }
