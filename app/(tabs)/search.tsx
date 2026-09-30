@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { CoverGrid } from '@/components/CoverGrid';
@@ -24,39 +24,44 @@ function SearchResults({ routeQuery }: Readonly<{ routeQuery: string }>) {
   const t = useT();
   const type = useType();
   const containerStyle = useScrollSafeAreaStyle();
-  const [input, setInput] = useState(routeQuery);
+  // null until the user types: the field shows the route query until then.
+  const [edited, setEdited] = useState<string | null>(null);
+  const input = edited ?? routeQuery;
   const [tooShort, setTooShort] = useState(false);
   const { games, searchQuery, searching, hasSearched } = useSyncExternalStore(
     (onStoreChange) => searchStore.subscribeQuery(routeQuery, onStoreChange),
     searchStore.getSnapshot,
   );
 
-  const submit = () => {
+  const submit = useCallback(() => {
     const query = input.trim();
     setTooShort(query.length < MIN_QUERY_LENGTH);
     if (query.length >= MIN_QUERY_LENGTH) searchStore.search(query);
-  };
+  }, [input]);
 
-  let empty = <EmptyState message={t('search.hint')} />;
-  if (searching) {
-    empty = (
-      <View style={styles.searching}>
-        <ActivityIndicator color={Palette.textMuted} />
-        <Text style={[type('body'), styles.muted]}>{t('search.loading')}</Text>
+  const empty = useMemo(() => {
+    if (searching) {
+      return (
+        <View style={styles.searching}>
+          <ActivityIndicator color={Palette.textMuted} />
+          <Text style={[type('body'), styles.muted]}>{t('search.loading')}</Text>
+        </View>
+      );
+    }
+    if (hasSearched && !tooShort) return <EmptyState message={t('search.empty', { query: searchQuery })} />;
+    return <EmptyState message={t('search.hint')} />;
+  }, [searching, hasSearched, tooShort, searchQuery, type, t]);
+
+  const resultCount = games.length > 0 && !searching ? plural('search.resultCount', games.length) : null;
+  const header = useMemo(
+    () => (
+      <View style={styles.header}>
+        <SearchField value={input} onChangeText={setEdited} onSubmit={submit} autoFocus={routeQuery.length === 0} />
+        {tooShort ? <Text style={[type('caption'), styles.muted]}>{t('search.hint')}</Text> : null}
+        {resultCount ? <Text style={[type('caption'), styles.muted]}>{resultCount}</Text> : null}
       </View>
-    );
-  } else if (hasSearched && !tooShort) {
-    empty = <EmptyState message={t('search.empty', { query: searchQuery })} />;
-  }
-
-  const header = (
-    <View style={styles.header}>
-      <SearchField value={input} onChangeText={setInput} onSubmit={submit} autoFocus={routeQuery.length === 0} />
-      {tooShort ? <Text style={[type('caption'), styles.muted]}>{t('search.hint')}</Text> : null}
-      {games.length > 0 && !searching ? (
-        <Text style={[type('caption'), styles.muted]}>{plural('search.resultCount', games.length)}</Text>
-      ) : null}
-    </View>
+    ),
+    [input, submit, routeQuery, tooShort, type, t, resultCount],
   );
 
   return (

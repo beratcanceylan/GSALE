@@ -4,61 +4,8 @@
  * before dynamically importing any UI module.
  */
 import { mock } from 'bun:test';
-import React, { type ReactNode } from 'react';
 
-type Props = Record<string, unknown> & { children?: ReactNode };
-
-/** A host element named like the native view, so tests can query by type. */
-export function host(name: string) {
-  function HostComponent(props: Props) {
-    return React.createElement(name, props, props.children);
-  }
-  HostComponent.displayName = name;
-  return HostComponent;
-}
-
-function Pressable(props: Props) {
-  const { style, children, ...rest } = props;
-  const resolvedStyle = typeof style === 'function' ? (style as (s: { pressed: boolean }) => unknown)({ pressed: true }) : style;
-  const content = typeof children === 'function' ? (children as (s: { pressed: boolean }) => ReactNode)({ pressed: false }) : children;
-  return React.createElement('Pressable', { ...rest, style: resolvedStyle }, content);
-}
-
-function Modal(props: Props) {
-  return props['visible'] ? React.createElement('Modal', props, props.children) : null;
-}
-
-type ListProps = Props & {
-  data?: readonly unknown[] | null;
-  renderItem?: (info: { item: unknown; index: number }) => ReactNode;
-  keyExtractor?: (item: unknown, index: number) => string;
-  ListHeaderComponent?: ReactNode;
-  ListEmptyComponent?: ReactNode;
-  ListFooterComponent?: ReactNode;
-  refreshControl?: ReactNode;
-};
-
-function FlatList(props: ListProps) {
-  const data = props.data ?? [];
-  const items = data.map((item, index) =>
-    React.createElement(
-      React.Fragment,
-      { key: props.keyExtractor ? props.keyExtractor(item, index) : String(index) },
-      props.renderItem?.({ item, index }),
-    ),
-  );
-  return React.createElement(
-    'FlatList',
-    { ...props, data: undefined },
-    props.ListHeaderComponent,
-    items.length > 0 ? items : props.ListEmptyComponent,
-    props.ListFooterComponent,
-  );
-}
-
-function ScrollView(props: ListProps) {
-  return React.createElement('ScrollView', props, props.refreshControl, props.children);
-}
+import { FlatList, Modal, Pressable, ScrollView, Stack, Tabs } from './native-mock-components';
 
 export const nativeState = {
   platform: 'ios' as 'ios' | 'android',
@@ -87,11 +34,11 @@ export function resetNativeState(): void {
 }
 
 mock.module('react-native', () => ({
-  View: host('View'),
-  Text: host('Text'),
-  TextInput: host('TextInput'),
-  ActivityIndicator: host('ActivityIndicator'),
-  RefreshControl: host('RefreshControl'),
+  View: 'View',
+  Text: 'Text',
+  TextInput: 'TextInput',
+  ActivityIndicator: 'ActivityIndicator',
+  RefreshControl: 'RefreshControl',
   Pressable,
   Modal,
   FlatList,
@@ -136,9 +83,9 @@ const ICONS = [
   'AlertCircle', 'ArrowLeft', 'Bell', 'Check', 'ChevronRight', 'ExternalLink', 'Gamepad2', 'Gift',
   'Globe', 'Heart', 'Home', 'Info', 'MapPin', 'Search', 'Settings', 'X',
 ];
-mock.module('lucide-react-native', () => Object.fromEntries(ICONS.map((name) => [name, host(name)])));
+mock.module('lucide-react-native', () => Object.fromEntries(ICONS.map((name) => [name, name])));
 
-mock.module('expo-image', () => ({ Image: host('Image') }));
+mock.module('expo-image', () => ({ Image: 'Image' }));
 /** In-memory secure store; tests that need to inspect writes mock it again after this import. */
 const secureStoreValues = new Map<string, string>();
 mock.module('expo-secure-store', () => ({
@@ -148,22 +95,22 @@ mock.module('expo-secure-store', () => ({
     return Promise.resolve();
   },
 }));
-mock.module('expo-status-bar', () => ({ StatusBar: host('StatusBar') }));
+mock.module('expo-status-bar', () => ({ StatusBar: 'StatusBar' }));
 mock.module('react-native-svg', () => ({
-  default: host('Svg'),
-  Defs: host('Defs'),
-  LinearGradient: host('LinearGradient'),
-  Rect: host('Rect'),
-  Stop: host('Stop'),
-  Path: host('Path'),
+  default: 'Svg',
+  Defs: 'Defs',
+  LinearGradient: 'LinearGradient',
+  Rect: 'Rect',
+  Stop: 'Stop',
+  Path: 'Path',
 }));
 mock.module('react-native-reanimated', () => ({
-  default: { View: host('AnimatedView') },
+  default: { View: 'AnimatedView' },
   FadeIn: { duration: () => 'fade-in' },
   LinearTransition: { duration: () => 'linear-transition' },
 }));
 mock.module('react-native-safe-area-context', () => ({
-  SafeAreaView: host('SafeAreaView'),
+  SafeAreaView: 'SafeAreaView',
   useSafeAreaInsets: () => nativeState.insets,
 }));
 mock.module('expo-splash-screen', () => ({
@@ -173,30 +120,9 @@ mock.module('expo-splash-screen', () => ({
     if (nativeState.splashShouldFail) throw new Error('splash already hidden');
   },
 }));
-type ScreenElementProps = { name: string; options?: Record<string, unknown>; listeners?: Record<string, () => void> };
-
-/** Render navigator screens and expose listeners so tests can fire tab presses. */
-function navigator(name: string) {
-  function Navigator(props: Props & { screenOptions?: Record<string, unknown> }) {
-    const screens = React.Children.toArray(props.children).filter(React.isValidElement<ScreenElementProps>);
-    const rendered = screens.map((screen) => {
-      const options = screen.props.options ?? {};
-      const icon = options['tabBarIcon'];
-      return React.createElement(
-        `${name}.Screen`,
-        { key: screen.props.name, name: screen.props.name, options, listeners: screen.props.listeners },
-        typeof icon === 'function' ? (icon as (p: object) => ReactNode)({ color: '#fff', size: 24, focused: true }) : null,
-      );
-    });
-    return React.createElement(name, { screenOptions: props.screenOptions }, rendered);
-  }
-  Navigator.Screen = host(`${name}.Screen`);
-  return Navigator;
-}
-
 mock.module('expo-router', () => ({
-  Tabs: navigator('Tabs'),
-  Stack: navigator('Stack'),
+  Tabs,
+  Stack,
   useRouter: () => ({
     push: (route: unknown) => {
       nativeState.router.pushed.push(route);
@@ -209,6 +135,6 @@ mock.module('expo-router', () => ({
 }));
 mock.module('expo-router/react-navigation', () => ({
   DarkTheme: { dark: true },
-  ThemeProvider: host('ThemeProvider'),
+  ThemeProvider: 'ThemeProvider',
 }));
 mock.module('expo-router/entry', () => ({}));

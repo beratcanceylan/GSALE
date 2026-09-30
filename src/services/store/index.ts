@@ -6,7 +6,7 @@ import { prepareLiveGame } from '@/services/store/merge';
 import { fetchEpicFreeGames } from '@/services/store/platforms/epic';
 import { fetchSteamFreeGames } from '@/services/store/platforms/steam';
 import { searchLiveGames } from '@/services/store/search';
-import type { GameDetailResponse, GameSummary, StoreRequestOptions } from '@/services/store/types';
+import type { GameDetailResponse, GameSummary, LiveGame, StoreRequestOptions } from '@/services/store/types';
 
 export { getHomeSections, type HomeSection } from '@/services/store/home';
 export type { EditionOption } from '@/services/store/edition-table';
@@ -46,14 +46,13 @@ export async function getFreeGames(options?: StoreRequestOptions): Promise<GameS
 
   // Epic and Steam can both give away the same game; keep the first listing.
   const seen = new Set<string>();
-  const unique = games
-    .filter((game) => {
-      const key = game.title.toLowerCase().trim();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .map(prepareLiveGame);
+  const unique: LiveGame[] = [];
+  for (const game of games) {
+    const key = game.title.toLowerCase().trim();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(prepareLiveGame(game));
+  }
   rememberDetailPreviews(unique);
   return unique.map(liveGameToSummary);
 }

@@ -47,8 +47,12 @@ const renderSection = ({ item }: { item: FreeRow }) => <FreeSection section={ite
 function FreeGamesLoaded({ games, refreshing }: Readonly<{ games: Game[]; refreshing: boolean }>) {
   const t = useT();
   const containerStyle = useScrollSafeAreaStyle();
-  const now = games.filter((game) => !game.upcoming).map(asFreeNow);
-  const next = games.filter((game) => game.upcoming);
+  const now: Game[] = [];
+  const next: Game[] = [];
+  for (const game of games) {
+    if (game.upcoming) next.push(game);
+    else now.push(asFreeNow(game));
+  }
   const sections: FreeRow[] = [
     ...(now.length > 0 ? [{ key: 'now', title: t('free.title'), games: now }] : []),
     ...(next.length > 0 ? [{ key: 'next', title: t('free.upcoming'), games: next }] : []),

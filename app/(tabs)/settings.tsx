@@ -1,7 +1,7 @@
 import { Bell } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState, useSyncExternalStore } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { IconButton } from '@/components/IconButton';
@@ -45,14 +45,16 @@ export default function SettingsScreen() {
     await setAppCountry(code);
   };
 
+  const bell = useMemo(
+    () => <IconButton icon={Bell} label={t('notifications.title')} onPress={() => { push('/notifications'); }} />,
+    [push, t],
+  );
+
   return (
     <View style={[styles.container, containerStyle]}>
       <StatusBar style="light" />
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.scroll}>
-        <ScreenHeader
-          title={t('settings.title')}
-          trailing={<IconButton icon={Bell} label={t('notifications.title')} onPress={() => { push('/notifications'); }} />}
-        />
+        <ScreenHeader title={t('settings.title')} trailing={bell} />
         <View style={styles.group}>
           <SettingsRow label={t('settings.language')} value={languageName} onPress={() => { setPicker('language'); }} />
           <SettingsRow

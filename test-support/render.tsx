@@ -1,5 +1,5 @@
-import type { ReactElement } from 'react';
-import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
+import { act, type ReactElement } from 'react';
+import TestRenderer, { type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -11,15 +11,6 @@ export type Rendered = Readonly<{
   update: (element: ReactElement) => Promise<void>;
   unmount: () => Promise<void>;
 }>;
-
-/** Resolves pending promises (store loads, fetch mocks) inside act(). */
-export async function flush(times = 5): Promise<void> {
-  for (let i = 0; i < times; i += 1) {
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-  }
-}
 
 /** Notify React after an external store changes during a screen test. */
 export async function updateExternalStore(update: () => void): Promise<void> {
@@ -39,12 +30,7 @@ function collectText(node: JsonNode): string {
 }
 
 export async function render(element: ReactElement): Promise<Rendered> {
-  let renderer: ReactTestRenderer | undefined;
-  await act(async () => {
-    renderer = TestRenderer.create(element);
-  });
-  if (!renderer) throw new Error('render failed');
-  const created = renderer;
+  const created = await act(async () => TestRenderer.create(element));
   return {
     renderer: created,
     root: created.root,

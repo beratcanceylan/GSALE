@@ -45,25 +45,29 @@ export default function FavoritesScreen() {
     return matching.map(favoriteToGame);
   }, [favorites, query]);
 
-  const empty = query.trim()
-    ? <EmptyState message={t('favorites.noMatch', { query: query.trim() })} />
-    : <EmptyState message={t('favorites.empty')} />;
+  const trimmedQuery = query.trim();
+  const empty = useMemo(
+    () => <EmptyState message={trimmedQuery ? t('favorites.noMatch', { query: trimmedQuery }) : t('favorites.empty')} />,
+    [trimmedQuery, t],
+  );
+
+  const hasFavorites = favorites.length > 0;
+  const header = useMemo(
+    () => (
+      <View style={styles.header}>
+        {hasFavorites ? (
+          <SearchField value={query} onChangeText={setQuery} onSubmit={() => undefined} placeholder={t('favorites.search')} />
+        ) : null}
+      </View>
+    ),
+    [hasFavorites, query, t],
+  );
 
   return (
     <View style={[styles.container, containerStyle]}>
       <StatusBar style="light" />
       <ScreenHeader title={t('favorites.title')} />
-      <CoverGrid
-        games={games}
-        header={
-          <View style={styles.header}>
-            {favorites.length > 0 ? (
-              <SearchField value={query} onChangeText={setQuery} onSubmit={() => undefined} placeholder={t('favorites.search')} />
-            ) : null}
-          </View>
-        }
-        empty={empty}
-      />
+      <CoverGrid games={games} header={header} empty={empty} />
     </View>
   );
 }

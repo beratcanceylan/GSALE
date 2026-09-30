@@ -1,7 +1,7 @@
 import { Check } from 'lucide-react-native';
-import { useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SearchField } from '@/components/SearchField';
 import { Palette, Size, Spacing, useType } from '@/constants/DesignSystem';
@@ -18,19 +18,54 @@ type OptionPickerProps<T extends string> = Readonly<{
   onClose: () => void;
 }>;
 
+type OptionRowProps = Readonly<{
+  value: string;
+  label: string;
+  detail: string | undefined;
+  active: boolean;
+  onSelect: (value: string) => void;
+}>;
+
+const OptionRow = memo(function OptionRow({ value, label, detail, active, onSelect }: OptionRowProps) {
+  const type = useType();
+  return (
+    <Pressable
+      onPress={() => { onSelect(value); }}
+      style={({ pressed }) => [styles.option, pressed && styles.pressed]}
+      accessibilityRole="radio"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: active }}
+    >
+      <Text style={[type('body'), styles.optionLabel]}>{label}</Text>
+      {detail ? <Text style={[type('caption'), styles.detail]}>{detail}</Text> : null}
+      {active ? <Check size={Size.icon} color={Palette.text} /> : <View style={styles.checkSpace} />}
+    </Pressable>
+  );
+});
+
 /** Full-screen, searchable single choice list. Render it only while it is open. */
 export function OptionPicker<T extends string>({ title, searchPlaceholder, options, selected, onSelect, onClose }: OptionPickerProps<T>) {
   const t = useT();
   const type = useType();
+  const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
   const needle = query.trim().toLocaleLowerCase();
   const visible = needle
     ? options.filter((option) => `${option.label} ${option.detail ?? ''} ${option.value}`.toLocaleLowerCase().includes(needle))
     : options;
 
+  // Option values come from `options`, so the row's string is always a T.
+  const select = useCallback((value: string) => { onSelect(value as T); }, [onSelect]);
+  const renderOption = useCallback(
+    ({ item }: { item: PickerOption<T> }) => (
+      <OptionRow value={item.value} label={item.label} detail={item.detail} active={item.value === selected} onSelect={select} />
+    ),
+    [selected, select],
+  );
+
   return (
     <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <SafeAreaView style={styles.sheet} edges={['top', 'bottom']}>
+      <View style={[styles.sheet, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <View style={styles.header}>
           <Text style={[type('title'), styles.title]} accessibilityRole="header">{title}</Text>
           <Pressable onPress={onClose} style={styles.close} accessibilityRole="button" accessibilityLabel={t('common.close')}>
@@ -44,24 +79,9 @@ export function OptionPicker<T extends string>({ title, searchPlaceholder, optio
           data={visible}
           keyExtractor={(item) => item.value}
           keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => {
-            const active = item.value === selected;
-            return (
-              <Pressable
-                onPress={() => { onSelect(item.value); }}
-                style={({ pressed }) => [styles.option, pressed && styles.pressed]}
-                accessibilityRole="radio"
-                accessibilityLabel={item.label}
-                accessibilityState={{ checked: active }}
-              >
-                <Text style={[type('body'), styles.optionLabel]}>{item.label}</Text>
-                {item.detail ? <Text style={[type('caption'), styles.detail]}>{item.detail}</Text> : null}
-                {active ? <Check size={Size.icon} color={Palette.text} /> : <View style={styles.checkSpace} />}
-              </Pressable>
-            );
-          }}
+          renderItem={renderOption}
         />
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }

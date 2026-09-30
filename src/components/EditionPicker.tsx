@@ -1,4 +1,5 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { memo, useCallback } from 'react';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Palette, Size, Spacing, useType } from '@/constants/DesignSystem';
 import { formatMoney, useT } from '@/i18n';
@@ -12,32 +13,44 @@ type EditionPickerProps = Readonly<{
   onSelect: (key: EditionKey) => void;
 }>;
 
-/** Editions as underlined tabs, each with its lowest price; hidden when there is only one. */
-export function EditionPicker({ options, selected, onSelect }: EditionPickerProps) {
+type EditionTabProps = Readonly<{ choice: EditionChoice; active: boolean; onSelect: (key: EditionKey) => void }>;
+
+const EditionTab = memo(function EditionTab({ choice, active, onSelect }: EditionTabProps) {
   const t = useT();
   const type = useType();
+  const name = t(`edition.${choice.key}`);
+  return (
+    <Pressable
+      onPress={() => { onSelect(choice.key); }}
+      style={styles.option}
+      accessibilityRole="tab"
+      accessibilityLabel={name}
+      accessibilityState={{ selected: active }}
+    >
+      <Text style={[type('label'), active ? styles.activeText : styles.text]}>{name}</Text>
+      <Text style={[type('caption'), styles.price]}>{choice.lowest === null ? ' ' : formatMoney(choice.lowest)}</Text>
+      <View style={[styles.underline, active && styles.underlineActive]} />
+    </Pressable>
+  );
+});
+
+/** Editions as underlined tabs, each with its lowest price; hidden when there is only one. */
+export function EditionPicker({ options, selected, onSelect }: EditionPickerProps) {
+  const renderTab = useCallback(
+    ({ item }: { item: EditionChoice }) => <EditionTab choice={item} active={item.key === selected} onSelect={onSelect} />,
+    [selected, onSelect],
+  );
   if (options.length < 2) return null;
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row} accessibilityRole="tablist">
-      {options.map(({ key, lowest }) => {
-        const active = key === selected;
-        const name = t(`edition.${key}`);
-        return (
-          <Pressable
-            key={key}
-            onPress={() => { onSelect(key); }}
-            style={styles.option}
-            accessibilityRole="tab"
-            accessibilityLabel={name}
-            accessibilityState={{ selected: active }}
-          >
-            <Text style={[type('label'), active ? styles.activeText : styles.text]}>{name}</Text>
-            <Text style={[type('caption'), styles.price]}>{lowest === null ? ' ' : formatMoney(lowest)}</Text>
-            <View style={[styles.underline, active && styles.underlineActive]} />
-          </Pressable>
-        );
-      })}
-    </ScrollView>
+    <FlatList
+      horizontal
+      data={options}
+      keyExtractor={(item) => item.key}
+      renderItem={renderTab}
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.row}
+      accessibilityRole="tablist"
+    />
   );
 }
 
