@@ -7,8 +7,7 @@ import { loadCatalog } from '@/services/catalog/loader';
 import { loadAppCountry } from '@/services/country';
 import { watchRegionChanges } from '@/services/screenData';
 import { markStartupReady } from '@/services/startup';
-import { loadLanguage } from '@/i18n/languageStore';
-import { applyLayoutDirection } from '@/i18n/rtl';
+import { loadAppLanguage } from '@/i18n/bootstrap';
 
 export function reportBootstrapFailure(label: string, task: Promise<unknown>): void {
   void task.catch((error: unknown) => {
@@ -17,7 +16,7 @@ export function reportBootstrapFailure(label: string, task: Promise<unknown>): v
 }
 
 reportBootstrapFailure('SplashScreen.preventAutoHideAsync', SplashScreen.preventAutoHideAsync());
-const languageLoad = loadLanguage().then(applyLayoutDirection);
+const languageLoad = loadAppLanguage();
 const countryLoad = loadAppCountry();
 reportBootstrapFailure('loadLanguage', languageLoad);
 reportBootstrapFailure('loadAppCountry', countryLoad);

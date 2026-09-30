@@ -6,7 +6,7 @@ mock.module('expo-router/entry', () => ({}));
 mock.module('@/services/catalog/loader', () => ({ loadCatalog: () => undefined }));
 mock.module('@/services/country', () => ({ loadAppCountry: async () => 'TR' }));
 mock.module('@/services/screenData', () => ({ watchRegionChanges: () => () => undefined }));
-mock.module('@/i18n/languageStore', () => ({ loadLanguage: async () => 'tr' }));
+mock.module('@/i18n/bootstrap', () => ({ loadAppLanguage: async () => undefined }));
 mock.module('expo-secure-store', () => ({
   getItemAsync: async () => null,
   setItemAsync: async () => undefined,

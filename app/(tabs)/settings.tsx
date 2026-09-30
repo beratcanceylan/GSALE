@@ -34,7 +34,11 @@ export default function SettingsScreen() {
 
   const chooseLanguage = async (code: LanguageCode) => {
     setPicker(null);
-    await setLanguage(code);
+    try {
+      await setLanguage(code);
+    } catch {
+      // The switch already happened for this session; only saving it failed.
+    }
     if (applyLayoutDirection(code)) {
       Alert.alert(t('settings.restartTitle'), t('settings.restartBody'));
     }

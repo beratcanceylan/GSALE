@@ -68,4 +68,18 @@ describe('createListStore refresh coordination', () => {
     store.invalidate();
     expect(calls).toBe(0);
   });
+
+  test('invalidate cancels the superseded request', async () => {
+    const signals: AbortSignal[] = [];
+    const store = createListStore((signal) => {
+      signals.push(signal);
+      return new Promise<string[]>(() => undefined);
+    });
+    const unsubscribe = store.subscribe(() => undefined);
+    store.invalidate();
+    expect(signals).toHaveLength(2);
+    expect(signals[0]?.aborted).toBeTrue();
+    expect(signals[1]?.aborted).toBeFalse();
+    unsubscribe();
+  });
 });

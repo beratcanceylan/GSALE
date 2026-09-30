@@ -11,10 +11,11 @@ export type ListStore<T> = Readonly<{
   invalidate: () => void;
 }>;
 
-export function createListStore<T>(fetcher: () => Promise<T[]>): ListStore<T> {
+export function createListStore<T>(fetcher: (signal: AbortSignal) => Promise<T[]>): ListStore<T> {
   let snapshot: ListStoreSnapshot<T> = { data: null, refreshing: false };
   const listeners = new Set<() => void>();
   let pending: Promise<void> | null = null;
+  let controller: AbortController | null = null;
   let generation = 0;
 
   const notify = (): void => {
@@ -23,14 +24,14 @@ export function createListStore<T>(fetcher: () => Promise<T[]>): ListStore<T> {
     }
   };
 
-  const fetchData = async (isRefresh: boolean, loadGeneration: number): Promise<void> => {
+  const fetchData = async (isRefresh: boolean, loadGeneration: number, signal: AbortSignal): Promise<void> => {
     if (isRefresh) {
       snapshot = { ...snapshot, refreshing: true };
       notify();
     }
     let next: ListStoreSnapshot<T>;
     try {
-      next = { data: await fetcher(), refreshing: false };
+      next = { data: await fetcher(signal), refreshing: false };
     } catch {
       next = { data: [], refreshing: false };
     }
@@ -46,7 +47,8 @@ export function createListStore<T>(fetcher: () => Promise<T[]>): ListStore<T> {
       return;
     }
     const loadGeneration = generation;
-    const request = fetchData(isRefresh, loadGeneration).finally(() => {
+    controller = new AbortController();
+    const request = fetchData(isRefresh, loadGeneration, controller.signal).finally(() => {
       if (pending === request) pending = null;
     });
     pending = request;
@@ -60,6 +62,7 @@ export function createListStore<T>(fetcher: () => Promise<T[]>): ListStore<T> {
     invalidate: () => {
       const wasActive = pending !== null || snapshot.data !== null;
       generation += 1;
+      controller?.abort();
       pending = null;
       if (wasActive) startLoad(snapshot.data !== null);
     },

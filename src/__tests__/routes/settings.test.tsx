@@ -4,9 +4,11 @@ import { nativeState, resetNativeState } from '../../../test-support/native-mock
 import { allOfType, byLabel, fire, render, type Rendered } from '../../../test-support/render';
 
 const saved: [string, string][] = [];
+let failWrites = false;
 mock.module('expo-secure-store', () => ({
   getItemAsync: () => Promise.resolve(null),
   setItemAsync: (key: string, value: string) => {
+    if (failWrites) return Promise.reject(new Error('keychain unavailable'));
     saved.push([key, value]);
     return Promise.resolve();
   },
@@ -65,6 +67,19 @@ describe('settings screen', () => {
     await fire(byLabel(view.root, 'العربية'), 'onPress');
     expect(nativeState.rtl.forced).toBeTrue();
     expect(nativeState.alerts).toHaveLength(1);
+    await view.unmount();
+    await setLanguage('tr');
+  });
+
+  test('a failed save still switches the language and never leaves an unhandled error', async () => {
+    resetNativeState();
+    await setLanguage('tr');
+    const view = await render(<SettingsScreen />);
+    failWrites = true;
+    await fire(byLabel(view.root, 'Dil'), 'onPress');
+    await fire(byLabel(view.root, 'English'), 'onPress');
+    expect(view.text()).toContain('Settings');
+    failWrites = false;
     await view.unmount();
     await setLanguage('tr');
   });

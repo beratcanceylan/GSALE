@@ -2,4 +2,4 @@ import { fetchFreeGames } from '@/services/gameData';
 
 import { createListStore } from './createListStore';
 
-export const freeGamesStore = createListStore(() => fetchFreeGames());
+export const freeGamesStore = createListStore((signal) => fetchFreeGames({ signal }));
