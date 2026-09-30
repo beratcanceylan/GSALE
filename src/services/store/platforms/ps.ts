@@ -307,38 +307,44 @@ function psCategoryUrl(categoryId: string, offset: number): string {
   return `${PS_GRAPHQL_URL}?operationName=categoryGridRetrieve&variables=${encodeURIComponent(JSON.stringify(variables))}&extensions=${encodeURIComponent(JSON.stringify(extensions))}`;
 }
 
+async function fetchPsCategoryPage(categoryId: string, page: number, options?: StoreRequestOptions): Promise<PsCategoryGridPage> {
+  const [language, country] = regionalLocale().split('-');
+  return withRetry(
+    () =>
+      fetchJson<PsCategoryGridPage>(
+        psCategoryUrl(categoryId, page * PS_GRID_PAGE_SIZE),
+        {
+          headers: {
+            Accept: 'application/json',
+            Referer: 'https://store.playstation.com/',
+            'Content-Type': 'application/json',
+            'x-psn-store-locale-override': `${language}-${(country ?? '').toUpperCase()}`,
+          },
+          signal: options?.signal,
+        },
+        STORE_CONFIG.timeout.long,
+      ),
+    0,
+    options?.signal,
+  );
+}
+
+function pageNames(page: PsCategoryGridPage): string[] {
+  return (page.data?.categoryGridRetrieve?.products ?? []).flatMap((product) => (product.name ? [product.name] : []));
+}
+
 /** Product names of the PS Plus Game Catalog in the selected region; empty where there is no PS Store. */
 export async function fetchPlayStationPlusNames(options?: StoreRequestOptions): Promise<string[]> {
   if (!getPsCurrency()) return [];
-  const [language, country] = regionalLocale().split('-');
-  const names: string[] = [];
-  for (let page = 0; page < PS_GRID_MAX_PAGES; page += 1) {
-    const data = await withRetry(
-      () =>
-        fetchJson<PsCategoryGridPage>(
-          psCategoryUrl(PS_PLUS_CATALOG_CATEGORY_ID, page * PS_GRID_PAGE_SIZE),
-          {
-            headers: {
-              Accept: 'application/json',
-              Referer: 'https://store.playstation.com/',
-              'Content-Type': 'application/json',
-              'x-psn-store-locale-override': `${language}-${(country ?? '').toUpperCase()}`,
-            },
-            signal: options?.signal,
-          },
-          STORE_CONFIG.timeout.long,
-        ),
-      0,
-      options?.signal,
-    );
-    const grid = data.data?.categoryGridRetrieve;
-    for (const product of grid?.products ?? []) {
-      if (product.name) names.push(product.name);
-    }
-    const total = grid?.pageInfo?.totalCount ?? 0;
-    if (!grid || grid.pageInfo?.isLast || names.length >= total) break;
-  }
-  return names;
+  const first = await fetchPsCategoryPage(PS_PLUS_CATALOG_CATEGORY_ID, 0, options);
+  const grid = first.data?.categoryGridRetrieve;
+  if (!grid || grid.pageInfo?.isLast) return pageNames(first);
+  // The first page tells the total; the rest load together.
+  const pages = Math.min(PS_GRID_MAX_PAGES, Math.ceil((grid.pageInfo?.totalCount ?? 0) / PS_GRID_PAGE_SIZE));
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(0, pages - 1) }, (_, index) => fetchPsCategoryPage(PS_PLUS_CATALOG_CATEGORY_ID, index + 1, options)),
+  );
+  return [first, ...rest].flatMap(pageNames);
 }
 
 export async function fetchPlayStationDetails(

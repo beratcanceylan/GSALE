@@ -39,7 +39,10 @@ export function StoreLogo({ platform, size = Size.logo, color = Palette.textMute
 
 /** Stores in a fixed order (known stores first), each once. */
 export function StoreLogoRow({ platforms, size, color }: Readonly<{ platforms: readonly string[]; size?: number; color?: string }>) {
-  const present = new Set(platforms.map((platform) => platform.trim()).filter(Boolean));
+  const present = new Set(platforms.flatMap((platform) => {
+    const name = platform.trim();
+    return name ? [name] : [];
+  }));
   const known: readonly string[] = STORE_ORDER;
   const stores = [...STORE_ORDER.filter((store) => present.has(store)), ...[...present].filter((store) => !known.includes(store))];
   if (stores.length === 0) return null;

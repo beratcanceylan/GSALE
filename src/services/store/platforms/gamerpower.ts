@@ -40,7 +40,10 @@ function isHttps(url: string | undefined): url is string {
 /** "Hades (Steam) Giveaway" → title "Hades", store "Steam"; the store falls back to the platforms list. */
 function parseGiveaway(entry: GamerPowerGiveaway): { title: string; store: string } | null {
   let title = (entry.title ?? '').trim().replace(GIVEAWAY_SUFFIX, '');
-  const platforms = (entry.platforms ?? '').split(',').map((part) => part.trim().toLowerCase()).filter(Boolean);
+  const platforms = (entry.platforms ?? '').split(',').flatMap((part) => {
+    const platform = part.trim().toLowerCase();
+    return platform ? [platform] : [];
+  });
   if (platforms.length > 0 && platforms.every((platform) => MOBILE_ONLY.has(platform))) return null;
   let store = platforms.map((platform) => STORE_NAMES[platform]).find(Boolean) ?? '';
   const named = STORE_IN_TITLE.exec(title);
