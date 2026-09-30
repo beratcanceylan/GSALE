@@ -133,4 +133,18 @@ describe('game detail screen', () => {
     await fire(byLabel(view.root, 'Favorilerden çıkar'), 'onPress');
     await view.unmount();
   });
+
+  test('Game Pass and PS Plus rows carry a badge next to their price', async () => {
+    resetNativeState();
+    nativeState.params = { id: 'subscribed' };
+    const xboxPass = uiDeal({ platform: 'Xbox', price: '500,00 TL', url: 'https://www.xbox.com/games/store/9', subscriptionNote: 'Game Pass' });
+    const psPlus = uiDeal({ platform: 'PlayStation', price: '600,00 TL', url: 'https://store.playstation.com/p/9', subscriptionNote: 'PS Plus' });
+    const subscribed: Game = { ...game, id: 'subscribed', edition: 'base', editions: [{ key: 'base', deals: [xboxPass, psPlus] }], deals: [xboxPass, psPlus] };
+    gameDetailStoreMock.setSnapshot({ game: subscribed, selectedEdition: 'base', loading: false, error: null, version: 8 });
+    const view = await render(<GameDetailScreen />);
+    expect(textOf(rowFor(view, 'Xbox'))).toContain('Game Pass’te');
+    expect(textOf(rowFor(view, 'Xbox'))).toContain(formatMoney(500));
+    expect(textOf(rowFor(view, 'PlayStation'))).toContain('PS Plus’ta');
+    await view.unmount();
+  });
 });

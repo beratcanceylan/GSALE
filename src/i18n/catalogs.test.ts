@@ -32,9 +32,10 @@ describe('message catalogs', () => {
     }
   });
 
-  test('brand names stay untranslated', () => {
+  test('subscription brand names stay untranslated', () => {
     for (const { code } of LANGUAGES) {
-      expect(CATALOGS[code]['price.gamePass']).toBe('Game Pass');
+      expect(CATALOGS[code]['subscription.gamePass']).toContain('Game Pass');
+      expect(CATALOGS[code]['subscription.psPlus']).toContain('PS Plus');
     }
   });
 });

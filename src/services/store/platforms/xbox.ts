@@ -303,6 +303,29 @@ export async function fetchXboxTopPaid(
   return games.flatMap((game) => (game ? [game] : []));
 }
 
+/** Microsoft's public Game Pass lists: every console game and every PC game. */
+const GAME_PASS_LISTS = ['f6f1f99f-9b49-4ccd-b3bf-4d9767a77f5e', 'fdd9e2a7-0fee-49f6-ad69-4354098401ff'] as const;
+
+/** Product ids in Game Pass (console or PC) for the selected market. */
+export async function fetchGamePassProductIds(options?: StoreRequestOptions): Promise<Set<string>> {
+  const { market, language } = xboxMarket();
+  const lists = await Promise.all(GAME_PASS_LISTS.map((listId) => {
+    const params = new URLSearchParams({ id: listId, language: language.toLowerCase(), market });
+    return withRetry(
+      () => fetchJson<{ id?: string }[]>(`https://catalog.gamepass.com/sigls/v2?${params.toString()}`, { signal: options?.signal }),
+      0,
+      options?.signal,
+    );
+  }));
+  const ids = new Set<string>();
+  for (const list of lists) {
+    for (const entry of Array.isArray(list) ? list : []) {
+      if (entry.id) ids.add(entry.id.toUpperCase());
+    }
+  }
+  return ids;
+}
+
 export async function fetchXboxDetails(
   slug: string,
   options?: StoreRequestOptions,

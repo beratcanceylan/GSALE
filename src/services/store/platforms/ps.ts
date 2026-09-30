@@ -279,6 +279,68 @@ export async function fetchPlayStationEditionOffers(
   return offers.flatMap((offer) => (offer ? [offer] : []));
 }
 
+const PS_GRAPHQL_URL = 'https://web.np.playstation.com/api/graphql/v1/op';
+const PS_CATEGORY_GRID_QUERY_HASH = '4ce7d410a4db2c8b635a48c1dcec375906ff63b19dadd87e073f8fd0c0481d35';
+/** The store's own "PS Plus Game Catalog – All games" category; the id is shared by every region. */
+const PS_PLUS_CATALOG_CATEGORY_ID = '3a7006fe-e26f-49fe-87e5-4473d7ed0fb2';
+const PS_GRID_PAGE_SIZE = 200;
+const PS_GRID_MAX_PAGES = 5;
+
+interface PsCategoryGridPage {
+  data?: {
+    categoryGridRetrieve?: {
+      pageInfo?: { totalCount?: number; isLast?: boolean };
+      products?: { name?: string }[];
+    } | null;
+  };
+}
+
+function psCategoryUrl(categoryId: string, offset: number): string {
+  const variables = {
+    id: categoryId,
+    pageArgs: { size: PS_GRID_PAGE_SIZE, offset },
+    sortBy: null,
+    filterBy: [],
+    facetOptions: [],
+  };
+  const extensions = { persistedQuery: { version: 1, sha256Hash: PS_CATEGORY_GRID_QUERY_HASH } };
+  return `${PS_GRAPHQL_URL}?operationName=categoryGridRetrieve&variables=${encodeURIComponent(JSON.stringify(variables))}&extensions=${encodeURIComponent(JSON.stringify(extensions))}`;
+}
+
+/** Product names of the PS Plus Game Catalog in the selected region; empty where there is no PS Store. */
+export async function fetchPlayStationPlusNames(options?: StoreRequestOptions): Promise<string[]> {
+  if (!getPsCurrency()) return [];
+  const [language, country] = regionalLocale().split('-');
+  const names: string[] = [];
+  for (let page = 0; page < PS_GRID_MAX_PAGES; page += 1) {
+    const data = await withRetry(
+      () =>
+        fetchJson<PsCategoryGridPage>(
+          psCategoryUrl(PS_PLUS_CATALOG_CATEGORY_ID, page * PS_GRID_PAGE_SIZE),
+          {
+            headers: {
+              Accept: 'application/json',
+              Referer: 'https://store.playstation.com/',
+              'Content-Type': 'application/json',
+              'x-psn-store-locale-override': `${language}-${(country ?? '').toUpperCase()}`,
+            },
+            signal: options?.signal,
+          },
+          STORE_CONFIG.timeout.long,
+        ),
+      0,
+      options?.signal,
+    );
+    const grid = data.data?.categoryGridRetrieve;
+    for (const product of grid?.products ?? []) {
+      if (product.name) names.push(product.name);
+    }
+    const total = grid?.pageInfo?.totalCount ?? 0;
+    if (!grid || grid.pageInfo?.isLast || names.length >= total) break;
+  }
+  return names;
+}
+
 export async function fetchPlayStationDetails(
   slug: string,
   options?: StoreRequestOptions,

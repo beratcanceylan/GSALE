@@ -9,6 +9,7 @@ import { fetchPlayStationDetails } from '@/services/store/platforms/ps';
 import { fetchSteamDetails } from '@/services/store/platforms/steam';
 import { fetchXboxDetails } from '@/services/store/platforms/xbox';
 import { fetchEditionOffers } from '@/services/store/prices';
+import { markSubscriptions } from '@/services/store/subscriptions';
 import type { LiveGame, StoreRequestOptions } from '@/services/store/types';
 
 const PLATFORM_HINT_MAP: Record<string, string> = {
@@ -92,7 +93,7 @@ export async function fetchGameDetailLive(
   if (!game) return null;
 
   const edition = editionKey(game.title);
-  const offers = await fetchEditionOffers(game.title, options);
+  const offers = await markSubscriptions(await fetchEditionOffers(game.title, options), options);
   const source = sourceOffer(game, edition);
   const withSource = source && !hasOffer(offers, source.platform, edition) ? [...offers, source] : offers;
   const editions = buildEditionTable(withSource);

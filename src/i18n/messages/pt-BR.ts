@@ -67,8 +67,10 @@ export const ptBR = {
 
   'price.free': 'Grátis',
   'price.unknown': 'Preço indisponível',
-  'price.gamePass': 'Game Pass',
   'price.was': 'antes {price}',
+
+  'subscription.gamePass': 'No Game Pass',
+  'subscription.psPlus': 'Na PS Plus',
 
   'settings.title': 'Configurações',
   'settings.language': 'Idioma',

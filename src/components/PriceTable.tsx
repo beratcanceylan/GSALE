@@ -4,8 +4,8 @@ import { I18nManager, Linking, Pressable, StyleSheet, Text, View } from 'react-n
 import { PriceTag } from '@/components/PriceTag';
 import { StoreLogo } from '@/components/StoreLogo';
 import { Palette, Size, Spacing, useType } from '@/constants/DesignSystem';
-import { useT } from '@/i18n';
-import type { Deal } from '@/services/deal';
+import { useT, type MessageKey } from '@/i18n';
+import type { Deal, Subscription } from '@/services/deal';
 import { isSafeExternalUrl } from '@/utils/gameDisplay';
 import { cheapestDeal, priceView, type PriceView } from '@/utils/price';
 
@@ -15,12 +15,21 @@ type PriceTableProps = Readonly<{
   missingStores: readonly string[];
 }>;
 
-function StoreName({ platform }: Readonly<{ platform: string }>) {
+const SUBSCRIPTION_KEYS = {
+  'game-pass': 'subscription.gamePass',
+  'ps-plus': 'subscription.psPlus',
+} as const satisfies Record<Subscription, MessageKey>;
+
+function StoreName({ platform, subscription = null }: Readonly<{ platform: string; subscription?: Subscription | null }>) {
+  const t = useT();
   const type = useType();
   return (
     <View style={styles.store}>
       <StoreLogo platform={platform} size={Size.logoLarge} color={Palette.text} />
-      <Text style={[type('heading'), styles.storeName]} numberOfLines={1}>{platform}</Text>
+      <View style={styles.storeText}>
+        <Text style={[type('heading'), styles.storeName]} numberOfLines={1}>{platform}</Text>
+        {subscription ? <Text style={[type('caption'), styles.subscription]}>{t(SUBSCRIPTION_KEYS[subscription])}</Text> : null}
+      </View>
     </View>
   );
 }
@@ -52,7 +61,7 @@ function DealRow({ deal, lowest }: Readonly<{ deal: Deal; lowest: boolean }>) {
       accessibilityRole="link"
       accessibilityLabel={t('detail.openStore', { store: deal.platform })}
     >
-      <StoreName platform={deal.platform} />
+      <StoreName platform={deal.platform} subscription={deal.subscription} />
       <View style={styles.priceColumn}>
         {price && lowest ? <PriceTag price={price} /> : null}
         {price && !lowest ? <PlainPrice price={price} /> : null}
@@ -117,9 +126,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
   },
-  storeName: {
+  storeText: {
     flexShrink: 1,
+    gap: Spacing.xxs,
+  },
+  storeName: {
     color: Palette.text,
+  },
+  subscription: {
+    color: Palette.sale,
   },
   priceColumn: {
     alignItems: 'flex-end',

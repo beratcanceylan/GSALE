@@ -67,8 +67,10 @@ export const ru = {
 
   'price.free': 'Бесплатно',
   'price.unknown': 'Цена недоступна',
-  'price.gamePass': 'Game Pass',
   'price.was': 'было {price}',
+
+  'subscription.gamePass': 'В Game Pass',
+  'subscription.psPlus': 'В PS Plus',
 
   'settings.title': 'Настройки',
   'settings.language': 'Язык',

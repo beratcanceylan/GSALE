@@ -67,8 +67,10 @@ export const zhHans = {
 
   'price.free': '免费',
   'price.unknown': '暂无价格',
-  'price.gamePass': 'Game Pass',
   'price.was': '原价 {price}',
+
+  'subscription.gamePass': 'Game Pass 可玩',
+  'subscription.psPlus': 'PS Plus 可玩',
 
   'settings.title': '设置',
   'settings.language': '语言',

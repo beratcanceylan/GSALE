@@ -67,8 +67,10 @@ export const cs = {
 
   'price.free': 'Zdarma',
   'price.unknown': 'Cena není k dispozici',
-  'price.gamePass': 'Game Pass',
   'price.was': 'dříve {price}',
+
+  'subscription.gamePass': 'V Game Passu',
+  'subscription.psPlus': 'V PS Plus',
 
   'settings.title': 'Nastavení',
   'settings.language': 'Jazyk',

@@ -67,8 +67,10 @@ export const es = {
 
   'price.free': 'Gratis',
   'price.unknown': 'Precio no disponible',
-  'price.gamePass': 'Game Pass',
   'price.was': 'antes {price}',
+
+  'subscription.gamePass': 'En Game Pass',
+  'subscription.psPlus': 'En PS Plus',
 
   'settings.title': 'Ajustes',
   'settings.language': 'Idioma',

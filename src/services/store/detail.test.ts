@@ -161,4 +161,22 @@ describe('detail editions', () => {
     await getGameDetail('76000', 'Steam');
     expect(urls.filter((url) => url.includes('/api/appdetails'))).toHaveLength(1);
   });
+
+  test('an Xbox product in Game Pass is marked in the price table', async () => {
+    const product = {
+      ProductId: 'GP77',
+      LocalizedProperties: [{ ProductTitle: 'GSALE Pass Game', Images: [{ ImagePurpose: 'Poster', Uri: '//store-images.s-microsoft.com/p' }] }],
+      DisplaySkuAvailabilities: [{ Availabilities: [{ OrderManagementData: { Price: { CurrencyCode: 'TRY', ListPrice: 500, MSRP: 500 } } }] }],
+    };
+    globalThis.fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('catalog.gamepass.com')) return Response.json([{ siglId: 's' }, { id: 'GP77' }]);
+      if (url.includes('autosuggest')) return Response.json({ Results: [{ Products: [{ ProductId: 'GP77' }] }] });
+      if (url.includes('displaycatalog')) return Response.json({ Products: [product] });
+      return new Response('', { status: 404 });
+    };
+    const detail = await getGameDetail('xbox-GP77', 'Xbox');
+    const xbox = detail.editions[0]?.deals.find((deal) => deal.platform === 'Xbox');
+    expect(xbox?.subscription_note).toBe('Game Pass');
+  });
 });

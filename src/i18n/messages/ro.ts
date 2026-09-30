@@ -67,8 +67,10 @@ export const ro = {
 
   'price.free': 'Gratuit',
   'price.unknown': 'Preț indisponibil',
-  'price.gamePass': 'Game Pass',
   'price.was': 'înainte {price}',
+
+  'subscription.gamePass': 'În Game Pass',
+  'subscription.psPlus': 'În PS Plus',
 
   'settings.title': 'Setări',
   'settings.language': 'Limbă',

@@ -67,8 +67,10 @@ export const vi = {
 
   'price.free': 'Miễn phí',
   'price.unknown': 'Không có giá',
-  'price.gamePass': 'Game Pass',
   'price.was': 'trước {price}',
+
+  'subscription.gamePass': 'Có trong Game Pass',
+  'subscription.psPlus': 'Có trong PS Plus',
 
   'settings.title': 'Cài đặt',
   'settings.language': 'Ngôn ngữ',

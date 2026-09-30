@@ -67,8 +67,10 @@ export const tr = {
 
   'price.free': 'Ücretsiz',
   'price.unknown': 'Fiyat yok',
-  'price.gamePass': 'Game Pass',
   'price.was': 'önceki {price}',
+
+  'subscription.gamePass': 'Game Pass’te',
+  'subscription.psPlus': 'PS Plus’ta',
 
   'settings.title': 'Ayarlar',
   'settings.language': 'Dil',

@@ -67,8 +67,10 @@ export const ko = {
 
   'price.free': '무료',
   'price.unknown': '가격 정보 없음',
-  'price.gamePass': 'Game Pass',
   'price.was': '정가 {price}',
+
+  'subscription.gamePass': 'Game Pass 포함',
+  'subscription.psPlus': 'PS Plus 포함',
 
   'settings.title': '설정',
   'settings.language': '언어',

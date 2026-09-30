@@ -67,8 +67,10 @@ export const hu = {
 
   'price.free': 'Ingyenes',
   'price.unknown': 'Nincs elérhető ár',
-  'price.gamePass': 'Game Pass',
   'price.was': 'korábban {price}',
+
+  'subscription.gamePass': 'A Game Passban',
+  'subscription.psPlus': 'A PS Plusban',
 
   'settings.title': 'Beállítások',
   'settings.language': 'Nyelv',

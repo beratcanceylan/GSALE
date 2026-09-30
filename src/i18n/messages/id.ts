@@ -67,8 +67,10 @@ export const id = {
 
   'price.free': 'Gratis',
   'price.unknown': 'Harga tidak tersedia',
-  'price.gamePass': 'Game Pass',
   'price.was': 'sebelumnya {price}',
+
+  'subscription.gamePass': 'Ada di Game Pass',
+  'subscription.psPlus': 'Ada di PS Plus',
 
   'settings.title': 'Pengaturan',
   'settings.language': 'Bahasa',

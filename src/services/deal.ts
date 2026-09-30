@@ -1,6 +1,14 @@
 import { isExplicitlyFreePrice, isUnavailablePrice, parseLocalizedAmount } from '@/services/store/price-parse';
 import type { GameDeal } from '@/services/store/types';
 
+export type Subscription = 'game-pass' | 'ps-plus';
+
+/** Notes the store layer sets (`subscriptions.ts`) for games included in a subscription. */
+const SUBSCRIPTIONS: Readonly<Record<string, Subscription>> = {
+  'Game Pass': 'game-pass',
+  'PS Plus': 'ps-plus',
+};
+
 export interface Deal {
   platform: string;
   price: string;
@@ -14,7 +22,8 @@ export interface Deal {
   /** Whole percent off (25 for "-25%"), 0 without a discount. */
   discountPercent: number;
   isFree: boolean;
-  gamePass: boolean;
+  /** The store's subscription that includes this game. */
+  subscription: Subscription | null;
 }
 
 /** Amount of a store price string ("1.500,00 TL"); null for sentinels and unparseable text. */
@@ -32,7 +41,6 @@ function discountPercentOf(discount: string): number {
 /** UI deal for one store price, with amounts derived once for every screen. */
 export function mapDeal(deal: GameDeal): Deal {
   const isFree = isExplicitlyFreePrice(deal.price);
-  const gamePass = /game\s*pass/i.test(`${deal.subscription_note ?? ''} ${deal.price}`);
   return {
     platform: deal.platform,
     price: deal.price,
@@ -40,11 +48,11 @@ export function mapDeal(deal: GameDeal): Deal {
     discount: deal.discount,
     url: deal.store_url || '',
     subscriptionNote: deal.subscription_note,
-    amount: gamePass && !isFree ? null : priceAmount(deal.price),
+    amount: priceAmount(deal.price),
     originalAmount: priceAmount(deal.original_price),
     discountPercent: discountPercentOf(deal.discount),
     isFree,
-    gamePass,
+    subscription: SUBSCRIPTIONS[deal.subscription_note ?? ''] ?? null,
   };
 }
 
@@ -59,7 +67,7 @@ export function freeDeal(platform: string, url: string): Deal {
     originalAmount: null,
     discountPercent: 0,
     isFree: true,
-    gamePass: false,
+    subscription: null,
   };
 }
 

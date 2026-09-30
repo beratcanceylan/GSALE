@@ -67,8 +67,10 @@ export const fi = {
 
   'price.free': 'Ilmainen',
   'price.unknown': 'Hinta ei saatavilla',
-  'price.gamePass': 'Game Pass',
   'price.was': 'ennen {price}',
+
+  'subscription.gamePass': 'Game Passissa',
+  'subscription.psPlus': 'PS Plusissa',
 
   'settings.title': 'Asetukset',
   'settings.language': 'Kieli',

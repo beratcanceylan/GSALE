@@ -67,8 +67,10 @@ export const ja = {
 
   'price.free': '無料',
   'price.unknown': '価格情報なし',
-  'price.gamePass': 'Game Pass',
   'price.was': '通常 {price}',
+
+  'subscription.gamePass': 'Game Pass対象',
+  'subscription.psPlus': 'PS Plus対象',
 
   'settings.title': '設定',
   'settings.language': '言語',

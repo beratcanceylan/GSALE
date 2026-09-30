@@ -67,8 +67,10 @@ export const th = {
 
   'price.free': 'ฟรี',
   'price.unknown': 'ไม่มีข้อมูลราคา',
-  'price.gamePass': 'Game Pass',
   'price.was': 'เดิม {price}',
+
+  'subscription.gamePass': 'มีใน Game Pass',
+  'subscription.psPlus': 'มีใน PS Plus',
 
   'settings.title': 'การตั้งค่า',
   'settings.language': 'ภาษา',

@@ -67,8 +67,10 @@ export const ar = {
 
   'price.free': 'مجاني',
   'price.unknown': 'السعر غير متوفر',
-  'price.gamePass': 'Game Pass',
   'price.was': 'كان {price}',
+
+  'subscription.gamePass': 'ضمن Game Pass',
+  'subscription.psPlus': 'ضمن PS Plus',
 
   'settings.title': 'الإعدادات',
   'settings.language': 'اللغة',
