@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react';
+import { useSyncExternalStore, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 
 import { Palette } from '@/constants/DesignSystem';
+import { startupStore } from '@/services/startup';
 
 let splashHidden = false;
 
@@ -14,11 +15,19 @@ function hideSplashOnFirstLayout(): void {
   });
 }
 
-/** App root: the slate ground, and the splash screen hidden once the first frame is laid out. */
+/**
+ * App root: the slate ground. Screens mount once the saved language and country are
+ * loaded (the splash stays up until then), so nothing loads in the wrong language.
+ */
 export function AppBackground({ children }: Readonly<{ children: ReactNode }>) {
+  const ready = useSyncExternalStore(startupStore.subscribe, startupStore.getSnapshot);
   return (
-    <View style={styles.root} onLayout={hideSplashOnFirstLayout}>
-      {children}
+    <View style={styles.root}>
+      {ready ? (
+        <View style={styles.root} onLayout={hideSplashOnFirstLayout}>
+          {children}
+        </View>
+      ) : null}
     </View>
   );
 }

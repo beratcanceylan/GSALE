@@ -8,6 +8,7 @@ import type { Game } from '@/services/gameData';
 const FreeGamesScreen = (await import('../../../app/(tabs)/free')).default;
 const SearchScreen = (await import('../../../app/(tabs)/search')).default;
 const FavoritesScreen = (await import('../../../app/(tabs)/favorites')).default;
+const { setLanguage } = await import('@/i18n/languageStore');
 
 const game: Game = {
   id: '1', title: 'Hades', imageUrl: '', platform: 'Epic Games', source_platform: 'Epic Games',
@@ -81,6 +82,16 @@ describe('favorites tab', () => {
     expect(view.text()).toContain('“No match” ile eşleşen favori yok');
     await fire(byLabel(view.root, 'Temizle'), 'onPress');
     expect(view.text()).toContain('Hades');
+    await view.unmount();
+  });
+
+  test('switches its text when the language changes', async () => {
+    favoritesStoreMock.setSnapshot({ data: [], version: 3 });
+    const view = await render(<FavoritesScreen />);
+    expect(view.text()).toContain('Favorilere eklediğiniz oyunlar burada görünür');
+    await updateExternalStore(() => { void setLanguage('en'); });
+    expect(view.text()).toContain('Games you favorite appear here.');
+    await updateExternalStore(() => { void setLanguage('tr'); });
     await view.unmount();
   });
 });

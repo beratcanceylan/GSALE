@@ -96,9 +96,11 @@ export function typeFor(name: TypeName, systemFont: boolean): TypeToken {
   return rest;
 }
 
-/** `typeFor` bound to the app language; re-renders when the language changes. */
+const typeWithPlex = (name: TypeName) => typeFor(name, false);
+const typeWithSystemFont = (name: TypeName) => typeFor(name, true);
+
+/** `typeFor` bound to the app language; stable per font, re-renders when the language changes. */
 export function useType(): (name: TypeName) => TypeToken {
   const language = useSyncExternalStore(languageStore.subscribe, languageStore.getSnapshot);
-  const systemFont = usesSystemFont(language);
-  return (name) => typeFor(name, systemFont);
+  return usesSystemFont(language) ? typeWithSystemFont : typeWithPlex;
 }

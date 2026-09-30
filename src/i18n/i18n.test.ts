@@ -9,7 +9,7 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { matchLanguage, isRtl, usesSystemFont } = await import('@/i18n/languages');
-const { formatMoney, formatPercent, plural, t } = await import('@/i18n');
+const { formatMoney, formatPercent, plural, pluralCategory, t, translatorFor } = await import('@/i18n');
 const { getLanguage, languageStore, loadLanguage, setLanguage } = await import('@/i18n/languageStore');
 
 describe('matchLanguage', () => {
@@ -86,5 +86,20 @@ describe('formatting', () => {
 
   test('percent shows a signed whole number', () => {
     expect(formatPercent(-40, 'en')).toBe(new Intl.NumberFormat('en', { style: 'percent', signDisplay: 'exceptZero', maximumFractionDigits: 0 }).format(-0.4));
+  });
+});
+
+describe('translatorFor', () => {
+  test('one stable function per language, so memoised screens recompute on a language change', () => {
+    expect(translatorFor('en')).toBe(translatorFor('en'));
+    expect(translatorFor('en')).not.toBe(translatorFor('tr'));
+  });
+});
+
+describe('pluralCategory', () => {
+  test('falls back to one/other when the runtime has no Intl.PluralRules', () => {
+    expect(pluralCategory(1, 'ru', null)).toBe('one');
+    expect(pluralCategory(5, 'ru', null)).toBe('other');
+    expect(pluralCategory(5, 'ru')).toBe('many');
   });
 });

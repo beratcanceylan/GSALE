@@ -26,10 +26,16 @@ const EDITION_ORDER: readonly EditionKey[] = [
 
 type Token = Readonly<{ word: string; start: number }>;
 
-/** "Edition" in the store languages we support (accents stripped, Turkish i folded). */
-const EDITION_WORDS = new Set([
-  'edition', 'edicion', 'edicao', 'edizione', 'wydanie', 'издание', 'editie', 'utgava', 'udgave',
-  'utgave', 'painos', 'kiadas', 'editia', 'εκδοση', 'surum', 'surumu', 'bundle', 'paket', 'paketi',
+/** Lists are written naturally and compared after the same normalisation as title words. */
+function normalizedSet(words: readonly string[]): ReadonlySet<string> {
+  return new Set(words.map(normalizeWord));
+}
+
+/** "Edition" in the store languages we support. */
+const EDITION_WORDS = normalizedSet([
+  'edition', 'edición', 'edição', 'edizione', 'wydanie', 'edycja', 'издание', 'видання', 'editie', 'utgåva',
+  'udgave', 'utgave', 'painos', 'kiadás', 'ediția', 'έκδοση', 'sürüm', 'sürümü', 'bundle', 'paket', 'paketi',
+  'エディション', '版', '에디션', '版本',
 ]);
 
 /**
@@ -42,11 +48,11 @@ const EDITION_NAMES: readonly Readonly<{ key: EditionKey; paired: boolean; names
   { key: 'goty', paired: false, names: ['game of the year', 'goty', 'yilin oyunu'] },
   { key: 'cross-gen', paired: false, names: ['cross gen'] },
   { key: 'enhanced', paired: false, names: ['enhanced'] },
-  { key: 'ultimate', paired: true, names: ['ultimate', 'ultime', 'nihai'] },
-  { key: 'deluxe', paired: true, names: ['deluxe', 'luks'] },
-  { key: 'gold', paired: true, names: ['gold', 'altin', 'oro', 'or', 'ouro'] },
-  { key: 'premium', paired: true, names: ['premium', 'seckin'] },
-  { key: 'complete', paired: true, names: ['complete', 'completa', 'komplett', 'tam'] },
+  { key: 'ultimate', paired: true, names: ['ultimate', 'ultime', 'nihai', 'ostateczna', 'アルティメット', '얼티밋', '终极'] },
+  { key: 'deluxe', paired: true, names: ['deluxe', 'lüks', 'делюкс', 'デラックス', '디럭스', '豪华'] },
+  { key: 'gold', paired: true, names: ['gold', 'altın', 'oro', 'or', 'ouro', 'złota', 'золотое', 'золоте', 'ゴールド', '골드', '黄金'] },
+  { key: 'premium', paired: true, names: ['premium', 'seçkin', 'プレミアム', '프리미엄'] },
+  { key: 'complete', paired: true, names: ['complete', 'completa', 'komplett', 'kompletna', 'tam', 'полное', 'повне', 'コンプリート', '컴플리트', '完整'] },
   { key: 'definitive', paired: true, names: ['definitive', 'definitiva'] },
   { key: 'legendary', paired: true, names: ['legendary', 'legendaire', 'legendaria', 'efsanevi'] },
   { key: 'champion', paired: true, names: ['champion', 'champions', 'sampiyon'] },
@@ -56,12 +62,16 @@ const EDITION_NAMES: readonly Readonly<{ key: EditionKey; paired: boolean; names
   { key: 'special', paired: true, names: ['special', 'speciale', 'especial', 'ozel'] },
 ];
 
-const STANDARD_NAMES = ['standard', 'standart', 'estandar'];
+const STANDARD_NAMES = normalizedSet(['standard', 'standart', 'estándar', 'standardowa', 'стандартное', 'стандартне', 'スタンダード', '스탠다드', '标准']);
 
 /** "Digital" before an edition name belongs to the edition ("Digital Deluxe Edition"). */
-const DIGITAL_WORDS = new Set(['digital', 'dijital', 'digitale', 'numerique', 'cyfrowa', 'цифровое']);
+const DIGITAL_WORDS = normalizedSet(['digital', 'dijital', 'digitale', 'numérique', 'cyfrowa', 'цифровое', 'цифрове', 'デジタル', '디지털']);
 
-const PLATFORM_WORDS = new Set(['pc', 'ps4', 'ps5', 'windows', 'xbox', 'and', 've', 'series']);
+/** Trailing platform phrases stores append to a product title, longest first. */
+const PLATFORM_PHRASES: readonly (readonly string[])[] = [
+  'xbox series x s', 'xbox series x', 'xbox series', 'xbox one', 'nintendo switch 2', 'nintendo switch',
+  'playstation 5', 'playstation 4', 'ps5 version', 'ps4 version', 'pc', 'ps4', 'ps5', 'windows', 'xbox', 'and', 've',
+].map((phrase) => phrase.split(' '));
 
 function normalizeWord(word: string): string {
   return foldTurkishI(word.toLowerCase())
@@ -74,7 +84,13 @@ function tokenize(title: string): Token[] {
   const tokens: Token[] = [];
   for (const match of title.matchAll(/[\p{L}\p{N}'’]+/gu)) {
     const word = normalizeWord(match[0]);
-    if (word) tokens.push({ word, start: match.index });
+    if (!word) continue;
+    // CJK titles glue "edition" to the name ("デラックス版"); split it off so it pairs like a word.
+    if (word.length > 1 && word.endsWith('版')) {
+      tokens.push({ word: word.slice(0, -1), start: match.index }, { word: '版', start: match.index + match[0].length - 1 });
+      continue;
+    }
+    tokens.push({ word, start: match.index });
   }
   return tokens;
 }
@@ -103,7 +119,7 @@ function pairedRange(tokens: readonly Token[], index: number, length: number): {
 function findEdition(tokens: readonly Token[]): EditionMatch | null {
   for (const { key, paired, names } of EDITION_NAMES) {
     for (const name of names) {
-      const phrase = name.split(' ');
+      const phrase = name.split(' ').map(normalizeWord);
       for (let index = 0; index < tokens.length; index += 1) {
         if (!phraseAt(tokens, index, phrase)) continue;
         if (!paired) return { key, from: index, to: index + phrase.length };
@@ -124,7 +140,7 @@ function trailingEditionStart(tokens: readonly Token[], end: number): number {
   const last = end - 1;
   if (last < 1 || !isEditionWord(tokens, last)) return end;
   const previous = tokens[last - 1]?.word;
-  return previous && STANDARD_NAMES.includes(previous) ? last - 1 : last;
+  return previous && STANDARD_NAMES.has(previous) ? last - 1 : last;
 }
 
 /** Leading "Édition Définitive de …" form: the index after "de/of/di/von". */
@@ -134,9 +150,19 @@ function leadingEditionEnd(tokens: readonly Token[], match: EditionMatch | null)
   return connector && ['de', 'of', 'di', 'von', 'del'].includes(connector) ? match.to + 1 : 0;
 }
 
+function trailingPlatformLength(tokens: readonly Token[], end: number): number {
+  for (const phrase of PLATFORM_PHRASES) {
+    const start = end - phrase.length;
+    if (start >= 1 && phrase.every((word, offset) => tokens[start + offset]?.word === word)) return phrase.length;
+  }
+  return 0;
+}
+
 function stripTrailingPlatforms(tokens: readonly Token[], end: number): number {
   let cut = end;
-  while (cut > 1 && PLATFORM_WORDS.has(tokens[cut - 1]?.word ?? '')) cut -= 1;
+  for (let length = trailingPlatformLength(tokens, cut); length > 0; length = trailingPlatformLength(tokens, cut)) {
+    cut -= length;
+  }
   return cut;
 }
 
@@ -173,6 +199,11 @@ export function baseTitle(title: string): string {
   return trimSeparators(cleaned.slice(startOffset, endOffset)).replaceAll(/\s+/g, ' ');
 }
 
+/** Comparable identity of a game across stores: its base title as lower-case letters and digits only. */
+export function gameKey(title: string): string {
+  return tokenize(baseTitle(title)).map((token) => token.word).join('');
+}
+
 export function compareEditions(a: EditionKey, b: EditionKey): number {
   return EDITION_ORDER.indexOf(a) - EDITION_ORDER.indexOf(b);
 }
@@ -186,7 +217,8 @@ const DLC_WORDS = new Set([
   'soundtrack', 'artbook', 'skin', 'skins', 'coin', 'coins', 'credit', 'credits', 'points', 'membership',
   'subscription', 'upgrade', 'yukseltme', 'genisleme', 'bundle', 'pass',
 ]);
-const EDITION_DLC_WORDS = new Set(['dlc', 'expansion', 'season']);
+/** Words that make an edition-named product an add-on ("Premium Edition Upgrade"). */
+const EDITION_DLC_WORDS = normalizedSet(['dlc', 'expansion', 'season', 'upgrade', 'yükseltme', 'addon', 'soundtrack']);
 
 export function isDlcTitle(title: string): boolean {
   const tokens = tokenize(title);

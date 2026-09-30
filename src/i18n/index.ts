@@ -27,8 +27,25 @@ export function t(key: MessageKey, params?: Params): string {
   return interpolate(lookup(key, getLanguage()) ?? key, params);
 }
 
+const translators = new Map<LanguageCode, typeof t>();
+
+/**
+ * `t` for one language, one stable function per language: screens that memoise on
+ * `t` recompute when the language changes.
+ */
+export function translatorFor(language: LanguageCode): typeof t {
+  let translator = translators.get(language);
+  if (!translator) {
+    translator = (key, params) => interpolate(lookup(key, language) ?? key, params);
+    translators.set(language, translator);
+  }
+  return translator;
+}
+
 /** Intl objects are costly to build; each is created once per language and kind below. */
-const { NumberFormat, PluralRules } = Intl;
+const { NumberFormat } = Intl;
+/** Hermes builds without full Intl lack PluralRules; `pluralCategory` falls back then. */
+const RuntimePluralRules: typeof Intl.PluralRules | undefined = (Intl as { PluralRules?: typeof Intl.PluralRules }).PluralRules;
 const pluralRules = new Map<LanguageCode, Intl.PluralRules>();
 const moneyFormats = new Map<LanguageCode, Intl.NumberFormat>();
 const percentFormats = new Map<LanguageCode, Intl.NumberFormat>();
@@ -44,19 +61,28 @@ function cached<T>(cache: Map<LanguageCode, T>, language: LanguageCode, create: 
 
 type PluralBase = 'search.resultCount';
 
+/** CLDR plural category of `count`; without Intl.PluralRules, a plain one/other rule. */
+export function pluralCategory(
+  count: number,
+  language: LanguageCode,
+  Rules: typeof Intl.PluralRules | null = RuntimePluralRules ?? null,
+): Intl.LDMLPluralRule {
+  if (!Rules) return count === 1 ? 'one' : 'other';
+  return cached(pluralRules, language, () => new Rules(language)).select(count);
+}
+
 /** `${base}.${category}` for the CLDR plural category of `count`, falling back to `.other`. */
 export function plural(base: PluralBase, count: number): string {
   const language = getLanguage();
-  const category = cached(pluralRules, language, () => new PluralRules(language)).select(count);
+  const category = pluralCategory(count, language);
   const key = `${base}.${category}` as MessageKey | PluralExtraKey;
   const text = lookup(key, language) ?? lookup(`${base}.other`, language) ?? base;
   return interpolate(text, { count });
 }
 
-/** Re-renders the caller when the app language changes and returns `t`. */
+/** Re-renders the caller when the app language changes; the returned function changes with it. */
 export function useT(): typeof t {
-  useSyncExternalStore(languageStore.subscribe, languageStore.getSnapshot);
-  return t;
+  return translatorFor(useSyncExternalStore(languageStore.subscribe, languageStore.getSnapshot));
 }
 
 /** Turkish lira amount formatted for the app language. */

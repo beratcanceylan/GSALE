@@ -4,10 +4,12 @@ import { nativeState, resetNativeState } from '../../../test-support/native-mock
 import { allOfType, byLabel, fire, render } from '../../../test-support/render';
 
 const RootLayout = (await import('../../../app/_layout')).default;
+const { markStartupReady } = await import('@/services/startup');
 const NotificationsScreen = (await import('../../../app/notifications')).default;
 
 describe('app navigation shell', () => {
-  test('registers the root screens inside the app background', async () => {
+  test('registers the root screens inside the app background once startup is ready', async () => {
+    markStartupReady();
     const view = await render(<RootLayout />);
     expect(allOfType(view.root, 'Stack.Screen').map((screen) => String(screen.props['name']))).toEqual([
       '(tabs)', 'game/[id]', 'notifications',

@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 
 import { nativeState, resetNativeState } from '../../test-support/native-mocks';
-import { allOfType, byLabel, fire, render } from '../../test-support/render';
+import { allOfType, byLabel, fire, render, updateExternalStore } from '../../test-support/render';
 import { uiDeal } from '../../test-support/deals';
 import type { Game } from '@/services/gameData';
 
 
 const { AppBackground } = await import('@/components/AppBackground');
+const { markStartupReady } = await import('@/services/startup');
 const { CoverCard } = await import('@/components/CoverCard');
 const { CoverImage } = await import('@/components/CoverImage');
 const { EmptyState } = await import('@/components/EmptyState');
@@ -112,13 +113,16 @@ describe('screen chrome', () => {
     await loading.unmount();
   });
 
-  test('background hides the splash after first layout, even if hide rejects', async () => {
+  test('the app waits for language and country before showing content, then hides the splash', async () => {
     nativeState.splashShouldFail = true;
-    const view = await render(<AppBackground><ScreenHeader title="x" /></AppBackground>);
-    const root = allOfType(view.root, 'View')[0];
-    if (!root) throw new Error('background missing');
-    await fire(root, 'onLayout');
-    await fire(root, 'onLayout');
+    const view = await render(<AppBackground><ScreenHeader title="content" /></AppBackground>);
+    expect(view.text()).not.toContain('content');
+    await updateExternalStore(() => { markStartupReady(); });
+    expect(view.text()).toContain('content');
+    const content = allOfType(view.root, 'View')[1];
+    if (!content) throw new Error('content view missing');
+    await fire(content, 'onLayout');
+    await fire(content, 'onLayout');
     expect(nativeState.splashHidden).toBe(1);
     await view.unmount();
   });

@@ -1,6 +1,5 @@
 import { platformPriceToGameDeal } from '@/services/store/deals';
-import { baseTitle, compareEditions, editionKey, isDlcTitle, type EditionKey } from '@/services/store/editions';
-import { scoreProductTitleMatch } from '@/services/store/match';
+import { compareEditions, editionKey, gameKey, isDlcTitle, type EditionKey } from '@/services/store/editions';
 import { isExplicitlyFreePrice, isUnavailablePrice, parseLocalizedAmount } from '@/services/store/price-parse';
 import type { GameDeal, PlatformPriceResult, StoreRequestOptions } from '@/services/store/types';
 
@@ -25,21 +24,15 @@ export type EditionOffersFetcher = (title: string, options?: StoreRequestOptions
 /** Most candidates a store contributes; keeps price conversions bounded. */
 export const MAX_EDITION_CANDIDATES = 8;
 
-const ROMAN_NUMERALS = new Set(['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x', 'xi', 'xii', 'xiii', 'xiv', 'xv', 'xvi']);
-
-/** Numbers and Roman numerals of a title ("Hades II" → "ii"), which tell sequels apart. */
-function sequelMarkers(title: string): string {
-  const words = title.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
-  return words.filter((word) => /^\d+$/.test(word) || ROMAN_NUMERALS.has(word)).sort().join(' ');
-}
-
-/** The candidate's edition when it is an edition of `title`'s game, otherwise null. */
+/**
+ * The candidate's edition when it is an edition of `title`'s game, otherwise null. The base
+ * titles must match exactly (after normalisation): expansions, spin-offs and sequels
+ * ("Phantom Liberty", "Silksong", "Hades II") share words with the game but are other products.
+ */
 export function acceptEditionCandidate(candidateTitle: string, title: string): EditionKey | null {
   if (isDlcTitle(candidateTitle) && !isDlcTitle(title)) return null;
-  const candidateBase = baseTitle(candidateTitle);
-  const base = baseTitle(title);
-  if (sequelMarkers(candidateBase) !== sequelMarkers(base)) return null;
-  if (scoreProductTitleMatch(candidateBase, base) < 50) return null;
+  const key = gameKey(title);
+  if (!key || gameKey(candidateTitle) !== key) return null;
   return editionKey(candidateTitle);
 }
 
