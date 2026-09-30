@@ -123,7 +123,7 @@ function GameDetailLoaded({ game, selectedEdition, onSelectEdition, onBack }: Ga
     <View style={styles.container}>
       <StatusBar style="light" />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        <CoverImage sources={getGameImageSources(game)} title={game.title} flush />
+        <CoverImage sources={getGameImageSources(game)} title={game.title} flush fit="natural" />
         <View style={styles.titleBlock}>
           <Text style={[type('display'), styles.title]} accessibilityRole="header">{game.title}</Text>
         </View>

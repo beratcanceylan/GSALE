@@ -80,6 +80,28 @@ describe('CoverImage', () => {
   });
 });
 
+describe('CoverImage fit', () => {
+  const frameOf = (view: Awaited<ReturnType<typeof render>>) => allOfType(view.root, 'View')[0];
+  const flatten = (style: unknown) => Object.assign({}, ...[style].flat(3).filter(Boolean)) as Record<string, unknown>;
+
+  test('the whole image is shown inside a card frame', async () => {
+    const view = await render(<CoverImage sources={[{ uri: 'https://a/square.jpg' }]} title="Hades" />);
+    expect(allOfType(view.root, 'Image')[0]?.props['contentFit']).toBe('contain');
+    await view.unmount();
+  });
+
+  test('natural fit sizes the frame to the loaded image, so nothing is cut', async () => {
+    const view = await render(<CoverImage sources={[{ uri: 'https://a/square.jpg' }]} title="Hades" fit="natural" />);
+    const image = allOfType(view.root, 'Image')[0];
+    if (!image) throw new Error('image missing');
+    await fire(image, 'onLoad', { source: { width: 600, height: 600 } });
+    expect(flatten(frameOf(view)?.props['style'])['aspectRatio']).toBe(1);
+    await fire(image, 'onLoad', { source: { width: 460, height: 215 } });
+    expect(flatten(frameOf(view)?.props['style'])['aspectRatio']).toBeGreaterThan(2);
+    await view.unmount();
+  });
+});
+
 describe('SearchField', () => {
   test('clears its text and submits', async () => {
     const changes: string[] = [];
