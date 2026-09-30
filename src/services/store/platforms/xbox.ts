@@ -75,12 +75,19 @@ function xboxAutosuggestUrl(query: string): string {
   return `https://displaycatalog.mp.microsoft.com/v7.0/productFamilies/autosuggest?${params.toString()}`;
 }
 
+/**
+ * Autosuggest often knows nothing for a full numbered title ("EA SPORTS FC 27") but lists it for
+ * the series name, so retry without a trailing number, then with the first four words.
+ * Candidates are still matched against the full title afterwards.
+ */
 function xboxQueryVariants(query: string): string[] {
   const trimmed = query.trim();
   if (!trimmed) return [];
   const words = trimmed.split(/\s+/).filter(Boolean);
-  if (words.length <= 4) return [trimmed];
-  return [trimmed, words.slice(0, 4).join(' ')];
+  const variants = [trimmed];
+  if (words.length > 1 && /^\d+$/.test(words.at(-1) ?? '')) variants.push(words.slice(0, -1).join(' '));
+  if (words.length > 4) variants.push(words.slice(0, 4).join(' '));
+  return [...new Set(variants)];
 }
 
 function getXboxTitle(product: XboxDisplayProduct): string {

@@ -216,10 +216,29 @@ describe('fetchXboxEditionOffers', () => {
   });
 
   test('searches once with the base title', async () => {
-    const urls = mockXbox([], []);
+    const urls = mockXbox(['A'], [product('A', 'Forza Horizon 5', usd(60))]);
     await fetchXboxEditionOffers('Forza Horizon 5 Premium Edition');
     const searches = urls.filter((url) => url.includes('autosuggest'));
     expect(searches).toHaveLength(1);
     expect(new URL(searches[0] ?? '').searchParams.get('query')).toBe('Forza Horizon 5');
   });
 });
+
+describe('Xbox search query fallback', () => {
+  test('retries without the trailing number when autosuggest knows nothing for the full title', async () => {
+    const queries: string[] = [];
+    globalThis.fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('autosuggest')) {
+        const query = new URL(url).searchParams.get('query') ?? '';
+        queries.push(query);
+        return Response.json({ Results: query === 'EA SPORTS FC' ? [{ Products: [{ ProductId: 'FC' }] }] : [] });
+      }
+      return Response.json({ Products: [product('FC', 'EA SPORTS FC™ 27 Standart Sürüm XBOX One ve XBOX Series X|S', [{ CurrencyCode: 'TRY', ListPrice: 3999, MSRP: 3999 }])] });
+    };
+    const offers = await fetchXboxEditionOffers('EA SPORTS FC 27');
+    expect(queries).toEqual(['EA SPORTS FC 27', 'EA SPORTS FC']);
+    expect(offers.map((offer) => [offer.edition, offer.id])).toEqual([['base', 'xbox-FC']]);
+  });
+});
+

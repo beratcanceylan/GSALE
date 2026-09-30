@@ -260,6 +260,24 @@ describe('fetchEpicEditionOffers', () => {
     ]);
   });
 
+  test('add-ons named like an edition are not editions', async () => {
+    routeFetch(() =>
+      Response.json({
+        offers: [
+          { ...offer('arc-deluxe', 'ARC Raiders Deluxe Sürüm', 309000), offerType: 'EDITION' },
+          { ...offer('arc-wanderer', 'ARC Raiders Deluxe Sürüm', 100000), offerType: 'ADD_ON' },
+          { ...offer('arc-playtest', 'ARC Raiders', 0), offerType: 'OTHERS' },
+          { ...offer('arc', 'ARC Raiders', 209000), offerType: 'BASE_GAME' },
+        ],
+      }),
+    );
+    const offers = await fetchEpicEditionOffers('ARC Raiders');
+    expect(offers.map((entry) => [entry.edition, entry.price.store_url])).toEqual([
+      ['deluxe', 'https://store.epicgames.com/p/arc-deluxe'],
+      ['base', 'https://store.epicgames.com/p/arc'],
+    ]);
+  });
+
   test('searches once with the base title', async () => {
     const bodies: string[] = [];
     routeFetch((_url, init) => {

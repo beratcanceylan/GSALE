@@ -134,6 +134,13 @@ export async function searchEpic(
 }
 
 
+/** Epic sells editions as base games, editions or bundles; add-ons can carry an edition's name. */
+const EDITION_OFFER_TYPES = new Set(['BASE_GAME', 'EDITION', 'BUNDLE']);
+
+function isEditionOfferType(offerType: string | undefined): boolean {
+  return !offerType || EDITION_OFFER_TYPES.has(offerType.toUpperCase());
+}
+
 /** Every edition of `title`'s game on Epic, from one search with the base title. */
 export async function fetchEpicEditionOffers(
   title: string,
@@ -143,6 +150,7 @@ export async function fetchEpicEditionOffers(
   throwIfAborted(options?.signal);
   const accepted = elements
     .flatMap((element) => {
+      if (!isEditionOfferType(element.offerType)) return [];
       const edition = element.title ? acceptEditionCandidate(element.title, title) : null;
       const priceInfo = element.price?.price;
       return edition && priceInfo ? [{ element, edition, priceInfo }] : [];
