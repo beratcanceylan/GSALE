@@ -14,6 +14,7 @@ import { Palette, Spacing, useType } from '@/constants/DesignSystem';
 import { useScrollSafeAreaStyle } from '@/hooks/useScrollSafeAreaStyle';
 import { useT } from '@/i18n';
 import type { Game } from '@/services/gameData';
+import { baseTitle } from '@/services/store/editions';
 import { homeStore } from '@/services/screenData';
 import { getDealPlatforms, getGameImageSources } from '@/utils/gameDisplay';
 import { cheapestDeal, priceView } from '@/utils/price';
@@ -32,7 +33,7 @@ const LeadGame = memo(function LeadGame({ game }: Readonly<{ game: Game }>) {
       }}
       style={({ pressed }) => [styles.lead, pressed && styles.pressed]}
       accessibilityRole="link"
-      accessibilityLabel={game.title}
+      accessibilityLabel={baseTitle(game.title)}
     >
       <View>
         <CoverImage sources={getGameImageSources(game)} title={game.title} decorative />
@@ -42,7 +43,7 @@ const LeadGame = memo(function LeadGame({ game }: Readonly<{ game: Game }>) {
           </View>
         ) : null}
       </View>
-      <Text style={[type('title'), styles.text]} numberOfLines={2}>{game.title}</Text>
+      <Text style={[type('title'), styles.text]} numberOfLines={2}>{baseTitle(game.title)}</Text>
       <StoreLogoRow platforms={getDealPlatforms(game)} />
     </Pressable>
   );

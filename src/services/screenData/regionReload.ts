@@ -1,4 +1,5 @@
 import { languageStore } from '@/i18n/languageStore';
+import { subscribeCatalog } from '@/services/catalog/state';
 import { countryStore } from '@/services/country';
 
 import { freeGamesStore } from './freeGamesStore';
@@ -18,8 +19,13 @@ function reloadForRegion(): void {
 export function watchRegionChanges(): () => void {
   const stopLanguage = languageStore.subscribe(reloadForRegion);
   const stopCountry = countryStore.subscribe(reloadForRegion);
+  const stopCatalog = subscribeCatalog(() => {
+    homeStore.invalidate();
+    if (searchStore.getSnapshot().hasSearched) searchStore.reload();
+  });
   return () => {
     stopLanguage();
     stopCountry();
+    stopCatalog();
   };
 }

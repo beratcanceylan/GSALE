@@ -16,6 +16,7 @@ export function platformPriceToGameDeal(price: PlatformPriceResult): GameDeal {
   if (price.original_price) deal.original_price = price.original_price;
   if (price.store_url) deal.store_url = price.store_url;
   if (price.subscription_note) deal.subscription_note = price.subscription_note;
+  if (price.devices) deal.devices = price.devices;
   if (price.tier) deal.tier = price.tier;
   return deal;
 }

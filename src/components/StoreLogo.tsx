@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { STORE_LOGO_PATHS } from '@/components/store-logo-paths';
+import { ADDITIONAL_STORE_MARKS, STORE_LOGO_PATHS } from '@/components/store-logo-paths';
 import { Palette, Size, Spacing, useType } from '@/constants/DesignSystem';
 
 /** Display order everywhere stores are listed together. */
@@ -16,15 +16,16 @@ type StoreLogoProps = Readonly<{
 /** A store's mark, or its name where no licensed mark exists. */
 export function StoreLogo({ platform, size = Size.logo, color = Palette.textMuted }: StoreLogoProps) {
   const type = useType();
-  const path = STORE_LOGO_PATHS[platform];
+  const mark = ADDITIONAL_STORE_MARKS[platform];
+  const path = mark?.path ?? STORE_LOGO_PATHS[platform];
   if (path) {
     return (
-      <Svg width={size} height={size} viewBox="0 0 24 24" accessible accessibilityLabel={platform}>
-        <Path d={path} fill={color} />
+      <Svg width={size} height={size} viewBox={mark?.viewBox ?? "0 0 24 24"} accessible accessibilityLabel={platform}>
+        <Path d={path} fill={color} transform={mark?.transform} />
       </Svg>
     );
   }
-  // No licensed mark (Xbox, Nintendo, itch.io, IndieGala…): the store's name stands in.
+  // Unknown giveaway stores use their name.
   if (!platform.trim()) return null;
   return (
     <Text
@@ -64,6 +65,8 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    flexShrink: 1,
     gap: Spacing.sm,
   },
   name: {

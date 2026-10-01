@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight } from '@/components/Icons';
 import { I18nManager, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Palette, Size, Spacing, useType } from '@/constants/DesignSystem';

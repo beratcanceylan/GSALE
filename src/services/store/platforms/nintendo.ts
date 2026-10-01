@@ -120,6 +120,7 @@ async function productToPriceResult(
     original_price,
     discount: product.discount,
     tier: 'console',
+    ...(product.platform ? { devices: [product.platform] } : {}),
     ...(product.store_url ? { store_url: product.store_url } : {}),
   };
 }

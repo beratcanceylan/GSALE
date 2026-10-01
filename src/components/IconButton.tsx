@@ -1,10 +1,10 @@
-import type { LucideIcon } from 'lucide-react-native';
+import type { AppIcon } from '@/components/Icons';
 import { I18nManager, Pressable, StyleSheet } from 'react-native';
 
 import { Palette, Radius, Size } from '@/constants/DesignSystem';
 
 type IconButtonProps = Readonly<{
-  icon: LucideIcon;
+  icon: AppIcon;
   label: string;
   onPress: () => void;
   /** `scrim` sits on cover art; `plain` on the slate ground. */

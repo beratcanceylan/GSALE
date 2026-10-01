@@ -7,17 +7,10 @@ import { allOfType, byLabel, render } from '../../test-support/render';
 const { StoreLogo, StoreLogoRow } = await import('@/components/StoreLogo');
 
 describe('StoreLogo', () => {
-  test.each([['Steam'], ['Epic Games'], ['GOG'], ['PlayStation']] as const)('%s draws its mark', async (platform) => {
+  test.each([['Steam'], ['Epic Games'], ['GOG'], ['PlayStation'], ['Xbox'], ['Nintendo']] as const)('%s draws its mark', async (platform) => {
     const view = await render(<StoreLogo platform={platform} />);
     expect(byLabel(view.root, platform)).toBeDefined();
     expect(allOfType(view.root, 'Path')).toHaveLength(1);
-    await view.unmount();
-  });
-
-  test.each([['Xbox'], ['Nintendo']] as const)('%s, without a licensed mark, shows its name', async (platform) => {
-    const view = await render(<StoreLogo platform={platform} />);
-    expect(allOfType(view.root, 'Path')).toHaveLength(0);
-    expect(view.text()).toContain(platform);
     await view.unmount();
   });
 

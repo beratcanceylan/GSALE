@@ -1,4 +1,4 @@
-import { searchCatalog } from '@/services/catalog/state';
+import { catalogStores, searchCatalog } from '@/services/catalog/state';
 import { throwIfAborted } from '@/services/store/fetch';
 import { mergeSearchHits, prepareLiveGame } from '@/services/store/merge';
 import { searchEpic } from '@/services/store/platforms/epic';
@@ -48,5 +48,10 @@ export async function searchLiveGames(
   options?: StoreRequestOptions,
 ): Promise<LiveGame[]> {
   const hits = await runMultiPlatformSearch(query, options);
-  return mergeSearchHits(hits, query).map(prepareLiveGame);
+  const games = await Promise.all(mergeSearchHits(hits, query).map(async (game) => {
+    const stores = await catalogStores(game.title);
+    return prepareLiveGame({ ...game, platforms: [...new Set([...(game.platforms ?? []), ...(stores ?? [])])] });
+  }));
+  throwIfAborted(options?.signal);
+  return games;
 }

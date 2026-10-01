@@ -1,4 +1,4 @@
-import { Bell } from 'lucide-react-native';
+import { Bell } from '@/components/Icons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState, useSyncExternalStore } from 'react';

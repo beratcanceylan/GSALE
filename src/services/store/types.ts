@@ -5,6 +5,8 @@ import type { EditionKey } from '@/services/store/editions';
 
 export interface GameDeal {
   platform: string;
+  /** Hardware explicitly listed by this store product. */
+  devices?: readonly string[];
   price: string;
   original_price?: string;
   discount: string;
@@ -41,6 +43,8 @@ export interface LiveGame {
 
 export interface PlatformPriceResult {
   platform: string;
+  /** Hardware explicitly listed by this store product. */
+  devices?: readonly string[];
   price: string;
   original_price?: string | null;
   discount?: string | null;
@@ -78,6 +82,6 @@ export interface GameSummary {
 
 export interface GameDetailResponse {
   game: GameSummary & { edition: EditionKey };
-  /** Every edition found across the stores, base first; each lists one deal per store. */
+  /** Every edition found across the stores, base first; each lists one deal per store and hardware variant. */
   editions: EditionOption[];
 }

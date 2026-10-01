@@ -17,15 +17,20 @@ export const CATALOG_PLATFORMS: ReadonlySet<string> = new Set(Object.values(CATA
 export const CATALOG_DB_NAME = 'catalog.db';
 export const CATALOG_MANIFEST_NAME = 'catalog-manifest.json';
 
-/** No index: searches are substring scans, and the file is downloaded uncompressed. */
+/**
+ * Searches are substring scans over `search_key`; `game_key` (the game's identity across
+ * stores, see `gameKey`) is an exact lookup, so it gets an index.
+ */
 export const CATALOG_SCHEMA_SQL = `
 CREATE TABLE games (
   store TEXT NOT NULL,
   id TEXT NOT NULL,
   title TEXT NOT NULL,
   search_key TEXT NOT NULL,
+  game_key TEXT NOT NULL DEFAULT '',
   image TEXT
 );
+CREATE INDEX games_game_key ON games (game_key);
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 `;
 

@@ -1,4 +1,5 @@
 import { catalogSearchKey, type CatalogStore } from '@/services/catalog/schema';
+import { gameKey } from '@/services/store/editions';
 
 /** Ephellon/game-store-catalog directory for each catalog store. */
 export const SOURCE_DIRECTORIES: Readonly<Record<CatalogStore, string>> = {
@@ -14,6 +15,7 @@ export interface CatalogRow {
   id: string;
   title: string;
   search_key: string;
+  game_key: string;
   image: string | null;
 }
 
@@ -44,6 +46,7 @@ export function sourceRecordToRow(store: CatalogStore, value: unknown): CatalogR
     id,
     title,
     search_key: searchKey,
+    game_key: gameKey(title),
     // Steam images are derived from the app id; only Xbox search hits need a stored image.
     image: store === 'xbox' && typeof record.image === 'string' ? record.image : null,
   };

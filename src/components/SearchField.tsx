@@ -1,4 +1,4 @@
-import { Search, X } from 'lucide-react-native';
+import { Search, X } from '@/components/Icons';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Palette, Radius, Size, Spacing, useType } from '@/constants/DesignSystem';

@@ -271,6 +271,7 @@ export async function fetchPlayStationEditionOffers(
         original_price: priced.original_price,
         discount: priced.discount,
         tier: 'console',
+        ...(priced.platforms ? { devices: priced.platforms.map((device) => device.replace('PS4', 'PlayStation 4').replace('PS5', 'PlayStation 5')) } : {}),
         store_url: priced.store_url,
       },
     };

@@ -21,7 +21,7 @@ let pending: Promise<void> | null = null;
 /** GitHub release download base, e.g. https://github.com/<owner>/<repo>/releases/download/catalog-latest */
 function catalogBaseUrl(): string | null {
   // Must stay a literal `process.env.EXPO_PUBLIC_…` access so Expo can inline it.
-  const base = trimTrailingChar(process.env.EXPO_PUBLIC_CATALOG_BASE_URL ?? '', '/');
+  const base = trimTrailingChar(process.env.EXPO_PUBLIC_CATALOG_BASE_URL ?? 'https://github.com/beratcanceylan/GSALE/releases/download/catalog-latest', '/');
   return HTTPS_BASE_PATTERN.test(base) ? base : null;
 }
 

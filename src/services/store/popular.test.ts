@@ -7,6 +7,7 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { CATALOG_SCHEMA_SQL, catalogSearchKey } = await import('@/services/catalog/schema');
+const { gameKey } = await import('@/services/store/editions');
 const { setActiveCatalog } = await import('@/services/catalog/state');
 const { getPopularGames } = await import('@/services/store/popular');
 
@@ -62,8 +63,8 @@ describe('getPopularGames', () => {
   test('the catalog adds the other stores that sell a game', async () => {
     const db = new Database(':memory:');
     db.exec(CATALOG_SCHEMA_SQL);
-    const insert = db.prepare('INSERT INTO games (store, id, title, search_key, image) VALUES (?, ?, ?, ?, ?)');
-    for (const store of ['steam', 'ps', 'xbox']) insert.run(store, '9', 'GSALE Pop Catalog', catalogSearchKey('GSALE Pop Catalog'), null);
+    const insert = db.prepare('INSERT INTO games (store, id, title, search_key, game_key, image) VALUES (?, ?, ?, ?, ?, ?)');
+    for (const store of ['steam', 'ps', 'xbox']) insert.run(store, '9', 'GSALE Pop Catalog', catalogSearchKey('GSALE Pop Catalog'), gameKey('GSALE Pop Catalog'), null);
     setActiveCatalog({
       db: { getAllAsync: <T>(sql: string, params: (string | number)[]) => Promise.resolve(db.query<T>(sql).all(...params)) },
       version: new Date().toISOString(),
@@ -71,6 +72,19 @@ describe('getPopularGames', () => {
     routeStores({ steam: [tryItem(9, 'GSALE Pop Catalog')] });
     const [game] = await getPopularGames();
     expect(game?.platforms).toEqual(expect.arrayContaining(['Steam', 'PlayStation', 'Xbox']));
+  });
+
+  test('a sequel in the catalog never adds its stores to the original game', async () => {
+    const db = new Database(':memory:');
+    db.exec(CATALOG_SCHEMA_SQL);
+    const insert = db.prepare('INSERT INTO games (store, id, title, search_key, game_key) VALUES (?, ?, ?, ?, ?)');
+    insert.run('ps', '2', 'GSALE Pop Exact II', catalogSearchKey('GSALE Pop Exact II'), gameKey('GSALE Pop Exact II'));
+    setActiveCatalog({
+      db: { getAllAsync: <T>(sql: string, params: (string | number)[]) => Promise.resolve(db.query<T>(sql).all(...params)) },
+      version: new Date().toISOString(),
+    });
+    routeStores({ steam: [tryItem(20, 'GSALE Pop Exact')] });
+    expect((await getPopularGames())[0]?.platforms).toEqual(['Steam']);
   });
 
   test('keeps the 30-game limit', async () => {

@@ -17,8 +17,14 @@ describe('catalog source records', () => {
       id: '1145350',
       title: 'Hades II™',
       search_key: 'hades ii',
+      game_key: 'hadesii',
       image: null,
     });
+  });
+
+  test('the game key ignores editions and platform suffixes', () => {
+    expect(sourceRecordToRow('ps', { name: 'ELDEN RING Deluxe Edition PS4 & PS5', uuid: '9' })?.game_key).toBe('eldenring');
+    expect(sourceRecordToRow('xbox', { name: 'DOOM Eternal Standard Edition (PC)', uuid: '8' })?.game_key).toBe('doometernal');
   });
 
   test('keeps the image for Xbox only', () => {

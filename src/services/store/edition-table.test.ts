@@ -92,3 +92,31 @@ describe('acceptEditionCandidate rejects expansions, spin-offs and sequels (revi
     expect(acceptEditionCandidate(candidate, title)).toBe(edition);
   });
 });
+
+describe('hardware variants', () => {
+  test('keeps Switch and Switch 2 prices and links apart', () => {
+    const switchOffer = { ...offer('Nintendo', 'base', '100,00 TL', 'switch'), title: 'Game Nintendo Switch' };
+    const switch2Offer = { ...offer('Nintendo', 'base', '200,00 TL', 'switch2'), title: 'Game Nintendo Switch 2' };
+    const deals = buildEditionTable([switchOffer, switch2Offer])[0]?.deals;
+    expect(deals?.map((deal) => [deal.devices, deal.price, deal.store_url])).toEqual([
+      [['Nintendo Switch'], '100,00 TL', 'https://example.com/switch'],
+      [['Nintendo Switch 2'], '200,00 TL', 'https://example.com/switch2'],
+    ]);
+  });
+
+  test('free Xbox package components do not become free prices beside a paid cross-generation bundle', () => {
+    const table = buildEditionTable([
+      { ...offer('Xbox', 'base', 'Ücretsiz', 'series'), title: 'Game Xbox Series X|S' },
+      { ...offer('Xbox', 'base', 'Ücretsiz', 'one'), title: 'Game Xbox One' },
+      { ...offer('Xbox', 'base', '300,00 TL', 'bundle'), title: 'Game Standard Edition Xbox One ve Xbox Series X|S' },
+    ]);
+    expect(table[0]?.deals).toHaveLength(1);
+    expect(table[0]?.deals[0]).toMatchObject({ price: '300,00 TL', devices: ['Xbox One', 'Xbox Series X|S'] });
+  });
+
+  test('PS4 in the bundle title is preserved when metadata only lists PS5', () => {
+    const psOffer = { ...offer('PlayStation', 'base', '300,00 TL'), title: 'Game Standard Edition PS4 & PS5' };
+    const table = buildEditionTable([{ ...psOffer, price: { ...psOffer.price, devices: ['PlayStation 5'] } }]);
+    expect(table[0]?.deals[0]?.devices).toEqual(['PlayStation 5', 'PlayStation 4']);
+  });
+});

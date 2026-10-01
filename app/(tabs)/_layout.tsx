@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet, type ColorValue } from 'react-native';
-import { Gift, Heart, Home, Search, Settings } from 'lucide-react-native';
+import { Gift, Heart, Home, Search, Settings } from '@/components/Icons';
 
 import { Palette, Size, Spacing, useType } from '@/constants/DesignSystem';
 import { useT } from '@/i18n';

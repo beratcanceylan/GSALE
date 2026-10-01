@@ -52,10 +52,10 @@ export function buildCatalog(args: readonly string[] = process.argv): void {
 
   const db = new Database(dbPath, { create: true });
   db.exec(CATALOG_SCHEMA_SQL);
-  const insert = db.prepare('INSERT INTO games (store, id, title, search_key, image) VALUES (?, ?, ?, ?, ?)');
+  const insert = db.prepare('INSERT INTO games (store, id, title, search_key, game_key, image) VALUES (?, ?, ?, ?, ?, ?)');
   const insertAll = db.transaction((rows: CatalogRow[]) => {
     for (const row of rows) {
-      insert.run(row.store, row.id, row.title, row.search_key, row.image);
+      insert.run(row.store, row.id, row.title, row.search_key, row.game_key, row.image);
     }
   });
 

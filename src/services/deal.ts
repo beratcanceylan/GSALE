@@ -11,6 +11,7 @@ const SUBSCRIPTIONS: Readonly<Record<string, Subscription>> = {
 
 export interface Deal {
   platform: string;
+  devices?: readonly string[];
   price: string;
   originalPrice?: string | undefined;
   discount: string;
@@ -43,6 +44,7 @@ export function mapDeal(deal: GameDeal): Deal {
   const isFree = isExplicitlyFreePrice(deal.price);
   return {
     platform: deal.platform,
+    ...(deal.devices ? { devices: deal.devices } : {}),
     price: deal.price,
     originalPrice: deal.original_price,
     discount: deal.discount,

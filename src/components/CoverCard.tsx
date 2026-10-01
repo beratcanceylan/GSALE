@@ -8,6 +8,7 @@ import { StoreLogoRow } from '@/components/StoreLogo';
 import { Palette, Spacing, useType } from '@/constants/DesignSystem';
 import { useT } from '@/i18n';
 import type { Game } from '@/services/gameData';
+import { baseTitle } from '@/services/store/editions';
 import { rememberDetailPreviews } from '@/services/store/detail-preview';
 import { getDealPlatforms, getGameImageSources, isSafeExternalUrl } from '@/utils/gameDisplay';
 import { cheapestDeal, priceView } from '@/utils/price';
@@ -52,7 +53,7 @@ function CoverCardView({ game, width }: CoverCardProps) {
       onPress={open}
       style={({ pressed }) => [styles.card, width === undefined ? styles.fluid : { width }, pressed && styles.pressed]}
       accessibilityRole="link"
-      accessibilityLabel={game.title}
+      accessibilityLabel={baseTitle(game.title)}
     >
       <View>
         <CoverImage sources={getGameImageSources(game)} title={game.title} decorative />
@@ -63,7 +64,7 @@ function CoverCardView({ game, width }: CoverCardProps) {
         ) : null}
       </View>
       <Text style={[type('heading'), styles.title]} numberOfLines={2}>
-        {game.title}
+        {baseTitle(game.title)}
       </Text>
       <View style={styles.meta}>
         <StoreLogoRow platforms={getDealPlatforms(game)} />

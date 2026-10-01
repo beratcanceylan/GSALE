@@ -1,4 +1,4 @@
-import { catalogPlatforms } from '@/services/catalog/state';
+import { catalogStores } from '@/services/catalog/state';
 import { rememberDetailPreviews } from '@/services/store/detail-preview';
 import { gameKey, isDlcTitle } from '@/services/store/editions';
 import { throwIfAborted } from '@/services/store/fetch';
@@ -50,7 +50,7 @@ function dedupe(games: readonly LiveGame[]): LiveGame[] {
 
 /** Adds every store the downloaded catalog lists for the game; no network request. */
 async function withCatalogStores(game: LiveGame): Promise<LiveGame> {
-  const stores = await catalogPlatforms(game.title);
+  const stores = await catalogStores(game.title);
   if (!stores || stores.size === 0) return game;
   return { ...game, platforms: [...new Set([...(game.platforms ?? []), ...stores])] };
 }

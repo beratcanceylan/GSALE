@@ -1,4 +1,4 @@
-import { ExternalLink } from 'lucide-react-native';
+import { ExternalLink } from '@/components/Icons';
 import { I18nManager, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PriceTag } from '@/components/PriceTag';
@@ -20,7 +20,7 @@ const SUBSCRIPTION_KEYS = {
   'ps-plus': 'subscription.psPlus',
 } as const satisfies Record<Subscription, MessageKey>;
 
-function StoreName({ platform, subscription = null }: Readonly<{ platform: string; subscription?: Subscription | null }>) {
+function StoreName({ platform, subscription = null, devices }: Readonly<{ platform: string; subscription?: Subscription | null; devices?: readonly string[] | undefined }>) {
   const t = useT();
   const type = useType();
   return (
@@ -28,6 +28,7 @@ function StoreName({ platform, subscription = null }: Readonly<{ platform: strin
       <StoreLogo platform={platform} size={Size.logoLarge} color={Palette.text} />
       <View style={styles.storeText}>
         <Text style={[type('heading'), styles.storeName]} numberOfLines={1}>{platform}</Text>
+        {devices?.length ? <Text style={[type('caption'), styles.subscription]}>{devices.join(' · ')}</Text> : null}
         {subscription ? <Text style={[type('caption'), styles.subscription]}>{t(SUBSCRIPTION_KEYS[subscription])}</Text> : null}
       </View>
     </View>
@@ -61,7 +62,7 @@ function DealRow({ deal, lowest }: Readonly<{ deal: Deal; lowest: boolean }>) {
       accessibilityRole="link"
       accessibilityLabel={t('detail.openStore', { store: deal.platform })}
     >
-      <StoreName platform={deal.platform} subscription={deal.subscription} />
+      <StoreName platform={deal.platform} subscription={deal.subscription} devices={deal.devices} />
       <View style={styles.priceColumn}>
         {price && lowest ? <PriceTag price={price} /> : null}
         {price && !lowest ? <PlainPrice price={price} /> : null}
@@ -90,7 +91,7 @@ function MissingRow({ platform }: Readonly<{ platform: string }>) {
   );
 }
 
-/** One row per store for the selected edition, cheapest first; the lowest wears the price tag. */
+/** Rows for each store and hardware variant, with a price tag on the cheapest listing. */
 export function PriceTable({ deals, missingStores }: PriceTableProps) {
   const t = useT();
   const type = useType();
@@ -101,7 +102,7 @@ export function PriceTable({ deals, missingStores }: PriceTableProps) {
   return (
     <View>
       {deals.length === 0 ? <Text style={[type('body'), styles.empty]}>{t('detail.noPrices')}</Text> : null}
-      {deals.map((deal) => <DealRow key={deal.platform} deal={deal} lowest={deal === lowest} />)}
+      {deals.map((deal) => <DealRow key={`${deal.platform}|${deal.devices?.join("|") ?? ""}`} deal={deal} lowest={deal === lowest} />)}
       {missingStores.map((platform) => <MissingRow key={platform} platform={platform} />)}
     </View>
   );

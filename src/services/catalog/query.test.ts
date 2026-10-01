@@ -1,7 +1,8 @@
 import { Database } from 'bun:sqlite';
 import { describe, expect, test } from 'bun:test';
 
-import { catalogPlatformsForTitle, searchCatalogHits, type CatalogDb } from '@/services/catalog/query';
+import { catalogPlatformsForTitle, catalogStoresForGame, searchCatalogHits, type CatalogDb } from '@/services/catalog/query';
+import { gameKey } from '@/services/store/editions';
 import { CATALOG_SCHEMA_SQL, catalogSearchKey } from '@/services/catalog/schema';
 
 type Row = readonly [store: string, id: string, title: string, image?: string];
@@ -9,9 +10,9 @@ type Row = readonly [store: string, id: string, title: string, image?: string];
 function catalogDb(rows: readonly Row[]): CatalogDb {
   const db = new Database(':memory:');
   db.exec(CATALOG_SCHEMA_SQL);
-  const insert = db.prepare('INSERT INTO games (store, id, title, search_key, image) VALUES (?, ?, ?, ?, ?)');
+  const insert = db.prepare('INSERT INTO games (store, id, title, search_key, game_key, image) VALUES (?, ?, ?, ?, ?, ?)');
   for (const [store, id, title, image] of rows) {
-    insert.run(store, id, title, catalogSearchKey(title), image ?? null);
+    insert.run(store, id, title, catalogSearchKey(title), gameKey(title), image ?? null);
   }
   return {
     getAllAsync: <T>(sql: string, params: (string | number)[]) =>
@@ -78,5 +79,18 @@ describe('catalogPlatformsForTitle', () => {
 
   test('returns null for titles the catalog does not know', async () => {
     expect(await catalogPlatformsForTitle(catalogDb(ROWS), 'Brand New Game 2027')).toBeNull();
+  });
+});
+
+describe('catalogStoresForGame', () => {
+  test('lists only stores selling this exact game, whatever the edition or platform suffix', async () => {
+    const db = catalogDb([
+      ...ROWS,
+      ['ps', 'X', 'Hades Deluxe Edition PS4 & PS5'],
+      ['steam', 'Y', 'Orpheus: Echo of Hades'],
+    ]);
+    expect(await catalogStoresForGame(db, 'Hades')).toEqual(new Set(['Steam', 'Xbox', 'PlayStation', 'Nintendo']));
+    expect(await catalogStoresForGame(db, 'Hades II')).toEqual(new Set(['Steam', 'Epic Games']));
+    expect(await catalogStoresForGame(db, 'Unknown Game')).toBeNull();
   });
 });

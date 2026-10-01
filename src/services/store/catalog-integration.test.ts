@@ -7,6 +7,7 @@ mock.module('expo-secure-store', () => ({
 }));
 
 const { CATALOG_SCHEMA_SQL, catalogSearchKey } = await import('@/services/catalog/schema');
+const { gameKey } = await import('@/services/store/editions');
 const { setActiveCatalog } = await import('@/services/catalog/state');
 const { fetchEditionTable } = await import('@/services/store/prices');
 const { searchLiveGames } = await import('@/services/store/search');
@@ -17,8 +18,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 function activateCatalog(rows: readonly (readonly [string, string, string])[], ageDays = 1): void {
   const db = new Database(':memory:');
   db.exec(CATALOG_SCHEMA_SQL);
-  const insert = db.prepare('INSERT INTO games (store, id, title, search_key, image) VALUES (?, ?, ?, ?, ?)');
-  for (const [store, id, title] of rows) insert.run(store, id, title, catalogSearchKey(title), null);
+  const insert = db.prepare('INSERT INTO games (store, id, title, search_key, game_key, image) VALUES (?, ?, ?, ?, ?, ?)');
+  for (const [store, id, title] of rows) insert.run(store, id, title, catalogSearchKey(title), gameKey(title), null);
   setActiveCatalog({
     db: { getAllAsync: <T>(sql: string, params: (string | number)[]) => Promise.resolve(db.query<T>(sql).all(...params)) },
     version: new Date(Date.now() - ageDays * DAY_MS).toISOString(),
@@ -77,6 +78,17 @@ describe('catalog platform detection', () => {
 });
 
 describe('catalog search', () => {
+  test('search cards include catalog console stores without borrowing a sequel', async () => {
+    activateCatalog([
+      ['steam', '4250', 'GSALE Exact Search'],
+      ['ps', 'p', 'GSALE Exact Search Deluxe Edition PS4 & PS5'],
+      ['nintendo', 'n', 'GSALE Exact Search II'],
+    ]);
+    recordEmptyStores();
+    const [game] = await searchLiveGames('GSALE Exact Search');
+    expect(game?.platforms).toEqual(['Steam', 'PlayStation']);
+  });
+
   test('catalog Steam hits appear even when live search returns nothing', async () => {
     activateCatalog([['steam', '4242', 'GSALE Catalog Search Hit']]);
     recordEmptyStores();

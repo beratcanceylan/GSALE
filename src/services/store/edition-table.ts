@@ -1,3 +1,4 @@
+import { productDevices } from '@/services/store/devices';
 import { platformPriceToGameDeal } from '@/services/store/deals';
 import { compareEditions, editionKey, gameKey, isDlcTitle, type EditionKey } from '@/services/store/editions';
 import { isExplicitlyFreePrice, isUnavailablePrice, parseLocalizedAmount } from '@/services/store/price-parse';
@@ -15,7 +16,7 @@ export type EditionOffer = Readonly<{
 
 export type EditionOption = Readonly<{
   key: EditionKey;
-  /** One deal per store, cheapest first; stores without this edition are absent. */
+  /** One deal per store and hardware variant, cheapest first; missing editions are absent. */
   deals: readonly GameDeal[];
 }>;
 
@@ -53,15 +54,21 @@ function isBetterListing(deal: GameDeal, current: GameDeal): boolean {
   return comparableAmount(deal) < comparableAmount(current);
 }
 
-/** Groups offers into editions (base first), keeping each store's cheapest deal, cheapest store first. */
+/** Groups offers into editions, keeping the cheapest listing per store and hardware variant. */
 export function buildEditionTable(offers: readonly EditionOffer[]): EditionOption[] {
+  const paidStores = new Set(offers.filter((offer) => !isUnavailablePrice(offer.price.price) && !isExplicitlyFreePrice(offer.price.price))
+    .map((offer) => `${offer.edition}|${offer.platform}`));
   const byEdition = new Map<EditionKey, Map<string, GameDeal>>();
   for (const offer of offers) {
     if (isUnavailablePrice(offer.price.price)) continue;
+    if (isExplicitlyFreePrice(offer.price.price) && paidStores.has(`${offer.edition}|${offer.platform}`)) continue;
     const deal = platformPriceToGameDeal(offer.price);
+    const devices = [...new Set([...(offer.price.devices ?? []), ...productDevices(offer.platform, offer.title)])];
+    if (devices.length > 0) deal.devices = devices;
+    const listingKey = `${offer.platform}|${[...devices].sort().join('|')}`;
     const stores = byEdition.get(offer.edition) ?? new Map<string, GameDeal>();
-    const current = stores.get(offer.platform);
-    if (!current || isBetterListing(deal, current)) stores.set(offer.platform, deal);
+    const current = stores.get(listingKey);
+    if (!current || isBetterListing(deal, current)) stores.set(listingKey, deal);
     byEdition.set(offer.edition, stores);
   }
   const keys = [...byEdition.keys()].sort(compareEditions);

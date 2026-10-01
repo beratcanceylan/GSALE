@@ -4,6 +4,7 @@ import {
   catalogSearchKey,
   type CatalogStore,
 } from '@/services/catalog/schema';
+import { gameKey } from '@/services/store/editions';
 import type { PlatformSearchHit } from '@/services/store/types';
 
 /** The part of expo-sqlite's database the catalog needs (bun:sqlite in tests). */
@@ -90,6 +91,18 @@ export async function catalogPlatformsForTitle(
     'SELECT DISTINCT store FROM games WHERE search_key LIKE ?',
     [`%${key}%`],
   );
+  if (rows.length === 0) return null;
+  return new Set(rows.map((row) => CATALOG_STORES[row.store]));
+}
+
+/**
+ * Stores that sell exactly this game (any edition or platform version), or null when the
+ * catalog does not know it. Used to show every store on a card without a network request.
+ */
+export async function catalogStoresForGame(db: CatalogDb, title: string): Promise<ReadonlySet<string> | null> {
+  const key = gameKey(title);
+  if (key.length < MIN_QUERY_LENGTH) return null;
+  const rows = await db.getAllAsync<{ store: CatalogStore }>('SELECT DISTINCT store FROM games WHERE game_key = ?', [key]);
   if (rows.length === 0) return null;
   return new Set(rows.map((row) => CATALOG_STORES[row.store]));
 }

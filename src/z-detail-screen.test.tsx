@@ -65,6 +65,12 @@ describe('game detail screen', () => {
     nativeState.params = { id: game.id, platform: 'Steam' };
     gameDetailStoreMock.setSnapshot({ game, selectedEdition: 'deluxe', loading: false, error: null, version: 3 });
     const view = await render(<GameDetailScreen />);
+    const backButton = byLabel(view.root, 'Geri dön');
+    let topBar = backButton.parent;
+    while (topBar && String(topBar.type) !== 'View') topBar = topBar.parent;
+    expect(topBar?.type).toBe('View');
+    const barStyles = topBar?.props['style'] as readonly { position?: string }[];
+    expect(barStyles[0]?.position).toBeUndefined();
     const deluxeTab = byLabel(view.root, 'Deluxe');
     expect(deluxeTab.props['accessibilityState']).toMatchObject({ selected: true });
     expect(textOf(rowFor(view, 'Steam'))).toContain(formatMoney(90));

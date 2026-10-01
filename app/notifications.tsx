@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft } from '@/components/Icons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';

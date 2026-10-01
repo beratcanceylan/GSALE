@@ -79,12 +79,6 @@ mock.module('react-native', () => ({
   },
 }));
 
-const ICONS = [
-  'AlertCircle', 'ArrowLeft', 'Bell', 'Check', 'ChevronRight', 'ExternalLink', 'Gamepad2', 'Gift',
-  'Globe', 'Heart', 'Home', 'Info', 'MapPin', 'Search', 'Settings', 'X',
-];
-mock.module('lucide-react-native', () => Object.fromEntries(ICONS.map((name) => [name, name])));
-
 mock.module('expo-image', () => ({ Image: 'Image' }));
 /** In-memory secure store; tests that need to inspect writes mock it again after this import. */
 const secureStoreValues = new Map<string, string>();

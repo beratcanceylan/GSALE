@@ -55,6 +55,17 @@ describe('catalog download and activation', () => {
     expect(opens).toBe(0);
   });
 
+  test('uses the project release without an environment override', async () => {
+    delete process.env.EXPO_PUBLIC_CATALOG_BASE_URL;
+    let requested = '';
+    globalThis.fetch = async (input) => {
+      requested = String(input);
+      return new Response('', { status: 404 });
+    };
+    await loadCatalog();
+    expect(requested).toBe('https://github.com/beratcanceylan/GSALE/releases/download/catalog-latest/catalog-manifest.json');
+  });
+
   test('creates the directory and waits when no manifest is published', async () => {
     process.env.EXPO_PUBLIC_CATALOG_BASE_URL = 'https://example.com/catalog/';
     remoteManifest(null);

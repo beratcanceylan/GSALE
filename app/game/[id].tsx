@@ -1,4 +1,4 @@
-import { ArrowLeft, Heart } from 'lucide-react-native';
+import { ArrowLeft, Heart } from '@/components/Icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState, useSyncExternalStore } from 'react';
@@ -65,13 +65,13 @@ function TopBar({ onBack, favorite }: Readonly<{ onBack: () => void; favorite?: 
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.topBar, { paddingTop: insets.top + Spacing.sm }]} pointerEvents="box-none">
-      <IconButton icon={ArrowLeft} label={t('common.back')} onPress={onBack} tone="scrim" directional />
+      <IconButton icon={ArrowLeft} label={t('common.back')} onPress={onBack} tone="plain" directional />
       {favorite ? (
         <IconButton
           icon={Heart}
           label={favorite.active ? t('favorites.remove') : t('favorites.add')}
           onPress={favorite.onToggle}
-          tone="scrim"
+          tone="plain"
           filled={favorite.active}
         />
       ) : null}
@@ -87,6 +87,7 @@ function LoadingView({ onBack }: Readonly<{ onBack: () => void }>) {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
+      <TopBar onBack={onBack} />
       <View style={styles.heroPlaceholder} />
       <View style={styles.body}>
         <Text style={[type('body'), styles.muted]}>{t('detail.loading')}</Text>
@@ -94,7 +95,6 @@ function LoadingView({ onBack }: Readonly<{ onBack: () => void }>) {
           {SKELETON_ROWS.map((row) => <View key={row} style={styles.skeletonRow} />)}
         </View>
       </View>
-      <TopBar onBack={onBack} />
     </View>
   );
 }
@@ -102,10 +102,12 @@ function LoadingView({ onBack }: Readonly<{ onBack: () => void }>) {
 function ErrorView({ message, onBack, onRetry }: Readonly<{ message: string; onBack: () => void; onRetry?: () => void }>) {
   const t = useT();
   return (
-    <View style={[styles.container, styles.center]}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      <EmptyState message={message} {...(onRetry ? { action: { label: t('common.retry'), onPress: onRetry } } : {})} />
       <TopBar onBack={onBack} />
+      <View style={styles.center}>
+        <EmptyState message={message} {...(onRetry ? { action: { label: t('common.retry'), onPress: onRetry } } : {})} />
+      </View>
     </View>
   );
 }
@@ -126,6 +128,10 @@ function GameDetailLoaded({ game, selectedEdition, onSelectEdition, onBack }: Ga
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
+      <TopBar
+        onBack={onBack}
+        favorite={{ active: isFav, onToggle: () => { setIsFav(toggleFavorite(favoritePayload(game, deals))); } }}
+      />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <CoverImage sources={getGameImageSources(game)} title={game.title} flush fit="natural" />
         <View style={styles.titleBlock}>
@@ -137,10 +143,6 @@ function GameDetailLoaded({ game, selectedEdition, onSelectEdition, onBack }: Ga
           <PriceTable deals={deals} missingStores={missingStores} />
         </View>
       </ScrollView>
-      <TopBar
-        onBack={onBack}
-        favorite={{ active: isFav, onToggle: () => { setIsFav(toggleFavorite(favoritePayload(game, deals))); } }}
-      />
     </View>
   );
 }
@@ -199,19 +201,17 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.background,
   },
   center: {
+    flex: 1,
     justifyContent: 'center',
   },
   scroll: {
     paddingBottom: Spacing.xxl,
   },
   topBar: {
-    position: 'absolute',
-    top: 0,
-    start: 0,
-    end: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.sm,
   },
   heroPlaceholder: {
     width: '100%',
